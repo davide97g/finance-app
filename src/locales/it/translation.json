@@ -86,5 +86,10 @@
     "magic_link_sent": "Ti abbiamo inviato un link di accesso. Controlla anche lo spam.",
     "auth_error": "Errore di Autenticazione",
     "expense_breakdown": "Ripartizione Spese",
-    "income_vs_expense": "Entrate vs Uscite"
+    "income_vs_expense": "Entrate vs Uscite",
+    "net_balance": "Saldo Netto",
+    "category_distribution": "Distribuzione Categorie",
+    "total": "Totale",
+    "no_data": "Nessun dato disponibile",
+    "logout": "Esci"
 }

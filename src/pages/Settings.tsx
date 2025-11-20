@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SyncIndicator } from '@/components/SyncStatus';
 import { Skeleton } from '@/components/ui/skeleton';
-// import { Separator } from '@/components/ui/separator';
+import { Separator } from '@/components/ui/separator';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -112,6 +112,7 @@ export function SettingsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <Separator />
                         <div className="grid gap-2">
                             <Label htmlFor="theme">{t('theme')}</Label>
                             <Select
@@ -128,6 +129,7 @@ export function SettingsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <Separator />
                         <div className="grid gap-2">
                             <Label htmlFor="start_of_week">{t('start_of_week')}</Label>
                             <Select

@@ -87,5 +87,9 @@
     "magic_link_sent": "We sent you a login link. Be sure to check your spam too.",
     "auth_error": "Authentication Error",
     "expense_breakdown": "Expense Breakdown",
-    "income_vs_expense": "Income vs Expense"
+    "income_vs_expense": "Income vs Expense",
+    "net_balance": "Net Balance",
+    "category_distribution": "Category Distribution",
+    "total": "Total",
+    "no_data": "No data available"
 }

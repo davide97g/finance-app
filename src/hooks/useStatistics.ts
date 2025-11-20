@@ -46,8 +46,21 @@ export function useStatistics() {
         });
     }
 
+    // Calculate net balance
+    const netBalance = stats.income - stats.expense;
+
+    // Calculate category percentages for radial chart
+    const totalExpense = stats.expense;
+    const categoryPercentages = stats.byCategory.map((cat, index) => ({
+        name: cat.name,
+        value: totalExpense > 0 ? Math.round((cat.value / totalExpense) * 100) : 0,
+        fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+    }));
+
     return {
         currentMonth,
         stats,
+        netBalance,
+        categoryPercentages,
     };
 }
