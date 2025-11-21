@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import packageJson from '../../package.json';
 
 export function SettingsPage() {
     const { settings, updateSettings } = useSettings();
@@ -168,6 +169,21 @@ export function SettingsPage() {
                                 checked={settings.include_investments_in_expense_totals}
                                 onCheckedChange={(checked) => updateSettings({ include_investments_in_expense_totals: checked })}
                             />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('about')}</CardTitle>
+                        <CardDescription>
+                            {t('app_info')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">{t('version')}</span>
+                            <span className="text-sm font-mono">{packageJson.version}</span>
                         </div>
                     </CardContent>
                 </Card>

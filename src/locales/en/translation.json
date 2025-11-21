@@ -91,5 +91,22 @@
     "net_balance": "Net Balance",
     "category_distribution": "Category Distribution",
     "total": "Total",
-    "no_data": "No data available"
+    "no_data": "No data available",
+    "all_types": "All Types",
+    "all_categories": "All Categories",
+    "search_placeholder": "Search...",
+    "date_from": "Date From",
+    "date_to": "Date To",
+    "min_amount": "Min Amount",
+    "max_amount": "Max Amount",
+    "reset_filters": "Reset Filters",
+    "filters": "Filters",
+    "active_filters": "Active Filters",
+    "clear": "Clear",
+    "parent_category": "Parent Category",
+    "next_occurrence": "Next Occurrence",
+    "next": "Next",
+    "about": "About",
+    "app_info": "Application information",
+    "version": "Version"
 }

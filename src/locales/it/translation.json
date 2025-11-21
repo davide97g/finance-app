@@ -91,5 +91,22 @@
     "category_distribution": "Distribuzione Categorie",
     "total": "Totale",
     "no_data": "Nessun dato disponibile",
-    "logout": "Esci"
+    "logout": "Esci",
+    "all_types": "Tutti i Tipi",
+    "all_categories": "Tutte le Categorie",
+    "search_placeholder": "Cerca...",
+    "date_from": "Data Da",
+    "date_to": "Data A",
+    "min_amount": "Importo Minimo",
+    "max_amount": "Importo Massimo",
+    "reset_filters": "Reimposta Filtri",
+    "filters": "Filtri",
+    "active_filters": "Filtri Attivi",
+    "clear": "Cancella",
+    "parent_category": "Categoria Padre",
+    "next_occurrence": "Prossima Occorrenza",
+    "next": "Prossimo",
+    "about": "Info",
+    "app_info": "Informazioni applicazione",
+    "version": "Versione"
 }
