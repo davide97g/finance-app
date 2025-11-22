@@ -3,7 +3,7 @@ import { useStatistics } from '@/hooks/useStatistics';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Label, RadialBarChart, RadialBar, PolarGrid, LabelList, Radar, RadarChart, PolarAngleAxis } from 'recharts';
+import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Label, LabelList, Radar, RadarChart, PolarAngleAxis, PolarGrid } from 'recharts';
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -279,24 +279,20 @@ export function StatisticsPage() {
                                         config={{}}
                                         className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                                     >
-                                        <RadialBarChart
-                                            data={currentCategoryPercentages.slice(0, 5)}
-                                            innerRadius={40}
-                                            outerRadius={130}
-                                            barSize={20}
-                                        >
+                                        <PieChart>
                                             <ChartTooltip
                                                 cursor={false}
-                                                content={<ChartTooltipContent hideLabel nameKey="name" />}
+                                                content={<ChartTooltipContent hideLabel />}
                                             />
-                                            <PolarGrid gridType="circle" />
-                                            <RadialBar
+                                            <Pie
+                                                data={currentCategoryPercentages}
                                                 dataKey="value"
-                                                background
-                                                cornerRadius={10}
+                                                nameKey="name"
+                                                innerRadius={60}
+                                                strokeWidth={5}
                                             />
                                             <ChartLegend content={<ChartLegendContent className="flex-wrap gap-2" />} />
-                                        </RadialBarChart>
+                                        </PieChart>
                                     </ChartContainer>
                                 ) : (
                                     <div className="flex h-[300px] items-center justify-center text-muted-foreground">
@@ -499,24 +495,20 @@ export function StatisticsPage() {
                                         config={{}}
                                         className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                                     >
-                                        <RadialBarChart
-                                            data={yearlyCategoryPercentages.slice(0, 5)}
-                                            innerRadius={40}
-                                            outerRadius={130}
-                                            barSize={20}
-                                        >
+                                        <PieChart>
                                             <ChartTooltip
                                                 cursor={false}
-                                                content={<ChartTooltipContent hideLabel nameKey="name" />}
+                                                content={<ChartTooltipContent hideLabel />}
                                             />
-                                            <PolarGrid gridType="circle" />
-                                            <RadialBar
+                                            <Pie
+                                                data={yearlyCategoryPercentages}
                                                 dataKey="value"
-                                                background
-                                                cornerRadius={10}
+                                                nameKey="name"
+                                                innerRadius={60}
+                                                strokeWidth={5}
                                             />
                                             <ChartLegend content={<ChartLegendContent className="flex-wrap gap-2" />} />
-                                        </RadialBarChart>
+                                        </PieChart>
                                     </ChartContainer>
                                 ) : (
                                     <div className="flex h-[300px] items-center justify-center text-muted-foreground">

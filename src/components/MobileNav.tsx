@@ -38,11 +38,11 @@ export function MobileNav({ navigation }: MobileNavProps) {
     };
 
     return (
-        <div className="flex items-center justify-between border-b p-4 md:hidden bg-background sticky top-0 z-50">
+        <div className="flex items-center justify-between border-b p-2 md:hidden bg-background sticky top-0 z-50">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon" aria-label={t('open_menu')}>
-                        <Menu className="h-6 w-6" />
+                        <Menu className="h-5 w-5" />
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-64 p-0" hideClose={true}>
@@ -86,12 +86,12 @@ export function MobileNav({ navigation }: MobileNavProps) {
                     </div>
                 </SheetContent>
             </Sheet>
-            <div className="flex items-center gap-2 font-bold text-xl">
-                <Wallet className={cn("h-6 w-6", !isOnline && "text-destructive")} />
+            <div className="flex items-center gap-2 font-bold text-lg">
+                <Wallet className={cn("h-5 w-5", !isOnline && "text-destructive")} />
                 <span className="text-primary">{t('app_title')}</span>
             </div>
             {/* Placeholder for right side actions if needed, e.g. profile or add */}
-            <div className="w-10" />
+            <div className="w-9" />
         </div>
     );
 }

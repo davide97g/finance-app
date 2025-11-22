@@ -219,18 +219,22 @@ export function SettingsPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between space-x-2">
-                            <Label htmlFor="investments-total" className="flex flex-col space-y-1">
-                                <span>{t('include_investments')}</span>
-                                <span className="font-normal text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="investments-total" className="text-base">
+                                    {t('include_investments')}
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
                                     {t('include_investments_desc')}
-                                </span>
-                            </Label>
-                            <Switch
-                                id="investments-total"
-                                checked={settings.include_investments_in_expense_totals}
-                                onCheckedChange={(checked) => updateSettings({ include_investments_in_expense_totals: checked })}
-                            />
+                                </p>
+                            </div>
+                            <div className="pl-2">
+                                <Switch
+                                    id="investments-total"
+                                    checked={settings.include_investments_in_expense_totals}
+                                    onCheckedChange={(checked) => updateSettings({ include_investments_in_expense_totals: checked })}
+                                />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
