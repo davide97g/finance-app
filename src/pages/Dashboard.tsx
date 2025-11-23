@@ -14,9 +14,11 @@ import { Input } from '@/components/ui/input';
 import { CategorySelector } from '@/components/CategorySelector';
 import { useAuth } from '@/hooks/useAuth';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useCategories } from '@/hooks/useCategories';
 
 export function Dashboard() {
     const { transactions, addTransaction } = useTransactions();
+    const { categories } = useCategories();
     const { user } = useAuth();
     const { t } = useTranslation();
     const now = new Date();
@@ -88,7 +90,7 @@ export function Dashboard() {
         },
         projection: {
             label: t('projection'),
-            color: "hsl(var(--chart-2))",
+            color: "hsl(var(--chart-5))",
         },
     } satisfies ChartConfig;
 
@@ -210,7 +212,9 @@ export function Dashboard() {
                         <ScrollArea className="h-[250px] pr-4 md:h-[300px]">
                             <TransactionList
                                 transactions={transactions?.filter(t => !t.deleted_at).slice(0, 5)}
+                                categories={categories}
                                 showActions={false}
+                                isLoading={transactions === undefined}
                             />
                         </ScrollArea>
                     </CardContent>

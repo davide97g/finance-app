@@ -18,6 +18,18 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { AVAILABLE_ICONS, getIconComponent } from '@/lib/icons';
@@ -27,18 +39,29 @@ import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 
 export function CategoriesPage() {
     const { t } = useTranslation();
-    const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
+    const { categories, addCategory, updateCategory, deleteCategory, reparentChildren } = useCategories();
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    // Conflict Resolution State
+    const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+    const [conflictData, setConflictData] = useState<{
+        action: 'delete' | 'deactivate';
+        targetId: string;
+        childrenCount: number;
+        parentName?: string;
+    } | null>(null);
+
     const [formData, setFormData] = useState({
         name: '',
         color: '#000000',
         type: 'expense' as 'income' | 'expense' | 'investment',
         icon: '',
         parent_id: '',
+        active: true,
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -51,12 +74,31 @@ export function CategoriesPage() {
         }
 
         if (editingId) {
+            // Check for deactivation conflict
+            if (!formData.active) {
+                const hasChildren = categories?.some(c => c.parent_id === editingId && !c.deleted_at);
+                if (hasChildren) {
+                    const currentCategory = categories?.find(c => c.id === editingId);
+                    const parentCategory = currentCategory?.parent_id ? categories?.find(c => c.id === currentCategory.parent_id) : null;
+
+                    setConflictData({
+                        action: 'deactivate',
+                        targetId: editingId,
+                        childrenCount: categories?.filter(c => c.parent_id === editingId && !c.deleted_at).length || 0,
+                        parentName: parentCategory?.name
+                    });
+                    setConflictDialogOpen(true);
+                    return; // Stop here, wait for conflict resolution
+                }
+            }
+
             await updateCategory(editingId, {
                 name: formData.name,
                 color: formData.color,
                 type: formData.type,
                 icon: formData.icon,
                 parent_id: formData.parent_id || undefined,
+                active: formData.active ? 1 : 0,
             });
         } else {
             await addCategory({
@@ -66,11 +108,12 @@ export function CategoriesPage() {
                 type: formData.type,
                 icon: formData.icon,
                 parent_id: formData.parent_id || undefined,
+                active: formData.active ? 1 : 0,
             });
         }
         setIsOpen(false);
         setEditingId(null);
-        setFormData({ name: '', color: '#000000', type: 'expense', icon: '', parent_id: '' });
+        setFormData({ name: '', color: '#000000', type: 'expense', icon: '', parent_id: '', active: true });
     };
 
     const handleEdit = (category: any) => {
@@ -81,17 +124,34 @@ export function CategoriesPage() {
             type: category.type,
             icon: category.icon || '',
             parent_id: category.parent_id || '',
+            active: category.active !== 0,
         });
         setIsOpen(true);
     };
 
     const openNew = () => {
         setEditingId(null);
-        setFormData({ name: '', color: '#000000', type: 'expense', icon: '', parent_id: '' });
+        setFormData({ name: '', color: '#000000', type: 'expense', icon: '', parent_id: '', active: true });
         setIsOpen(true);
     };
 
     const handleDeleteClick = (id: string) => {
+        // Check for children
+        const hasChildren = categories?.some(c => c.parent_id === id && !c.deleted_at);
+        if (hasChildren) {
+            const currentCategory = categories?.find(c => c.id === id);
+            const parentCategory = currentCategory?.parent_id ? categories?.find(c => c.id === currentCategory.parent_id) : null;
+
+            setConflictData({
+                action: 'delete',
+                targetId: id,
+                childrenCount: categories?.filter(c => c.parent_id === id && !c.deleted_at).length || 0,
+                parentName: parentCategory?.name
+            });
+            setConflictDialogOpen(true);
+            return;
+        }
+
         setDeletingId(id);
         setDeleteDialogOpen(true);
     };
@@ -103,8 +163,35 @@ export function CategoriesPage() {
         }
     };
 
+    const handleConflictResolve = async () => {
+        if (!conflictData) return;
 
+        const targetCategory = categories?.find(c => c.id === conflictData.targetId);
+        const newParentId = targetCategory?.parent_id;
 
+        // 1. Reparent children
+        await reparentChildren(conflictData.targetId, newParentId);
+
+        // 2. Perform original action
+        if (conflictData.action === 'delete') {
+            await deleteCategory(conflictData.targetId);
+        } else if (conflictData.action === 'deactivate') {
+            await updateCategory(conflictData.targetId, {
+                name: formData.name,
+                color: formData.color,
+                type: formData.type,
+                icon: formData.icon,
+                parent_id: formData.parent_id || undefined,
+                active: 0, // Force inactive
+            });
+            setIsOpen(false);
+            setEditingId(null);
+            setFormData({ name: '', color: '#000000', type: 'expense', icon: '', parent_id: '', active: true });
+        }
+
+        setConflictDialogOpen(false);
+        setConflictData(null);
+    };
 
     return (
         <div className="space-y-4">
@@ -204,6 +291,14 @@ export function CategoriesPage() {
                                     modal
                                 />
                             </div>
+                            <div className="flex items-center space-x-2">
+                                <Switch
+                                    id="active-mode"
+                                    checked={formData.active}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
+                                />
+                                <label htmlFor="active-mode" className="text-sm font-medium">{t('active') || 'Active'}</label>
+                            </div>
                             <Button type="submit" className="w-full">{t('save')}</Button>
                         </form>
                     </DialogContent>
@@ -225,6 +320,7 @@ export function CategoriesPage() {
                                 <div className="font-medium flex items-center gap-2">
                                     {c.name}
                                     <SyncStatusBadge isPending={c.pendingSync === 1} />
+                                    {c.active === 0 && <Badge variant="secondary" className="text-xs">{t('inactive') || 'Inactive'}</Badge>}
                                 </div>
                                 <div className="text-sm text-muted-foreground capitalize">{t(c.type)}</div>
                             </div>
@@ -249,6 +345,7 @@ export function CategoriesPage() {
                             <TableHead>{t('name')}</TableHead>
                             <TableHead>{t('type')}</TableHead>
                             <TableHead>{t('color')}</TableHead>
+                            <TableHead>{t('status') || 'Status'}</TableHead>
                             <TableHead></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -268,6 +365,13 @@ export function CategoriesPage() {
                                 </TableCell>
                                 <TableCell className="capitalize">{t(c.type)}</TableCell>
                                 <TableCell>{c.color}</TableCell>
+                                <TableCell>
+                                    {c.active === 0 ? (
+                                        <Badge variant="secondary">{t('inactive') || 'Inactive'}</Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="text-green-600 border-green-600">{t('active') || 'Active'}</Badge>
+                                    )}
+                                </TableCell>
                                 <TableCell>
                                     <div className="flex items-center justify-end gap-2">
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(c)}>
@@ -291,6 +395,26 @@ export function CategoriesPage() {
                 title={t('confirm_delete_category') || t('confirm_delete')}
                 description={t('confirm_delete_category_description') || t('confirm_delete_description')}
             />
+
+            <AlertDialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('warning_subcategories') || "Warning: Subcategories Detected"}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('subcategory_conflict_description', {
+                                count: conflictData?.childrenCount,
+                                parentName: conflictData?.parentName || t('root_category') || 'Root'
+                            }) || `This category has ${conflictData?.childrenCount} subcategories. ${conflictData?.action === 'delete' ? 'Deleting' : 'Deactivating'} it will make them inaccessible. Do you want to move them to the parent category (${conflictData?.parentName || 'Root'})?`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConflictResolve}>
+                            {t('move_children_and_proceed') || "Move Children & Proceed"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div >
     );
 }

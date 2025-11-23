@@ -6,6 +6,15 @@ import { v4 as uuidv4 } from 'uuid';
 export function useTransactions(limit?: number, yearMonth?: string) {
     const transactions = useLiveQuery(() => {
         if (yearMonth) {
+            // If yearMonth is just a year (e.g. "2024"), filter by date range
+            if (yearMonth.length === 4) {
+                return db.transactions
+                    .where('date')
+                    .between(`${yearMonth}-01-01`, `${yearMonth}-12-31\uffff`)
+                    .reverse()
+                    .sortBy('date');
+            }
+
             return db.transactions
                 .where('year_month')
                 .equals(yearMonth)

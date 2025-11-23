@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useCategories } from '@/hooks/useCategories';
 import { CategorySelector } from '@/components/CategorySelector';
@@ -212,30 +212,32 @@ export function TransactionsPage() {
     };
 
 
-    const filteredTransactions = transactions?.filter(transaction => {
-        if (transaction.deleted_at) return false;
+    const filteredTransactions = useMemo(() => {
+        return transactions?.filter(transaction => {
+            if (transaction.deleted_at) return false;
 
-        // Text Search
-        if (filters.text && !transaction.description?.toLowerCase().includes(filters.text.toLowerCase())) {
-            return false;
-        }
+            // Text Search
+            if (filters.text && !transaction.description?.toLowerCase().includes(filters.text.toLowerCase())) {
+                return false;
+            }
 
-        // Date Range
-        if (filters.dateFrom && transaction.date < filters.dateFrom) return false;
-        if (filters.dateTo && transaction.date > filters.dateTo) return false;
+            // Date Range
+            if (filters.dateFrom && transaction.date < filters.dateFrom) return false;
+            if (filters.dateTo && transaction.date > filters.dateTo) return false;
 
-        // Amount Range
-        if (filters.minAmount && transaction.amount < parseFloat(filters.minAmount)) return false;
-        if (filters.maxAmount && transaction.amount > parseFloat(filters.maxAmount)) return false;
+            // Amount Range
+            if (filters.minAmount && transaction.amount < parseFloat(filters.minAmount)) return false;
+            if (filters.maxAmount && transaction.amount > parseFloat(filters.maxAmount)) return false;
 
-        // Category
-        if (filters.categoryId !== 'all' && transaction.category_id !== filters.categoryId) return false;
+            // Category
+            if (filters.categoryId !== 'all' && transaction.category_id !== filters.categoryId) return false;
 
-        // Type
-        if (filters.type !== 'all' && transaction.type !== filters.type) return false;
+            // Type
+            if (filters.type !== 'all' && transaction.type !== filters.type) return false;
 
-        return true;
-    }) || [];
+            return true;
+        }) || [];
+    }, [transactions, filters]);
 
     const FilterContent = () => (
         <div className="space-y-4 py-4">
@@ -528,22 +530,13 @@ export function TransactionsPage() {
             )}
 
             {/* Mobile View: Card Stack */}
-            <div className="space-y-4 md:hidden">
-                <TransactionList
-                    transactions={filteredTransactions}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteClick}
-                />
-            </div>
-
-            {/* Desktop View: Table */}
-            <div className="hidden md:block rounded-md border">
-                <TransactionList
-                    transactions={filteredTransactions}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteClick}
-                />
-            </div>
+            <TransactionList
+                transactions={filteredTransactions}
+                categories={categories}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+                isLoading={transactions === undefined}
+            />
 
             <DeleteConfirmDialog
                 open={deleteDialogOpen}

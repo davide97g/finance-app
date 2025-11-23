@@ -11,12 +11,12 @@ export function useCategories() {
     // Filter out deleted items in JS if Dexie query is tricky with null
     const activeCategories = categories?.filter(c => !c.deleted_at) || [];
 
-    const addCategory = async (category: Omit<Category, 'id' | 'sync_token' | 'pendingSync' | 'deleted_at' | 'active'>) => {
+    const addCategory = async (category: Omit<Category, 'id' | 'sync_token' | 'pendingSync' | 'deleted_at'>) => {
         const id = uuidv4();
         await db.categories.add({
             ...category,
             id,
-            active: 1,
+            active: category.active ?? 1,
             pendingSync: 1,
             deleted_at: null,
         });
@@ -37,10 +37,23 @@ export function useCategories() {
         });
     };
 
+    const reparentChildren = async (oldParentId: string, newParentId: string | undefined) => {
+        // Find all children of the old parent
+        // Since parent_id is not indexed, we use filter
+        await db.categories
+            .filter(c => c.parent_id === oldParentId)
+            .modify({
+                parent_id: newParentId,
+                pendingSync: 1
+            });
+        syncManager.sync();
+    };
+
     return {
         categories: activeCategories,
         addCategory,
         updateCategory,
         deleteCategory,
+        reparentChildren,
     };
 }
