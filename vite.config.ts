@@ -22,7 +22,7 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',
-        start_url: './index.html',
+        start_url: '/',
         icons: [
           {
             src: 'pwa-192x192.png',

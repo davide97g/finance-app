@@ -73,6 +73,7 @@ function App() {
                     <Route path="/contexts" element={<ContextsPage />} />
                     <Route path="/statistics" element={<StatisticsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </AppShell>
               </ProtectedRoute>
