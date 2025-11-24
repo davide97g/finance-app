@@ -3,7 +3,7 @@ import Dexie, { Table } from 'dexie';
 export interface Transaction {
     id: string;
     user_id: string;
-    category_id: string; // Now required
+    category_id: string;
     context_id?: string;
     type: 'income' | 'expense' | 'investment';
     amount: number;
@@ -19,7 +19,7 @@ export interface Category {
     id: string;
     user_id: string;
     name: string;
-    icon: string; // Now required
+    icon: string;
     color: string;
     type: 'income' | 'expense' | 'investment';
     parent_id?: string;

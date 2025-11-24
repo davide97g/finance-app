@@ -110,25 +110,111 @@ export function useStatistics(params?: UseStatisticsParams) {
     const monthlyNetBalance = useMemo(() => monthlyStats.income - monthlyStats.expense, [monthlyStats]);
     const yearlyNetBalance = useMemo(() => yearlyStats.income - yearlyStats.expense, [yearlyStats]);
 
-    // Calculate category percentages for radial chart (monthly)
+    // Calculate category percentages for radial chart (monthly) - Only root categories with aggregated children
     const monthlyCategoryPercentages = useMemo(() => {
+        if (!categories || !transactions) return [];
+
         const totalMonthlyExpense = monthlyStats.expense;
-        return monthlyStats.byCategory.map((cat, index) => ({
+        const categoryMap = new Map(categories.map(c => [c.id, c]));
+        const expensesByCategory = new Map<string, number>();
+
+        // Aggregate expenses by category
+        transactions.forEach(t => {
+            if (t.deleted_at || t.type !== 'expense' || !t.category_id) return;
+            const amount = Number(t.amount);
+            expensesByCategory.set(
+                t.category_id,
+                (expensesByCategory.get(t.category_id) || 0) + amount
+            );
+        });
+
+        // Aggregate child expenses into root categories
+        const rootCategoryTotals = new Map<string, { name: string; value: number }>();
+
+        expensesByCategory.forEach((value, categoryId) => {
+            const category = categoryMap.get(categoryId);
+            if (!category) return;
+
+            // Find root category
+            let rootCategory = category;
+            while (rootCategory.parent_id) {
+                const parent = categoryMap.get(rootCategory.parent_id);
+                if (!parent) break;
+                rootCategory = parent;
+            }
+
+            // Add to root category total
+            const existing = rootCategoryTotals.get(rootCategory.id);
+            if (existing) {
+                existing.value += value;
+            } else {
+                rootCategoryTotals.set(rootCategory.id, {
+                    name: rootCategory.name,
+                    value: value
+                });
+            }
+        });
+
+        // Convert to array and add colors
+        return Array.from(rootCategoryTotals.values()).map((cat, index) => ({
             name: cat.name,
             value: totalMonthlyExpense > 0 ? Math.round((cat.value / totalMonthlyExpense) * 100) : 0,
             fill: `hsl(var(--chart-${(index % 5) + 1}))`,
         }));
-    }, [monthlyStats]);
+    }, [monthlyStats, categories, transactions]);
 
-    // Calculate category percentages for radial chart (yearly)
+    // Calculate category percentages for radial chart (yearly) - Only root categories with aggregated children
     const yearlyCategoryPercentages = useMemo(() => {
+        if (!categories || !yearlyTransactions) return [];
+
         const totalYearlyExpense = yearlyStats.expense;
-        return yearlyStats.byCategory.map((cat, index) => ({
+        const categoryMap = new Map(categories.map(c => [c.id, c]));
+        const expensesByCategory = new Map<string, number>();
+
+        // Aggregate expenses by category
+        yearlyTransactions.forEach(t => {
+            if (t.deleted_at || t.type !== 'expense' || !t.category_id) return;
+            const amount = Number(t.amount);
+            expensesByCategory.set(
+                t.category_id,
+                (expensesByCategory.get(t.category_id) || 0) + amount
+            );
+        });
+
+        // Aggregate child expenses into root categories
+        const rootCategoryTotals = new Map<string, { name: string; value: number }>();
+
+        expensesByCategory.forEach((value, categoryId) => {
+            const category = categoryMap.get(categoryId);
+            if (!category) return;
+
+            // Find root category
+            let rootCategory = category;
+            while (rootCategory.parent_id) {
+                const parent = categoryMap.get(rootCategory.parent_id);
+                if (!parent) break;
+                rootCategory = parent;
+            }
+
+            // Add to root category total
+            const existing = rootCategoryTotals.get(rootCategory.id);
+            if (existing) {
+                existing.value += value;
+            } else {
+                rootCategoryTotals.set(rootCategory.id, {
+                    name: rootCategory.name,
+                    value: value
+                });
+            }
+        });
+
+        // Convert to array and add colors
+        return Array.from(rootCategoryTotals.values()).map((cat, index) => ({
             name: cat.name,
             value: totalYearlyExpense > 0 ? Math.round((cat.value / totalYearlyExpense) * 100) : 0,
             fill: `hsl(var(--chart-${(index % 5) + 1}))`,
         }));
-    }, [yearlyStats]);
+    }, [yearlyStats, categories, yearlyTransactions]);
 
     // Prepare monthly data for radar charts (selected year, all 12 months)
     const { monthlyExpenses, monthlyIncome, monthlyInvestments } = useMemo(() => {

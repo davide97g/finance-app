@@ -183,7 +183,7 @@ export function SettingsPage() {
                                                                 backgroundColor: `hsl(${color.light.primary})`
                                                             }}
                                                         />
-                                                        {color.label}
+                                                        {t(color.name)}
                                                     </div>
                                                 </SelectItem>
                                             ))}

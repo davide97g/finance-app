@@ -116,16 +116,19 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
-    --chart-1: 0 84.2% 60.2%;
-    /* Red for expenses */
-    --chart-2: 142.1 76.2% 36.3%;
-    /* Green for income */
-    --chart-3: 221.2 83.2% 53.3%;
-    /* Blue for investment */
-    --chart-4: 280 65% 60%;
+    --color-expense: 0 84.2% 60.2%;
+    --color-income: 142.1 70.6% 45.3%;
+    --color-investment: 217.2 91.2% 59.8%;
+    --chart-1: 210 70% 50%;
+    /* Primary blue (based on accent hue) */
+    --chart-2: 150 65% 45%;
+    /* Teal/cyan */
+    --chart-3: 280 60% 55%;
     /* Purple */
-    --chart-5: 340 75% 55%;
-    /* Pink */
+    --chart-4: 30 75% 50%;
+    /* Orange */
+    --chart-5: 340 70% 55%;
+    /* Pink/magenta */
   }
 
   .dark {
@@ -148,16 +151,16 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --chart-1: 0 72.2% 50.6%;
-    /* Red for expenses (slightly adjusted for dark mode) */
-    --chart-2: 142.1 70.6% 45.3%;
-    /* Green for income (slightly adjusted for dark mode) */
-    --chart-3: 217.2 91.2% 59.8%;
-    /* Blue for investment (slightly adjusted for dark mode) */
-    --chart-4: 280 65% 60%;
-    /* Purple */
-    --chart-5: 340 75% 55%;
-    /* Pink */
+    --chart-1: 210 75% 60%;
+    /* Lighter blue for dark mode */
+    --chart-2: 150 70% 55%;
+    /* Lighter teal for dark mode */
+    --chart-3: 280 65% 65%;
+    /* Lighter purple for dark mode */
+    --chart-4: 30 80% 60%;
+    /* Lighter orange for dark mode */
+    --chart-5: 340 75% 65%;
+    /* Lighter pink for dark mode */
   }
 }
 
@@ -188,9 +191,9 @@
   }
 
   /* Ensure touch targets are large enough */
-  button,
+  button:not([role="switch"]),
   a,
-  input,
+  input:not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {
     @apply min-h-[44px] min-w-[44px];

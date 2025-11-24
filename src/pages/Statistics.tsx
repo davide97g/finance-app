@@ -3,7 +3,7 @@ import { useStatistics } from '@/hooks/useStatistics';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Label, LabelList, Radar, RadarChart, PolarAngleAxis, PolarGrid, LineChart, Line, ComposedChart } from 'recharts';
+import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, Radar, RadarChart, PolarAngleAxis, PolarGrid, LineChart, Line, ComposedChart } from 'recharts';
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Activity, AlertCircle } from 'lucide-react';
@@ -44,32 +44,41 @@ export function StatisticsPage() {
     const chartConfig = {
         income: {
             label: t('income'),
-            color: "hsl(var(--chart-2))",
+            color: "var(--color-income)",
         },
         expense: {
             label: t('expense'),
-            color: "hsl(var(--chart-1))",
+            color: "var(--color-expense)",
         },
         investment: {
             label: t('investment'),
-            color: "hsl(var(--chart-3))",
+            color: "var(--color-investment)",
         },
     } satisfies ChartConfig;
 
     // Pie chart data
     const pieData = [
-        { name: "income", value: currentStats.income, fill: "var(--color-income)" },
-        { name: "expense", value: currentStats.expense, fill: "var(--color-expense)" },
-        { name: "investment", value: currentStats.investment, fill: "var(--color-investment)" },
+        { name: "income", value: currentStats.income, fill: "hsl(142.1 70.6% 45.3%)" },
+        { name: "expense", value: currentStats.expense, fill: "hsl(0 84.2% 60.2%)" },
+        { name: "investment", value: currentStats.investment, fill: "hsl(217.2 91.2% 59.8%)" },
     ].filter(item => item.value > 0);
 
     // Bar chart data
     const barData = currentStats.byCategory.map((item, index) => ({
         ...item,
-        fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+        fill: `hsl(var(--chart-${(index % 5) + 1}))`,  // Use chart colors for variety
     }));
 
     const sortedBarData = [...barData].sort((a, b) => b.value - a.value);
+
+    // Create dynamic config for category charts (for legend)
+    const categoryChartConfig = currentCategoryPercentages.reduce((acc, item, index) => {
+        acc[item.name] = {
+            label: item.name,
+            color: `hsl(var(--chart-${(index % 5) + 1}))`,
+        };
+        return acc;
+    }, {} as ChartConfig);
 
     // Generate years for selector (last 5 years + current + next)
     const currentYearNum = new Date().getFullYear();
@@ -264,37 +273,7 @@ export function StatisticsPage() {
                                             nameKey="name"
                                             innerRadius={60}
                                             strokeWidth={5}
-                                        >
-                                            <Label
-                                                content={({ viewBox }) => {
-                                                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                                        return (
-                                                            <text
-                                                                x={viewBox.cx}
-                                                                y={viewBox.cy}
-                                                                textAnchor="middle"
-                                                                dominantBaseline="middle"
-                                                            >
-                                                                <tspan
-                                                                    x={viewBox.cx}
-                                                                    y={viewBox.cy}
-                                                                    className="fill-foreground text-3xl font-bold"
-                                                                >
-                                                                    €{(currentStats.income + currentStats.expense + currentStats.investment).toFixed(0)}
-                                                                </tspan>
-                                                                <tspan
-                                                                    x={viewBox.cx}
-                                                                    y={(viewBox.cy || 0) + 24}
-                                                                    className="fill-muted-foreground text-xs"
-                                                                >
-                                                                    {t('total')}
-                                                                </tspan>
-                                                            </text>
-                                                        )
-                                                    }
-                                                }}
-                                            />
-                                        </Pie>
+                                        />
                                         <ChartLegend content={<ChartLegendContent className="flex-wrap gap-2" />} />
                                     </PieChart>
                                 </ChartContainer>
@@ -309,7 +288,7 @@ export function StatisticsPage() {
                             <CardContent className="flex-1 pb-0 min-w-0">
                                 {currentCategoryPercentages.length > 0 ? (
                                     <ChartContainer
-                                        config={{}}
+                                        config={categoryChartConfig}
                                         className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                                     >
                                         <PieChart>
@@ -403,7 +382,7 @@ export function StatisticsPage() {
                                         config={{
                                             value: {
                                                 label: t('expense'),
-                                                color: "hsl(var(--chart-1))",
+                                                color: "hsl(var(--color-expense))",
                                             },
                                         }}
                                         className="mx-auto aspect-square max-h-[250px]"
@@ -446,7 +425,7 @@ export function StatisticsPage() {
                                         config={{
                                             value: {
                                                 label: t('income'),
-                                                color: "hsl(var(--chart-2))",
+                                                color: "hsl(var(--color-income))",
                                             },
                                         }}
                                         className="mx-auto aspect-square max-h-[250px]"
@@ -489,7 +468,7 @@ export function StatisticsPage() {
                                         config={{
                                             value: {
                                                 label: t('investment'),
-                                                color: "hsl(var(--chart-3))",
+                                                color: "hsl(var(--color-investment))",
                                             },
                                         }}
                                         className="mx-auto aspect-square max-h-[250px]"
@@ -529,7 +508,13 @@ export function StatisticsPage() {
                             <CardContent className="flex-1 pb-0 min-w-0">
                                 {yearlyCategoryPercentages.length > 0 ? (
                                     <ChartContainer
-                                        config={{}}
+                                        config={yearlyCategoryPercentages.reduce((acc, item, index) => {
+                                            acc[item.name] = {
+                                                label: item.name,
+                                                color: `hsl(var(--chart-${(index % 5) + 1}))`,
+                                            };
+                                            return acc;
+                                        }, {} as ChartConfig)}
                                         className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                                     >
                                         <PieChart>
@@ -617,9 +602,9 @@ export function StatisticsPage() {
                             {monthlyTrendData.length > 0 ? (
                                 <ChartContainer
                                     config={{
-                                        income: { label: t('income'), color: 'hsl(var(--chart-2))' },
-                                        expense: { label: t('expense'), color: 'hsl(var(--chart-1))' },
-                                        balance: { label: t('balance'), color: 'hsl(var(--chart-3))' },
+                                        income: { label: t('income'), color: 'hsl(142.1 70.6% 45.3%)' },
+                                        expense: { label: t('expense'), color: 'hsl(0 84.2% 60.2%)' },
+                                        balance: { label: t('balance'), color: 'hsl(217.2 91.2% 59.8%)' },
                                     }}
                                     className="h-[350px] w-full"
                                 >
@@ -685,8 +670,8 @@ export function StatisticsPage() {
                             {activeTab === 'yearly' && monthlyCashFlow.length > 0 ? (
                                 <ChartContainer
                                     config={{
-                                        income: { label: t('income'), color: 'hsl(var(--chart-2))' },
-                                        expense: { label: t('expense'), color: 'hsl(var(--chart-1))' },
+                                        income: { label: t('income'), color: 'hsl(142.1 70.6% 45.3%)' },
+                                        expense: { label: t('expense'), color: 'hsl(0 84.2% 60.2%)' },
                                     }}
                                     className="h-[300px] w-full"
                                 >
@@ -699,8 +684,8 @@ export function StatisticsPage() {
                                         <YAxis />
                                         <ChartTooltip content={<ChartTooltipContent />} />
                                         <ChartLegend content={<ChartLegendContent />} />
-                                        <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="income" fill="hsl(142.1 70.6% 45.3%)" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="expense" fill="hsl(0 84.2% 60.2%)" radius={[4, 4, 0, 0]} />
                                     </ComposedChart>
                                 </ChartContainer>
                             ) : (
@@ -759,7 +744,7 @@ export function StatisticsPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <div className="text-xs text-muted-foreground">{t('daily_average')}</div>
-                                <div className="text-2xl font-bold">€{(activeTab === 'monthly' ? burnRate : yearlyBurnRate).dailyAverage.toFixed(2)}/day</div>
+                                <div className="text-2xl font-bold">€{(activeTab === 'monthly' ? burnRate : yearlyBurnRate).dailyAverage.toFixed(2)}{t('per_day')}</div>
                             </div>
                             <div>
                                 <div className="text-xs text-muted-foreground">{activeTab === 'monthly' ? t('projected_month_end') : t('projected_year_end')}</div>

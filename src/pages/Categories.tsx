@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
 import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,13 @@ export function CategoriesPage() {
     const { t } = useTranslation();
     const { categories, addCategory, updateCategory, deleteCategory, reparentChildren } = useCategories();
     const { user } = useAuth();
+
+    // Fetch all transactions to check for associations
+    const transactions = useLiveQuery(async () => {
+        const { db } = await import('@/lib/db');
+        return db.transactions.toArray();
+    });
+
     const [isOpen, setIsOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -136,8 +144,19 @@ export function CategoriesPage() {
     };
 
     const handleDeleteClick = (id: string) => {
+        // Check for associated transactions
+        const associatedTransactions = transactions?.filter(t => t.category_id === id && !t.deleted_at);
+        const transactionCount = associatedTransactions?.length || 0;
+
         // Check for children
         const hasChildren = categories?.some(c => c.parent_id === id && !c.deleted_at);
+
+        if (transactionCount > 0) {
+            // Show warning about transactions
+            alert(t('category_has_transactions_warning', { count: transactionCount }) ||
+                `Warning: This category has ${transactionCount} associated transaction(s). Deleting it will leave these transactions without a category.`);
+        }
+
         if (hasChildren) {
             const currentCategory = categories?.find(c => c.id === id);
             const parentCategory = currentCategory?.parent_id ? categories?.find(c => c.id === currentCategory.parent_id) : null;

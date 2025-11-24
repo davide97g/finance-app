@@ -86,11 +86,11 @@ export function Dashboard() {
     const chartConfig = {
         cumulative: {
             label: t('cumulative_expenses'),
-            color: "hsl(var(--chart-1))",
+            color: "hsl(0 84.2% 60.2%)",
         },
         projection: {
             label: t('projection'),
-            color: "hsl(var(--chart-5))",
+            color: "#eb630fff",
         },
     } satisfies ChartConfig;
 
@@ -142,7 +142,7 @@ export function Dashboard() {
                                         dataKey="projection"
                                         type="monotone"
                                         fill="var(--color-projection)"
-                                        fillOpacity={0.2}
+                                        fillOpacity={0.3}
                                         stroke="var(--color-projection)"
                                         strokeDasharray="5 5"
                                     />
