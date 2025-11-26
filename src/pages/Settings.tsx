@@ -50,6 +50,7 @@ import {
   Download,
   FileJson,
   Wallet,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
@@ -524,6 +525,7 @@ export function SettingsPage() {
               <div className="flex gap-2 items-center">
                 <span className="text-muted-foreground">€</span>
                 <Input
+                  key={settings.monthly_budget ?? "empty"}
                   id="monthly-budget"
                   type="number"
                   step="1"
@@ -538,6 +540,17 @@ export function SettingsPage() {
                   }}
                   className="max-w-[200px]"
                 />
+                {settings.monthly_budget !== null &&
+                  settings.monthly_budget !== undefined && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => updateSettings({ monthly_budget: null })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
               </div>
               <p className="text-xs text-muted-foreground">
                 {settings.monthly_budget
