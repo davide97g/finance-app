@@ -9,6 +9,8 @@ import { Dashboard } from "@/pages/Dashboard";
 import { AuthPage } from "@/pages/AuthPage";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
+import { useAutoGenerate } from "@/hooks/useAutoGenerate";
+import { useBudgetNotifications } from "@/hooks/useBudgetNotifications";
 import { Toaster } from "@/components/ui/sonner";
 
 import { TransactionsPage } from "@/pages/Transactions";
@@ -25,6 +27,8 @@ import { SettingsPage } from "@/pages/Settings";
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   useOnlineSync(); // Auto-sync when coming online
+  useAutoGenerate(); // Generate recurring transactions on app load
+  useBudgetNotifications(); // Monitor budget and show warnings
 
   if (loading) {
     return (

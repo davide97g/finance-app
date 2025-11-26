@@ -84,6 +84,9 @@ export function MobileNav({ navigation }: MobileNavProps) {
                 );
               })}
             </nav>
+            <div className="text-xs text-muted-foreground px-3 text-center">
+              {t("version")} {packageJson.version}
+            </div>
             <div className="border-t p-4 space-y-2">
               <Button
                 variant="ghost"
@@ -93,9 +96,6 @@ export function MobileNav({ navigation }: MobileNavProps) {
                 <LogOut className="h-4 w-4" />
                 {t("logout")}
               </Button>
-              <div className="text-xs text-muted-foreground text-center pt-2">
-                v{packageJson.version}
-              </div>
             </div>
           </div>
         </SheetContent>
