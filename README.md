@@ -19,14 +19,14 @@ A modern, offline-first Progressive Web App for managing personal finances. Trac
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Set up environment variables
 cp .env.example .env
 # Edit .env with your Supabase credentials
 
 # Start development server
-npm run dev
+pnpm dev
 ```
 
 ## 📚 Documentation
@@ -49,10 +49,25 @@ Complete documentation is available in the [`docs/`](./docs) folder:
 
 ## 📜 Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm preview` - Preview production build
+- `pnpm lint` - Run ESLint
+- `pnpm test` - Run tests
+- `pnpm test:watch` - Run tests in watch mode
+- `pnpm test:coverage` - Run tests with coverage report
+
+## 🧪 Testing
+
+The project includes a comprehensive Jest test suite. See [Testing Guide](./docs/TESTING.md) for details.
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests with coverage
+pnpm test:coverage
+```
 
 ## 🤝 Contributing
 
