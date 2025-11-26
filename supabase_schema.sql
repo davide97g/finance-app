@@ -33,6 +33,23 @@ create table public.groups (
 
 alter table public.groups enable row level security;
 
+
+-- 0b. Group Members Table (created BEFORE helper functions that reference it)
+create table public.group_members (
+  id uuid primary key default uuid_generate_v4(),
+  group_id uuid references public.groups(id) on delete cascade not null,
+  user_id uuid references auth.users(id) not null,
+  share numeric not null check (share >= 0 and share <= 100),
+  joined_at timestamptz default now(),
+  removed_at timestamptz,
+  sync_token bigint default nextval('global_sync_token_seq'),
+  updated_at timestamptz default now(),
+  unique(group_id, user_id)
+);
+
+alter table public.group_members enable row level security;
+
+
 -- Helper function: check if user is a member of the group
 create or replace function is_group_member(group_id uuid)
 returns boolean as $$
@@ -58,6 +75,8 @@ begin
 end;
 $$ language plpgsql security definer;
 
+
+-- Groups RLS Policies
 create policy "Members can view their groups"
   on public.groups for select
   using (is_group_member(id) or created_by = auth.uid());
@@ -79,21 +98,7 @@ create trigger update_groups_sync_token
   for each row execute procedure update_sync_token();
 
 
--- 0b. Group Members Table
-create table public.group_members (
-  id uuid primary key default uuid_generate_v4(),
-  group_id uuid references public.groups(id) on delete cascade not null,
-  user_id uuid references auth.users(id) not null,
-  share numeric not null check (share >= 0 and share <= 100),
-  joined_at timestamptz default now(),
-  removed_at timestamptz,
-  sync_token bigint default nextval('global_sync_token_seq'),
-  updated_at timestamptz default now(),
-  unique(group_id, user_id)
-);
-
-alter table public.group_members enable row level security;
-
+-- Group Members RLS Policies
 create policy "Members can view group members"
   on public.group_members for select
   using (is_group_member(group_id) or is_group_creator(group_id));
@@ -310,11 +315,14 @@ create trigger update_recurring_transactions_sync_token
 create table public.user_settings (
   user_id uuid primary key references auth.users(id) not null,
   currency text default 'EUR',
+  language text default 'en',
   theme text default 'light',
+  accent_color text default 'slate',
   start_of_week text default 'monday',
   default_view text default 'list',
   include_investments_in_expense_totals boolean default false,
   include_group_expenses boolean default false,
+  monthly_budget numeric(12, 2),
   cached_month integer,
   last_sync_token bigint default 0,
   updated_at timestamptz default now()
@@ -363,28 +371,12 @@ create index idx_recurring_transactions_group_id on public.recurring_transaction
 -- REALTIME PUBLICATIONS
 -- ============================================================================
 -- Enable Realtime for all tables that need live sync.
--- Note: In Supabase Dashboard, you also need to enable Realtime for these tables
--- under Database > Replication > supabase_realtime publication.
--- 
--- Alternatively, run these commands (requires superuser):
-
--- Drop existing publication if exists and recreate with all tables
--- drop publication if exists supabase_realtime;
--- create publication supabase_realtime for table 
---   public.groups,
---   public.group_members,
---   public.transactions,
---   public.categories,
---   public.contexts,
---   public.recurring_transactions;
-
--- OR add tables to existing publication:
--- alter publication supabase_realtime add table public.groups;
--- alter publication supabase_realtime add table public.group_members;
--- alter publication supabase_realtime add table public.transactions;
--- alter publication supabase_realtime add table public.categories;
--- alter publication supabase_realtime add table public.contexts;
--- alter publication supabase_realtime add table public.recurring_transactions;
-
 -- IMPORTANT: Realtime respects RLS policies. The SELECT policies above
 -- determine what changes each user receives via Realtime subscriptions.
+
+alter publication supabase_realtime add table public.groups;
+alter publication supabase_realtime add table public.group_members;
+alter publication supabase_realtime add table public.transactions;
+alter publication supabase_realtime add table public.categories;
+alter publication supabase_realtime add table public.contexts;
+alter publication supabase_realtime add table public.recurring_transactions;
