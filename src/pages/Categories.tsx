@@ -38,6 +38,7 @@ import { AVAILABLE_ICONS, getIconComponent } from "@/lib/icons";
 import { SyncStatusBadge } from "@/components/SyncStatus";
 import { CategorySelector } from "@/components/CategorySelector";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function CategoriesPage() {
   const { t } = useTranslation();
@@ -457,7 +458,36 @@ export function CategoriesPage() {
 
       {/* Mobile View: Card Stack */}
       <div className="space-y-3 md:hidden">
-        {categories?.map((c, index) => {
+        {!categories ? (
+          // Skeleton loading state
+          Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-lg border bg-card p-4 shadow-sm animate-slide-in-up opacity-0 fill-mode-forwards"
+              style={{ animationDelay: `${i * 0.05}s` }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : categories.length === 0 ? (
+          <div className="text-muted-foreground text-center py-8">
+            {t("no_categories") || "No categories"}
+          </div>
+        ) : (
+          categories.map((c, index) => {
           const budgetInfo =
             c.type === "expense" ? getCategoryBudgetInfo(c.id) : null;
           return (
@@ -559,7 +589,8 @@ export function CategoriesPage() {
               )}
             </div>
           );
-        })}
+          })
+        )}
       </div>
 
       {/* Desktop View: Table */}
@@ -575,14 +606,48 @@ export function CategoriesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {categories?.map((c, index) => {
+            {!categories ? (
+              // Skeleton loading state for desktop
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow
+                  key={i}
+                  className="animate-slide-in-up opacity-0 fill-mode-forwards"
+                  style={{ animationDelay: `${i * 0.03}s` }}
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-2">
+                      <Skeleton className="h-8 w-8 rounded-md" />
+                      <Skeleton className="h-8 w-8 rounded-md" />
+                      <Skeleton className="h-8 w-8 rounded-md" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              categories.map((c, index) => {
               const budgetInfo =
                 c.type === "expense" ? getCategoryBudgetInfo(c.id) : null;
               return (
                 <TableRow
                   key={c.id}
-                  className="transition-colors duration-200 hover:bg-muted/50"
-                  style={{ animationDelay: `${index * 30}ms` }}
+                  className={`${index < 20 ? "animate-slide-in-up opacity-0 fill-mode-forwards" : ""}`}
+                  style={index < 20 ? { animationDelay: `${index * 0.03}s` } : {}}
                 >
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -694,7 +759,8 @@ export function CategoriesPage() {
                   </TableCell>
                 </TableRow>
               );
-            })}
+              })
+            )}
           </TableBody>
         </Table>
       </div>
