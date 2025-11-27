@@ -4,8 +4,8 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Dashboard } from "@/pages/Dashboard";
 import { AuthPage } from "@/pages/AuthPage";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
@@ -14,17 +14,37 @@ import { useBudgetNotifications } from "@/hooks/useBudgetNotifications";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Skeleton } from "@/components/ui/skeleton";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
-import { TransactionsPage } from "@/pages/Transactions";
-import { RecurringTransactionsPage } from "@/pages/RecurringTransactions";
-import { CategoriesPage } from "@/pages/Categories";
-import { ContextsPage } from "@/pages/Contexts";
-import { GroupsPage } from "@/pages/Groups";
-import { GroupDetailPage } from "@/pages/GroupDetail";
+// Lazy-loaded pages for better initial bundle size
+const Dashboard = lazy(() => import("@/pages/Dashboard").then(m => ({ default: m.Dashboard })));
+const TransactionsPage = lazy(() => import("@/pages/Transactions").then(m => ({ default: m.TransactionsPage })));
+const RecurringTransactionsPage = lazy(() => import("@/pages/RecurringTransactions").then(m => ({ default: m.RecurringTransactionsPage })));
+const CategoriesPage = lazy(() => import("@/pages/Categories").then(m => ({ default: m.CategoriesPage })));
+const ContextsPage = lazy(() => import("@/pages/Contexts").then(m => ({ default: m.ContextsPage })));
+const GroupsPage = lazy(() => import("@/pages/Groups").then(m => ({ default: m.GroupsPage })));
+const GroupDetailPage = lazy(() => import("@/pages/GroupDetail").then(m => ({ default: m.GroupDetailPage })));
+const StatisticsPage = lazy(() => import("@/pages/Statistics").then(m => ({ default: m.StatisticsPage })));
+const SettingsPage = lazy(() => import("@/pages/Settings").then(m => ({ default: m.SettingsPage })));
 
-import { StatisticsPage } from "@/pages/Statistics";
-
-import { SettingsPage } from "@/pages/Settings";
+/**
+ * Loading fallback for lazy-loaded pages
+ */
+function PageLoadingFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-48" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+      </div>
+      <Skeleton className="h-64" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -80,6 +100,7 @@ function App() {
         <ThemeProvider>
           <Toaster />
           <PWAUpdateNotification />
+          <OfflineIndicator />
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route
@@ -92,7 +113,9 @@ function App() {
                         path="/"
                         element={
                           <ErrorBoundary section="Dashboard" minimal>
-                            <Dashboard />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <Dashboard />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -100,7 +123,9 @@ function App() {
                         path="/transactions"
                         element={
                           <ErrorBoundary section="Transazioni" minimal>
-                            <TransactionsPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <TransactionsPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -111,7 +136,9 @@ function App() {
                             section="Transazioni Ricorrenti"
                             minimal
                           >
-                            <RecurringTransactionsPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <RecurringTransactionsPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -119,7 +146,9 @@ function App() {
                         path="/categories"
                         element={
                           <ErrorBoundary section="Categorie" minimal>
-                            <CategoriesPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <CategoriesPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -127,7 +156,9 @@ function App() {
                         path="/contexts"
                         element={
                           <ErrorBoundary section="Contesti" minimal>
-                            <ContextsPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <ContextsPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -135,7 +166,9 @@ function App() {
                         path="/groups"
                         element={
                           <ErrorBoundary section="Gruppi" minimal>
-                            <GroupsPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <GroupsPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -143,7 +176,9 @@ function App() {
                         path="/groups/:groupId"
                         element={
                           <ErrorBoundary section="Dettaglio Gruppo" minimal>
-                            <GroupDetailPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <GroupDetailPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -151,7 +186,9 @@ function App() {
                         path="/statistics"
                         element={
                           <ErrorBoundary section="Statistiche" minimal>
-                            <StatisticsPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <StatisticsPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
@@ -159,7 +196,9 @@ function App() {
                         path="/settings"
                         element={
                           <ErrorBoundary section="Impostazioni" minimal>
-                            <SettingsPage />
+                            <Suspense fallback={<PageLoadingFallback />}>
+                              <SettingsPage />
+                            </Suspense>
                           </ErrorBoundary>
                         }
                       />
