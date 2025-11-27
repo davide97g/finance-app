@@ -64,7 +64,7 @@ export function useSettings() {
 
     const updatedAt = new Date().toISOString();
     const current = await db.user_settings.get(user.id);
-    
+
     if (current) {
       await db.user_settings.update(user.id, {
         ...updates,
@@ -90,13 +90,14 @@ export function useSettings() {
     const settingsToSync = await db.user_settings.get(user.id);
     if (settingsToSync) {
       // Map local field names to Supabase column names
-      const { last_sync_token, cached_month, accentColor, ...rest } = settingsToSync;
+      const { last_sync_token, cached_month, accentColor, ...rest } =
+        settingsToSync;
       const supabaseSettings = {
         ...rest,
         accent_color: accentColor,
         updated_at: updatedAt,
       };
-      
+
       supabase
         .from("user_settings")
         .upsert(supabaseSettings)

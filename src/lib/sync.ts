@@ -629,7 +629,7 @@ export class SyncManager {
       if (!data) return;
 
       const localSettings = await db.user_settings.get(userId);
-      
+
       // Last-write-wins conflict resolution
       if (localSettings) {
         const localTime = localSettings.updated_at
@@ -655,7 +655,8 @@ export class SyncManager {
         accentColor: data.accent_color, // Map snake_case to camelCase
         start_of_week: data.start_of_week,
         default_view: data.default_view,
-        include_investments_in_expense_totals: data.include_investments_in_expense_totals,
+        include_investments_in_expense_totals:
+          data.include_investments_in_expense_totals,
         include_group_expenses: data.include_group_expenses,
         monthly_budget: data.monthly_budget,
         cached_month: data.cached_month,

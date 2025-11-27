@@ -244,6 +244,8 @@ export default defineConfig({
         },
       },
     },
+    // Target Safari 14+ for iOS compatibility
+    target: ["es2020", "safari14"],
     // Adjust warning limit
     chunkSizeWarningLimit: 350,
   },
