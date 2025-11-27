@@ -69,6 +69,7 @@ export function SettingsPage() {
   const { resolvedTheme } = useTheme();
   const [lastSyncTime, setLastSyncTime] = useState<Date | undefined>();
   const [manualSyncing, setManualSyncing] = useState(false);
+  const [fullSyncing, setFullSyncing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
@@ -81,13 +82,26 @@ export function SettingsPage() {
     setMounted(true);
   }, []);
 
-  const isSyncing = autoSyncing || onlineSyncing || manualSyncing;
+  const isSyncing = autoSyncing || onlineSyncing || manualSyncing || fullSyncing;
 
   const handleManualSync = async () => {
     setManualSyncing(true);
     await sync();
     setLastSyncTime(new Date());
     setManualSyncing(false);
+  };
+
+  const handleFullSync = async () => {
+    setFullSyncing(true);
+    try {
+      await syncManager.fullSync();
+      setLastSyncTime(new Date());
+      toast.success(t("full_sync_completed") || "Full sync completed!");
+    } catch (error) {
+      toast.error(t("sync_error") || "Sync failed");
+    } finally {
+      setFullSyncing(false);
+    }
   };
 
   const copyUserId = async () => {
@@ -315,18 +329,35 @@ export function SettingsPage() {
                 lastSyncTime={lastSyncTime}
                 isRealtimeConnected={isRealtimeConnected}
               />
-              <Button
-                onClick={handleManualSync}
-                disabled={isSyncing || !isOnline}
-                size="sm"
-                variant="outline"
-              >
-                <RefreshCw
-                  className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
-                />
-                {t("sync_now")}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleManualSync}
+                  disabled={isSyncing || !isOnline}
+                  size="sm"
+                  variant="outline"
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${manualSyncing ? "animate-spin" : ""}`}
+                  />
+                  {t("sync_now")}
+                </Button>
+                <Button
+                  onClick={handleFullSync}
+                  disabled={isSyncing || !isOnline}
+                  size="sm"
+                  variant="secondary"
+                  title={t("full_sync_desc") || "Re-download all data from server"}
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${fullSyncing ? "animate-spin" : ""}`}
+                  />
+                  {t("full_sync") || "Full Sync"}
+                </Button>
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              {t("full_sync_hint") || "Use 'Full Sync' if data seems out of sync after direct database changes."}
+            </p>
           </CardContent>
         </Card>
 

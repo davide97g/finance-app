@@ -352,5 +352,10 @@
   "loading_offline_description": "You're offline. Loading your locally stored data.",
   "offline_no_session_title": "You're Offline",
   "offline_no_session_description": "Please connect to the internet to sign in. Once signed in, you can use the app offline.",
-  "offline_no_session_hint": "The app will automatically reconnect when you're back online."
+  "offline_no_session_hint": "The app will automatically reconnect when you're back online.",
+  "full_sync": "Full Sync",
+  "full_sync_desc": "Re-download all data from server",
+  "full_sync_hint": "Use 'Full Sync' if data seems out of sync after direct database changes.",
+  "full_sync_completed": "Full sync completed!",
+  "sync_error": "Sync failed"
 }

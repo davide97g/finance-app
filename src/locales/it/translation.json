@@ -352,5 +352,10 @@
   "loading_offline_description": "Sei offline. Caricamento dei dati salvati localmente.",
   "offline_no_session_title": "Sei Offline",
   "offline_no_session_description": "Connettiti a internet per accedere. Una volta effettuato l'accesso, potrai usare l'app offline.",
-  "offline_no_session_hint": "L'app si riconnetterà automaticamente quando tornerai online."
+  "offline_no_session_hint": "L'app si riconnetterà automaticamente quando tornerai online.",
+  "full_sync": "Sync Completo",
+  "full_sync_desc": "Riscarica tutti i dati dal server",
+  "full_sync_hint": "Usa 'Sync Completo' se i dati sembrano non sincronizzati dopo modifiche dirette al database.",
+  "full_sync_completed": "Sincronizzazione completa completata!",
+  "sync_error": "Sincronizzazione fallita"
 }

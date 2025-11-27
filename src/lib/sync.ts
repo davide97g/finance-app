@@ -148,6 +148,47 @@ export class SyncManager {
   }
 
   /**
+   * Full sync - ignores sync_token and pulls ALL data from server.
+   * Use this when data seems out of sync or after direct database modifications.
+   * This will overwrite local data with server data (except pending local changes).
+   */
+  async fullSync(): Promise<void> {
+    if (this.isSyncing) {
+      console.log("[Sync] Already syncing, skipping...");
+      return;
+    }
+
+    this.isSyncing = true;
+    this.notifyListeners();
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        console.log("[Sync] No user, skipping full sync");
+        return;
+      }
+
+      console.log("[Sync] Starting FULL sync (ignoring sync_token)...");
+
+      // Push local changes first
+      await this.pushPendingWithRetry(user.id);
+
+      // Pull ALL remote changes (ignoring sync_token)
+      await this.pullAll(user.id);
+
+      this.lastSyncAt = new Date().toISOString();
+      console.log("[Sync] Full sync completed successfully");
+    } catch (error) {
+      console.error("[Sync] Full sync failed:", error);
+    } finally {
+      this.isSyncing = false;
+      this.notifyListeners();
+    }
+  }
+
+  /**
    * Subscribe to sync status changes
    */
   onSyncChange(callback: SyncListener): () => void {
@@ -408,6 +449,67 @@ export class SyncManager {
   }
 
   /**
+   * Pull ALL data from Supabase, ignoring sync_token.
+   * Used for full sync when data might be out of sync.
+   */
+  private async pullAll(userId: string): Promise<void> {
+    let maxToken = 0;
+
+    for (const tableName of TABLES) {
+      try {
+        // Query ALL data, no sync_token filter
+        const { data, error } = await supabase.from(tableName).select("*");
+
+        if (error) {
+          console.error(`[Sync] Failed to pull all ${tableName}:`, error);
+          this.trackPullError(tableName, error.message);
+          continue;
+        }
+
+        if (!data || data.length === 0) {
+          console.log(`[Sync] No data in ${tableName}`);
+          continue;
+        }
+
+        console.log(
+          `[Sync] Full pull: ${data.length} items from ${tableName}`
+        );
+
+        await db.transaction("rw", db.table(tableName), async () => {
+          for (const item of data) {
+            const shouldUpdate = await this.shouldUpdateLocal(tableName, item);
+
+            if (!shouldUpdate) {
+              console.log(
+                `[Sync] Skipping ${tableName} ${item.id} - local has pending changes`
+              );
+              continue;
+            }
+
+            // Calculate year_month for transactions if missing
+            const localItem = this.prepareItemForLocal(item, tableName);
+            await db.table(tableName).put(localItem);
+
+            // Track max sync_token for future delta syncs
+            if (item.sync_token && item.sync_token > maxToken) {
+              maxToken = item.sync_token;
+            }
+          }
+        });
+      } catch (error) {
+        console.error(`[Sync] Error pulling all ${tableName}:`, error);
+        this.trackPullError(tableName, (error as Error).message);
+      }
+    }
+
+    // Update last sync token
+    if (maxToken > 0) {
+      const userSettings = await db.user_settings.get(userId);
+      await this.updateLastSyncToken(userId, maxToken, userSettings);
+    }
+  }
+
+  /**
    * Check if we should update local with remote data
    * Implements last-write-wins conflict resolution
    */
@@ -432,7 +534,8 @@ export class SyncManager {
   }
 
   /**
-   * Prepare a remote item for local storage
+   * Prepare a remote item for local storage.
+   * Normalizes data types that differ between Supabase (PostgreSQL) and IndexedDB.
    */
   private prepareItemForLocal(item: any, tableName: TableName): any {
     const localItem = { ...item, pendingSync: 0 };
@@ -440,6 +543,12 @@ export class SyncManager {
     // Calculate year_month for transactions
     if (tableName === "transactions" && item.date) {
       localItem.year_month = item.date.substring(0, 7);
+    }
+
+    // Normalize boolean -> number for 'active' field
+    // Supabase stores as boolean, IndexedDB needs number for indexing
+    if ("active" in localItem) {
+      localItem.active = localItem.active ? 1 : 0;
     }
 
     return localItem;

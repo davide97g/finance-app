@@ -108,6 +108,12 @@ export function useRealtimeSync() {
               recordToSave.year_month = newRecord.date.substring(0, 7);
             }
 
+            // Normalize boolean -> number for 'active' field
+            // Supabase stores as boolean, IndexedDB needs number for indexing
+            if ("active" in recordToSave) {
+              recordToSave.active = recordToSave.active ? 1 : 0;
+            }
+
             await dexieTable.put(recordToSave);
             console.log(`[Realtime] Saved ${table} ${newRecord.id}`);
             break;
