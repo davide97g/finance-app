@@ -326,6 +326,7 @@
   "cumulative_expenses_comparison": "Confronto Spese Cumulative",
   "cumulative_expenses_yearly": "Spese Cumulative Annuali",
   "previous_month": "Mese precedente",
+  "previous_year": "Anno precedente",
   "remove_budget": "Rimuovi Budget",
   "monthly_limit": "Limite Mensile"
 }

@@ -65,6 +65,10 @@ export function StatisticsPage() {
   const [selectedMonth, setSelectedMonth] = useState(format(now, "yyyy-MM"));
   const [selectedYear, setSelectedYear] = useState(format(now, "yyyy"));
   const [activeTab, setActiveTab] = useState<"monthly" | "yearly">("monthly");
+  
+  // State for comparison period selection
+  const [comparisonMonth, setComparisonMonth] = useState<string | undefined>(undefined);
+  const [comparisonYear, setComparisonYear] = useState<string | undefined>(undefined);
 
   // Get statistics based on current selection
   const {
@@ -92,7 +96,7 @@ export function StatisticsPage() {
     monthlyComparison,
     yearlyComparison,
     categoryComparison,
-  } = useStatistics({ selectedMonth, selectedYear });
+  } = useStatistics({ selectedMonth, selectedYear, comparisonMonth, comparisonYear });
 
   // Determine which stats to display based on active tab
   const currentStats = activeTab === "monthly" ? monthlyStats : yearlyStats;
@@ -532,6 +536,56 @@ export function StatisticsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Comparison month selector */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">{t("compare_with")}</label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={comparisonMonth?.split("-")[1] || "auto"}
+                      onValueChange={(value) => {
+                        if (value === "auto") {
+                          setComparisonMonth(undefined);
+                        } else {
+                          const year = comparisonMonth?.split("-")[0] || selectedYear;
+                          setComparisonMonth(`${year}-${value}`);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder={t("previous_month")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">{t("previous_month")}</SelectItem>
+                        {months.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={comparisonMonth?.split("-")[0] || selectedYear}
+                      onValueChange={(year) => {
+                        const month = comparisonMonth?.split("-")[1] || selectedMonth.split("-")[1];
+                        setComparisonMonth(`${year}-${month}`);
+                      }}
+                      disabled={!comparisonMonth}
+                    >
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {/* Income Comparison */}
                 <div className="space-y-1">
@@ -981,6 +1035,34 @@ export function StatisticsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Comparison year selector */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">{t("compare_with")}</label>
+                  <Select
+                    value={comparisonYear || "auto"}
+                    onValueChange={(value) => {
+                      if (value === "auto") {
+                        setComparisonYear(undefined);
+                      } else {
+                        setComparisonYear(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder={t("previous_year")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">{t("previous_year")}</SelectItem>
+                      {years.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {/* Income Comparison */}
                 <div className="space-y-1">
