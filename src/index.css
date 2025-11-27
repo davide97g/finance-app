@@ -41,6 +41,14 @@
   --animate-fade-out: fade-out 0.2s ease-out;
   --animate-slide-in-up: slide-in-up 0.5s ease-out forwards;
 
+  /* Sheet/Dialog animations */
+  --animate-sheet-slide-in-bottom: sheet-slide-in-bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-sheet-slide-out-bottom: sheet-slide-out-bottom 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-dialog-fade-in: dialog-fade-in 0.2s ease-out;
+  --animate-dialog-fade-out: dialog-fade-out 0.15s ease-out;
+  --animate-dialog-zoom-in: dialog-zoom-in 0.2s ease-out;
+  --animate-dialog-zoom-out: dialog-zoom-out 0.15s ease-out;
+
   @keyframes slide-in-up {
     0% {
       transform: translateY(20px);
@@ -90,6 +98,66 @@
 
     100% {
       opacity: 0;
+    }
+  }
+
+  /* Sheet slide from bottom */
+  @keyframes sheet-slide-in-bottom {
+    0% {
+      transform: translateY(100%);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes sheet-slide-out-bottom {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(100%);
+    }
+  }
+
+  /* Dialog fade + zoom */
+  @keyframes dialog-fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dialog-fade-out {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes dialog-zoom-in {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  @keyframes dialog-zoom-out {
+    0% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.95);
     }
   }
 }
