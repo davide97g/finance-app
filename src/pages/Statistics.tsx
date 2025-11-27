@@ -1357,7 +1357,7 @@ export function StatisticsPage() {
               <CardTitle>{t("context_analytics")}</CardTitle>
               <CardDescription>{t("context_analytics_desc")}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 pb-0">
+            <CardContent>
               <ChartContainer
                 config={contextStats.reduce((acc, item, index) => {
                   acc[item.name] = {
@@ -1366,24 +1366,32 @@ export function StatisticsPage() {
                   };
                   return acc;
                 }, {} as ChartConfig)}
-                className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
+                className="w-full min-h-[200px]"
               >
-                <PieChart>
+                <BarChart
+                  data={contextStats}
+                  layout="vertical"
+                  margin={{ left: 0, right: 16 }}
+                >
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    width={80}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <XAxis type="number" hide />
                   <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent hideLabel />}
                   />
-                  <Pie
-                    data={contextStats}
+                  <Bar
                     dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    strokeWidth={5}
+                    radius={[0, 4, 4, 0]}
+                    fill="hsl(var(--chart-1))"
                   />
-                  <ChartLegend
-                    content={<ChartLegendContent className="flex-wrap gap-2" />}
-                  />
-                </PieChart>
+                </BarChart>
               </ChartContainer>
             </CardContent>
           </Card>
@@ -1485,28 +1493,6 @@ export function StatisticsPage() {
                     }%`,
                   }}
                 />
-              </div>
-              <div className="text-center">
-                {(activeTab === "monthly" ? burnRate : yearlyBurnRate)
-                  .noBudget ? (
-                  <span className="text-sm text-muted-foreground">
-                    {t("burn_rate_no_budget")}
-                  </span>
-                ) : (
-                  <span
-                    className={`text-sm font-medium ${
-                      (activeTab === "monthly" ? burnRate : yearlyBurnRate)
-                        .onTrack
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
-                  >
-                    {(activeTab === "monthly" ? burnRate : yearlyBurnRate)
-                      .onTrack
-                      ? t("on_track")
-                      : t("over_budget")}
-                  </span>
-                )}
               </div>
             </div>
           </CardContent>
