@@ -32,13 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import {
-  Plus,
-  X,
-  ChevronDown,
-  ChevronRight,
-  MoreVertical,
-} from "lucide-react";
+import { Plus, X, ChevronRight, MoreVertical } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { CategoryDetailSheet } from "@/components/CategoryDetailSheet";
 import { AVAILABLE_ICONS, getIconComponent } from "@/lib/icons";
@@ -121,11 +115,11 @@ function MobileCategoryList({
                           size="icon"
                           className="h-8 w-8 p-0 shrink-0"
                         >
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
+                          <ChevronRight 
+                            className={`h-4 w-4 transition-transform duration-200 ${
+                              isExpanded ? "rotate-90" : ""
+                            }`} 
+                          />
                         </Button>
                       </CollapsibleTrigger>
                     ) : (
@@ -262,11 +256,11 @@ function DesktopCategoryRows({
                     className="h-6 w-6"
                     onClick={() => toggleCategory(c.id)}
                   >
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
+                    <ChevronRight 
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        isExpanded ? "rotate-90" : ""
+                      }`} 
+                    />
                   </Button>
                 ) : null}
               </TableCell>
@@ -389,7 +383,9 @@ export function CategoriesPage() {
 
   // Category Detail Sheet State
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
 
   // Conflict Resolution State
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
@@ -1044,10 +1040,16 @@ export function CategoriesPage() {
             : null
         }
         parentCategory={getParentCategory(selectedCategory?.parent_id)}
-        childrenCount={selectedCategory ? getChildrenCount(selectedCategory.id) : 0}
+        childrenCount={
+          selectedCategory ? getChildrenCount(selectedCategory.id) : 0
+        }
         onEdit={() => selectedCategory && handleEdit(selectedCategory)}
-        onDelete={() => selectedCategory && handleDeleteClick(selectedCategory.id)}
-        onSetBudget={() => selectedCategory && handleOpenBudgetDialog(selectedCategory.id)}
+        onDelete={() =>
+          selectedCategory && handleDeleteClick(selectedCategory.id)
+        }
+        onSetBudget={() =>
+          selectedCategory && handleOpenBudgetDialog(selectedCategory.id)
+        }
       />
     </div>
   );

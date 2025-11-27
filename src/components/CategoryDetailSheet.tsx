@@ -89,7 +89,10 @@ export function CategoryDetailSheet({
           {category.active === 0 ? (
             <Badge variant="secondary">{t("inactive")}</Badge>
           ) : (
-            <Badge variant="outline" className="text-green-600 border-green-600">
+            <Badge
+              variant="outline"
+              className="text-green-600 border-green-600"
+            >
               {t("active")}
             </Badge>
           )}
@@ -97,9 +100,13 @@ export function CategoryDetailSheet({
 
         {/* Parent category */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{t("parent_category")}</span>
+          <span className="text-sm text-muted-foreground">
+            {t("parent_category")}
+          </span>
           <span className="text-sm font-medium">
-            {parentCategory ? parentCategory.name : t("root_category") || "Root"}
+            {parentCategory
+              ? parentCategory.name
+              : t("root_category") || "Root"}
           </span>
         </div>
 
@@ -164,7 +171,8 @@ export function CategoryDetailSheet({
                     />
                   </div>
                   <div className="text-xs text-muted-foreground text-right">
-                    €{(budgetInfo.amount - budgetInfo.spent).toFixed(2)} {t("remaining_label")}
+                    €{(budgetInfo.amount - budgetInfo.spent).toFixed(2)}{" "}
+                    {t("remaining_label")}
                   </div>
                 </div>
               )}
@@ -220,10 +228,15 @@ export function CategoryDetailSheet({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-xl">
+        <SheetContent
+          side="bottom"
+          className="h-auto max-h-[85vh] rounded-t-xl"
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>{category.name}</SheetTitle>
-            <SheetDescription>{t("category")} {t("details") || "details"}</SheetDescription>
+            <SheetDescription>
+              {t("category")} {t("details") || "details"}
+            </SheetDescription>
           </SheetHeader>
           {content}
         </SheetContent>
@@ -237,7 +250,9 @@ export function CategoryDetailSheet({
       <DialogContent className="max-w-md">
         <DialogHeader className="sr-only">
           <DialogTitle>{category.name}</DialogTitle>
-          <DialogDescription>{t("category")} {t("details") || "details"}</DialogDescription>
+          <DialogDescription>
+            {t("category")} {t("details") || "details"}
+          </DialogDescription>
         </DialogHeader>
         {content}
       </DialogContent>
