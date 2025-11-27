@@ -11,8 +11,6 @@ const TABLES = [
   "category_budgets",
 ] as const;
 
-type TableName = (typeof TABLES)[number];
-
 export class SyncManager {
   private isSyncing = false;
   private syncListeners: Set<(syncing: boolean) => void> = new Set();

@@ -34,8 +34,6 @@ import {
   ComposedChart,
   AreaChart,
   Area,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
 import {
   ChartConfig,
@@ -53,7 +51,6 @@ import {
   AlertCircle,
   ArrowUp,
   ArrowDown,
-  Minus,
 } from "lucide-react";
 import { format } from "date-fns";
 

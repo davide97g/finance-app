@@ -44,7 +44,9 @@ export function useRealtimeSync() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<RealtimeEvent | null>(null);
 
@@ -184,13 +186,16 @@ export function useRealtimeSync() {
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         setIsConnected(false);
         console.error(`[Realtime] ${status} - will retry with backoff`);
-        
+
         // Exponential backoff retry
         if (retryCountRef.current < MAX_RETRY_ATTEMPTS) {
-          const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current);
+          const delay =
+            INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current);
           retryCountRef.current++;
-          console.log(`[Realtime] Retry ${retryCountRef.current}/${MAX_RETRY_ATTEMPTS} in ${delay}ms`);
-          
+          console.log(
+            `[Realtime] Retry ${retryCountRef.current}/${MAX_RETRY_ATTEMPTS} in ${delay}ms`
+          );
+
           retryTimeoutRef.current = setTimeout(async () => {
             await supabase.removeChannel(channel);
             channelRef.current = null;
@@ -220,12 +225,22 @@ export function useRealtimeSync() {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    
+
     if (channelRef.current) {
       console.log("[Realtime] Unsubscribing...");
-      await supabase.removeChannel(channelRef.current);
+      const channel = channelRef.current;
       channelRef.current = null;
       setIsConnected(false);
+
+      // Use try-catch to handle cases where WebSocket is already closed
+      try {
+        await supabase.removeChannel(channel);
+      } catch (error) {
+        // Ignore errors when WebSocket is already closed
+        console.log(
+          "[Realtime] Channel already closed or error during cleanup"
+        );
+      }
     }
   }, []);
 
@@ -237,10 +252,10 @@ export function useRealtimeSync() {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
-    
+
     await unsubscribe();
     retryCountRef.current = 0; // Reset retry count for fresh reconnect
-    
+
     // Debounced delay before reconnecting
     reconnectTimeoutRef.current = setTimeout(() => {
       subscribe();
