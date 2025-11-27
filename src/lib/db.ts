@@ -103,6 +103,19 @@ export interface Setting {
   updated_at?: string;
 }
 
+export interface CategoryBudget {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  period: "monthly" | "yearly";
+  deleted_at?: string | null;
+  pendingSync?: number;
+  sync_token?: number;
+  updated_at?: string;
+  created_at?: string;
+}
+
 export class AppDatabase extends Dexie {
   groups!: Table<Group>;
   group_members!: Table<GroupMember>;
@@ -111,6 +124,7 @@ export class AppDatabase extends Dexie {
   contexts!: Table<Context>;
   recurring_transactions!: Table<RecurringTransaction>;
   user_settings!: Table<Setting>;
+  category_budgets!: Table<CategoryBudget>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -136,6 +150,21 @@ export class AppDatabase extends Dexie {
         "id, user_id, group_id, type, frequency, pendingSync, deleted_at",
       user_settings: "user_id",
     });
+
+    // Version 3: Add category budgets
+    this.version(3).stores({
+      groups: "id, created_by, pendingSync, deleted_at",
+      group_members: "id, group_id, user_id, pendingSync, removed_at",
+      transactions:
+        "id, user_id, group_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at",
+      categories: "id, user_id, group_id, type, pendingSync, deleted_at",
+      contexts: "id, user_id, pendingSync, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, type, frequency, pendingSync, deleted_at",
+      user_settings: "user_id",
+      category_budgets:
+        "id, user_id, category_id, period, pendingSync, deleted_at",
+    });
   }
 
   /**
@@ -152,6 +181,7 @@ export class AppDatabase extends Dexie {
       this.contexts.clear(),
       this.recurring_transactions.clear(),
       this.user_settings.clear(),
+      this.category_budgets.clear(),
     ]);
   }
 }

@@ -343,6 +343,39 @@ create policy "Users can update their own settings"
   using (auth.uid() = user_id);
 
 
+-- 6. Category Budgets Table
+create table public.category_budgets (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) not null,
+  category_id uuid references public.categories(id) not null,
+  amount numeric(12, 2) not null,
+  period text check (period in ('monthly', 'yearly')) not null default 'monthly',
+  deleted_at timestamptz,
+  sync_token bigint default nextval('global_sync_token_seq'),
+  updated_at timestamptz default now(),
+  created_at timestamptz default now(),
+  unique(user_id, category_id, period)
+);
+
+alter table public.category_budgets enable row level security;
+
+create policy "Users can view their own category budgets"
+  on public.category_budgets for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own category budgets"
+  on public.category_budgets for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own category budgets"
+  on public.category_budgets for update
+  using (auth.uid() = user_id);
+
+create trigger update_category_budgets_sync_token
+  before update on public.category_budgets
+  for each row execute procedure update_sync_token();
+
+
 -- ============================================================================
 -- INDEXES FOR PERFORMANCE
 -- ============================================================================
@@ -366,6 +399,10 @@ create index idx_transactions_paid_by on public.transactions(paid_by_user_id) wh
 -- Recurring Transactions
 create index idx_recurring_transactions_group_id on public.recurring_transactions(group_id) where group_id is not null;
 
+-- Category Budgets
+create index idx_category_budgets_user_id on public.category_budgets(user_id);
+create index idx_category_budgets_category_id on public.category_budgets(category_id);
+
 
 -- ============================================================================
 -- REALTIME PUBLICATIONS
@@ -380,3 +417,4 @@ alter publication supabase_realtime add table public.transactions;
 alter publication supabase_realtime add table public.categories;
 alter publication supabase_realtime add table public.contexts;
 alter publication supabase_realtime add table public.recurring_transactions;
+alter publication supabase_realtime add table public.category_budgets;

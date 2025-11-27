@@ -8,6 +8,7 @@ const TABLES = [
   "categories",
   "contexts",
   "recurring_transactions",
+  "category_budgets",
 ] as const;
 
 type TableName = (typeof TABLES)[number];
