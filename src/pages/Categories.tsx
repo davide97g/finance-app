@@ -1,11 +1,11 @@
-import React from "react";
-import { useState, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { useTranslation } from "react-i18next";
-import { useCategories } from "@/hooks/useCategories";
-import { useCategoryBudgets } from "@/hooks/useCategoryBudgets";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React from 'react';
+import {useState, useMemo} from 'react';
+import {useLiveQuery} from 'dexie-react-hooks';
+import {useTranslation} from 'react-i18next';
+import {useCategories} from '@/hooks/useCategories';
+import {useCategoryBudgets} from '@/hooks/useCategoryBudgets';
+import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -13,14 +13,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,26 +30,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Plus, X, ChevronRight, MoreVertical, EyeOff } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { CategoryDetailSheet } from "@/components/CategoryDetailSheet";
-import { AVAILABLE_ICONS, getIconComponent } from "@/lib/icons";
-import { SyncStatusBadge } from "@/components/SyncStatus";
-import { CategorySelector } from "@/components/CategorySelector";
-import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import type { Category } from "@/lib/db";
-import { MobileCategoryRow } from "@/components/MobileCategoryRow";
-import { useMobile } from "@/hooks/useMobile";
-import { motion, AnimatePresence } from "framer-motion";
+} from '@/components/ui/alert-dialog';
+import {Switch} from '@/components/ui/switch';
+import {Badge} from '@/components/ui/badge';
+import {Plus, X, ChevronRight, MoreVertical, EyeOff} from 'lucide-react';
+import {useAuth} from '@/hooks/useAuth';
+import {CategoryDetailSheet} from '@/components/CategoryDetailSheet';
+import {AVAILABLE_ICONS, getIconComponent} from '@/lib/icons';
+import {SyncStatusBadge} from '@/components/SyncStatus';
+import {CategorySelector} from '@/components/CategorySelector';
+import {DeleteConfirmDialog} from '@/components/DeleteConfirmDialog';
+import {Skeleton} from '@/components/ui/skeleton';
+import type {Category} from '@/lib/db';
+import {MobileCategoryRow} from '@/components/MobileCategoryRow';
+import {motion, AnimatePresence} from 'framer-motion';
 
 // Types for recursive components
 interface CategoryListProps {
@@ -63,152 +57,8 @@ interface CategoryListProps {
   t: (key: string) => string;
 }
 
-// Recursive Mobile Category Component
-function MobileCategoryList({
-  categories,
-  depth,
-  getChildren,
-  hasChildren,
-  expandedCategories,
-  toggleCategory,
-  onCategoryClick,
-  t,
-}: CategoryListProps) {
-  const baseIndent = 16; // px per level
-  const maxDepth = 5; // Prevent infinite recursion
-
-  if (depth > maxDepth) return null;
-
-  return (
-    <>
-      {categories.map((c, index) => {
-        const children = getChildren(c.id);
-        const isExpanded = expandedCategories.has(c.id);
-        const isRoot = depth === 0;
-
-        const isInactive = c.active === 0;
-
-        return (
-          <Collapsible
-            key={c.id}
-            open={isExpanded}
-            onOpenChange={() => toggleCategory(c.id)}
-          >
-            <div
-              className={`rounded-lg border bg-card shadow-sm transition-opacity ${isRoot && index < 20
-                ? "animate-slide-in-up opacity-0 fill-mode-forwards"
-                : ""
-                } ${!isRoot ? "ml-4 border-l-2 border-l-muted-foreground/20" : ""
-                } ${isInactive ? "opacity-50" : ""}`}
-              style={
-                isRoot && index < 20
-                  ? { animationDelay: `${index * 0.05}s` }
-                  : {}
-              }
-            >
-              <div
-                className="p-4"
-                style={{ paddingLeft: isRoot ? undefined : `${baseIndent}px` }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {children.length > 0 ? (
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 shrink-0"
-                        >
-                          <ChevronRight
-                            className="h-4 w-4 transition-transform duration-200 ease-out"
-                            style={{
-                              transform: isExpanded
-                                ? "rotate(90deg)"
-                                : "rotate(0deg)",
-                            }}
-                          />
-                        </Button>
-                      </CollapsibleTrigger>
-                    ) : (
-                      <div className="w-8 shrink-0" />
-                    )}
-                    <div
-                      className={`${isRoot ? "h-8 w-8" : "h-6 w-6"
-                        } rounded-full flex items-center justify-center text-white shrink-0 ${isInactive ? "grayscale" : ""
-                        }`}
-                      style={{ backgroundColor: c.color }}
-                    >
-                      {c.icon &&
-                        (() => {
-                          const IconComp = getIconComponent(c.icon);
-                          return IconComp ? (
-                            <IconComp
-                              className={isRoot ? "h-4 w-4" : "h-3 w-3"}
-                            />
-                          ) : null;
-                        })()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className={`${isRoot ? "font-medium" : "font-medium text-sm"
-                          } flex items-center gap-2 flex-wrap`}
-                      >
-                        <span className="truncate">{c.name}</span>
-                        {isInactive && (
-                          <EyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
-                        )}
-                        {children.length > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs shrink-0"
-                          >
-                            {children.length}
-                          </Badge>
-                        )}
-                        <SyncStatusBadge isPending={c.pendingSync === 1} />
-                      </div>
-                      {isRoot && (
-                        <div className="text-sm text-muted-foreground capitalize">
-                          {t(c.type)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={isRoot ? "h-8 w-8 shrink-0" : "h-7 w-7 shrink-0"}
-                    onClick={() => onCategoryClick(c)}
-                  >
-                    <MoreVertical className={isRoot ? "h-4 w-4" : "h-3 w-3"} />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Children categories - recursive */}
-              <CollapsibleContent>
-                {children.length > 0 && (
-                  <div className="border-t bg-muted/20 p-2">
-                    <MobileCategoryList
-                      categories={children}
-                      depth={depth + 1}
-                      getChildren={getChildren}
-                      hasChildren={hasChildren}
-                      expandedCategories={expandedCategories}
-                      toggleCategory={toggleCategory}
-                      onCategoryClick={onCategoryClick}
-                      t={t}
-                    />
-                  </div>
-                )}
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-        );
-      })}
-    </>
-  );
-}
+// Deleted the old MobileCategoryList component since mobile rendering is handled
+// by a separate, inlined `renderCategory` implementation below.
 
 // Recursive Desktop Category Rows Component
 function DesktopCategoryRows({
@@ -237,36 +87,39 @@ function DesktopCategoryRows({
         return (
           <React.Fragment key={c.id}>
             <TableRow
-              className={`${isRoot && index < 20
-                ? "animate-slide-in-up opacity-0 fill-mode-forwards"
-                : !isRoot
-                  ? "animate-fade-in"
-                  : ""
-                } ${children.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""
-                } ${!isRoot ? "bg-muted/20" : ""} ${isInactive ? "opacity-50" : ""
-                }`}
+              className={`${
+                isRoot && index < 20
+                  ? 'animate-slide-in-up opacity-0 fill-mode-forwards'
+                  : !isRoot
+                  ? 'animate-fade-in'
+                  : ''
+              } ${
+                children.length > 0 ? 'cursor-pointer hover:bg-muted/50' : ''
+              } ${!isRoot ? 'bg-muted/20' : ''} ${
+                isInactive ? 'opacity-50' : ''
+              }`}
               style={
                 isRoot && index < 20
-                  ? { animationDelay: `${index * 0.03}s` }
+                  ? {animationDelay: `${index * 0.03}s`}
                   : !isRoot
-                    ? { animationDelay: `${index * 0.03}s` }
-                    : {}
+                  ? {animationDelay: `${index * 0.03}s`}
+                  : {}
               }
             >
-              <TableCell className="w-8">
+              <TableCell className='w-8'>
                 {children.length > 0 ? (
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
+                    variant='ghost'
+                    size='icon'
+                    className='h-6 w-6'
                     onClick={() => toggleCategory(c.id)}
                   >
                     <ChevronRight
-                      className="h-4 w-4 transition-transform duration-200 ease-out"
+                      className='h-4 w-4 transition-transform duration-200 ease-out'
                       style={{
                         transform: isExpanded
-                          ? "rotate(90deg)"
-                          : "rotate(0deg)",
+                          ? 'rotate(90deg)'
+                          : 'rotate(0deg)',
                       }}
                     />
                   </Button>
@@ -274,62 +127,64 @@ function DesktopCategoryRows({
               </TableCell>
               <TableCell>
                 <div
-                  className="flex items-center gap-2"
-                  style={{ paddingLeft: `${indentPx}px` }}
+                  className='flex items-center gap-2'
+                  style={{paddingLeft: `${indentPx}px`}}
                 >
                   {!isRoot && (
-                    <div className="w-4 h-4 border-l-2 border-b-2 border-muted-foreground/30 rounded-bl shrink-0" />
+                    <div className='w-4 h-4 border-l-2 border-b-2 border-muted-foreground/30 rounded-bl shrink-0' />
                   )}
                   <div
-                    className={`${isRoot ? "h-4 w-4" : "h-3 w-3"
-                      } rounded-full shrink-0 ${isInactive ? "grayscale" : ""}`}
-                    style={{ backgroundColor: c.color }}
+                    className={`${
+                      isRoot ? 'h-4 w-4' : 'h-3 w-3'
+                    } rounded-full shrink-0 ${isInactive ? 'grayscale' : ''}`}
+                    style={{backgroundColor: c.color}}
                   />
                   {c.icon &&
                     (() => {
                       const IconComp = getIconComponent(c.icon);
                       return IconComp ? (
-                        <IconComp className={isRoot ? "h-4 w-4" : "h-3 w-3"} />
+                        <IconComp className={isRoot ? 'h-4 w-4' : 'h-3 w-3'} />
                       ) : null;
                     })()}
-                  <span className={isRoot ? "" : "text-sm"}>{c.name}</span>
+                  <span className={isRoot ? '' : 'text-sm'}>{c.name}</span>
                   {children.length > 0 && (
-                    <Badge variant="secondary" className="text-xs ml-1">
+                    <Badge variant='secondary' className='text-xs ml-1'>
                       {children.length}
                     </Badge>
                   )}
                   <SyncStatusBadge isPending={c.pendingSync === 1} />
                 </div>
               </TableCell>
-              <TableCell className={`capitalize ${isRoot ? "" : "text-sm"}`}>
+              <TableCell className={`capitalize ${isRoot ? '' : 'text-sm'}`}>
                 {t(c.type)}
               </TableCell>
               <TableCell>
                 {c.active === 0 ? (
                   <Badge
-                    variant="secondary"
-                    className={isRoot ? "" : "text-xs"}
+                    variant='secondary'
+                    className={isRoot ? '' : 'text-xs'}
                   >
-                    {t("inactive") || "Inactive"}
+                    {t('inactive') || 'Inactive'}
                   </Badge>
                 ) : (
                   <Badge
-                    variant="outline"
-                    className={`text-green-600 border-green-600 ${isRoot ? "" : "text-xs"
-                      }`}
+                    variant='outline'
+                    className={`text-green-600 border-green-600 ${
+                      isRoot ? '' : 'text-xs'
+                    }`}
                   >
-                    {t("active") || "Active"}
+                    {t('active') || 'Active'}
                   </Badge>
                 )}
               </TableCell>
               <TableCell>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className={isRoot ? "" : "h-7 w-7"}
+                  variant='ghost'
+                  size='icon'
+                  className={isRoot ? '' : 'h-7 w-7'}
                   onClick={() => onCategoryClick(c)}
                 >
-                  <MoreVertical className={isRoot ? "h-4 w-4" : "h-3 w-3"} />
+                  <MoreVertical className={isRoot ? 'h-4 w-4' : 'h-3 w-3'} />
                 </Button>
               </TableCell>
             </TableRow>
@@ -355,7 +210,7 @@ function DesktopCategoryRows({
 }
 
 export function CategoriesPage() {
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const {
     categories,
     addCategory,
@@ -369,12 +224,11 @@ export function CategoriesPage() {
     removeCategoryBudget,
     getBudgetForCategory,
   } = useCategoryBudgets();
-  const { user } = useAuth();
-  const isMobile = useMobile();
+  const {user} = useAuth();
 
   // Fetch all transactions to check for associations
   const transactions = useLiveQuery(async () => {
-    const { db } = await import("@/lib/db");
+    const {db} = await import('@/lib/db');
     return db.transactions.toArray();
   });
 
@@ -386,7 +240,7 @@ export function CategoriesPage() {
   // Budget Dialog State
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
   const [budgetCategoryId, setBudgetCategoryId] = useState<string | null>(null);
-  const [budgetAmount, setBudgetAmount] = useState<string>("");
+  const [budgetAmount, setBudgetAmount] = useState<string>('');
 
   // Category Detail Sheet State
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
@@ -398,25 +252,27 @@ export function CategoriesPage() {
   const [showInactive, setShowInactive] = useState(false);
 
   // Expanded categories state for mobile collapse/expand
-  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set());
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(
+    new Set()
+  );
 
   // Conflict Resolution State
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
   const [conflictData, setConflictData] = useState<{
-    action: "delete" | "deactivate";
+    action: 'delete' | 'deactivate';
     targetId: string;
     childrenCount: number;
     parentName?: string;
   } | null>(null);
 
   const [formData, setFormData] = useState({
-    name: "",
-    color: "#000000",
-    type: "expense" as "income" | "expense" | "investment",
-    icon: "",
-    parent_id: "",
+    name: '',
+    color: '#000000',
+    type: 'expense' as 'income' | 'expense' | 'investment',
+    icon: '',
+    parent_id: '',
     active: true,
-    budget: "", // Budget amount for expense categories
+    budget: '', // Budget amount for expense categories
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -424,7 +280,7 @@ export function CategoriesPage() {
     if (!user) return;
 
     if (!formData.icon) {
-      alert(t("icon_required") || "Please select an icon");
+      alert(t('icon_required') || 'Please select an icon');
       return;
     }
 
@@ -441,7 +297,7 @@ export function CategoriesPage() {
             : null;
 
           setConflictData({
-            action: "deactivate",
+            action: 'deactivate',
             targetId: editingId,
             childrenCount:
               categories?.filter(
@@ -464,9 +320,9 @@ export function CategoriesPage() {
       });
 
       // Handle budget for expense categories
-      if (formData.type === "expense" && formData.budget) {
+      if (formData.type === 'expense' && formData.budget) {
         await setCategoryBudget(editingId, parseFloat(formData.budget));
-      } else if (formData.type === "expense" && !formData.budget) {
+      } else if (formData.type === 'expense' && !formData.budget) {
         // Remove budget if field is empty
         await removeCategoryBudget(editingId);
       }
@@ -487,37 +343,38 @@ export function CategoriesPage() {
         } as any),
       });
 
-      // Handle budget for expense categories  
-      if (formData.type === "expense" && formData.budget) {
+      // Handle budget for expense categories
+      if (formData.type === 'expense' && formData.budget) {
         await setCategoryBudget(newCategoryId, parseFloat(formData.budget));
       }
     }
     setIsOpen(false);
     setEditingId(null);
     setFormData({
-      name: "",
-      color: "#000000",
-      type: "expense",
-      icon: "",
-      parent_id: "",
+      name: '',
+      color: '#000000',
+      type: 'expense',
+      icon: '',
+      parent_id: '',
       active: true,
-      budget: "",
+      budget: '',
     });
   };
 
   const handleEdit = (category: any) => {
     setEditingId(category.id);
     // Get budget for this category if it's an expense
-    const categoryBudget = category.type === "expense" ? getBudgetForCategory(category.id) : null;
+    const categoryBudget =
+      category.type === 'expense' ? getBudgetForCategory(category.id) : null;
 
     setFormData({
       name: category.name,
       color: category.color,
       type: category.type,
-      icon: category.icon || "",
-      parent_id: category.parent_id || "",
+      icon: category.icon || '',
+      parent_id: category.parent_id || '',
       active: category.active !== 0,
-      budget: categoryBudget ? categoryBudget.amount.toString() : "",
+      budget: categoryBudget ? categoryBudget.amount.toString() : '',
     });
     setIsOpen(true);
   };
@@ -525,13 +382,13 @@ export function CategoriesPage() {
   const openNew = () => {
     setEditingId(null);
     setFormData({
-      name: "",
-      color: "#000000",
-      type: "expense",
-      icon: "",
-      parent_id: "",
+      name: '',
+      color: '#000000',
+      type: 'expense',
+      icon: '',
+      parent_id: '',
       active: true,
-      budget: "",
+      budget: '',
     });
     setIsOpen(true);
   };
@@ -551,8 +408,8 @@ export function CategoriesPage() {
     if (transactionCount > 0) {
       // Show warning about transactions
       alert(
-        t("category_has_transactions_warning", { count: transactionCount }) ||
-        `Warning: This category has ${transactionCount} associated transaction(s). Deleting it will leave these transactions without a category.`
+        t('category_has_transactions_warning', {count: transactionCount}) ||
+          `Warning: This category has ${transactionCount} associated transaction(s). Deleting it will leave these transactions without a category.`
       );
     }
 
@@ -563,7 +420,7 @@ export function CategoriesPage() {
         : null;
 
       setConflictData({
-        action: "delete",
+        action: 'delete',
         targetId: id,
         childrenCount:
           categories?.filter((c) => c.parent_id === id && !c.deleted_at)
@@ -597,9 +454,9 @@ export function CategoriesPage() {
     await reparentChildren(conflictData.targetId, newParentId);
 
     // 2. Perform original action
-    if (conflictData.action === "delete") {
+    if (conflictData.action === 'delete') {
       await deleteCategory(conflictData.targetId);
-    } else if (conflictData.action === "deactivate") {
+    } else if (conflictData.action === 'deactivate') {
       await updateCategory(conflictData.targetId, {
         name: formData.name,
         color: formData.color,
@@ -611,13 +468,13 @@ export function CategoriesPage() {
       setIsOpen(false);
       setEditingId(null);
       setFormData({
-        name: "",
-        color: "#000000",
-        type: "expense",
-        icon: "",
-        parent_id: "",
+        name: '',
+        color: '#000000',
+        type: 'expense',
+        icon: '',
+        parent_id: '',
         active: true,
-        budget: "",
+        budget: '',
       });
     }
 
@@ -629,7 +486,7 @@ export function CategoriesPage() {
   const handleOpenBudgetDialog = (categoryId: string) => {
     const existingBudget = getBudgetForCategory(categoryId);
     setBudgetCategoryId(categoryId);
-    setBudgetAmount(existingBudget ? existingBudget.amount.toString() : "");
+    setBudgetAmount(existingBudget ? existingBudget.amount.toString() : '');
     setBudgetDialogOpen(true);
   };
 
@@ -638,7 +495,7 @@ export function CategoriesPage() {
     await setCategoryBudget(budgetCategoryId, parseFloat(budgetAmount));
     setBudgetDialogOpen(false);
     setBudgetCategoryId(null);
-    setBudgetAmount("");
+    setBudgetAmount('');
   };
 
   const handleRemoveBudget = async () => {
@@ -646,7 +503,7 @@ export function CategoriesPage() {
     await removeCategoryBudget(budgetCategoryId);
     setBudgetDialogOpen(false);
     setBudgetCategoryId(null);
-    setBudgetAmount("");
+    setBudgetAmount('');
   };
 
   // Helper function to get budget info for a category
@@ -734,147 +591,150 @@ export function CategoriesPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">{t("categories")}</h1>
-        <div className="flex items-center gap-2">
+    <div className='space-y-4'>
+      <div className='flex items-center justify-between gap-2'>
+        <h1 className='text-2xl font-bold'>{t('categories')}</h1>
+        <div className='flex items-center gap-2'>
           {/* Show Inactive Toggle */}
           <button
             onClick={() => setShowInactive(!showInactive)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${showInactive
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted/50"
-              }`}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              showInactive
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:bg-muted/50'
+            }`}
           >
-            <EyeOff className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">
-              {t("show_inactive") || "Inactive"}
+            <EyeOff className='h-3.5 w-3.5' />
+            <span className='hidden sm:inline'>
+              {t('show_inactive') || 'Inactive'}
             </span>
           </button>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
               <Button
                 onClick={openNew}
-                size="icon"
-                className="md:w-auto md:px-4 md:h-10"
+                size='icon'
+                className='md:w-auto md:px-4 md:h-10'
               >
-                <Plus className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">{t("add_category")}</span>
+                <Plus className='h-4 w-4 md:mr-2' />
+                <span className='hidden md:inline'>{t('add_category')}</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md w-[95vw] rounded-lg">
+            <DialogContent className='max-w-md w-[95vw] rounded-lg'>
               <DialogHeader>
                 <DialogTitle>
-                  {editingId ? t("edit_category") : t("add_category")}
+                  {editingId ? t('edit_category') : t('add_category')}
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("name")}</label>
+              <form onSubmit={handleSubmit} className='space-y-4'>
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium'>{t('name')}</label>
                   <Input
                     value={formData.name}
                     onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
+                      setFormData({...formData, name: e.target.value})
                     }
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("color")}</label>
-                  <div className="flex gap-2">
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium'>{t('color')}</label>
+                  <div className='flex gap-2'>
                     <Input
-                      type="color"
+                      type='color'
                       value={formData.color}
                       onChange={(e) =>
-                        setFormData({ ...formData, color: e.target.value })
+                        setFormData({...formData, color: e.target.value})
                       }
-                      className="h-10 w-20 p-1"
+                      className='h-10 w-20 p-1'
                     />
                     <Input
                       value={formData.color}
                       onChange={(e) =>
-                        setFormData({ ...formData, color: e.target.value })
+                        setFormData({...formData, color: e.target.value})
                       }
-                      className="flex-1"
+                      className='flex-1'
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("type")}</label>
-                  <div className="flex gap-2">
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium'>{t('type')}</label>
+                  <div className='flex gap-2'>
                     <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${formData.type === "expense"
-                        ? "bg-red-500 hover:bg-red-600 text-white"
-                        : ""
-                        }`}
+                      type='button'
+                      variant='outline'
+                      className={`w-full ${
+                        formData.type === 'expense'
+                          ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : ''
+                      }`}
                       onClick={() =>
-                        setFormData({ ...formData, type: "expense" })
+                        setFormData({...formData, type: 'expense'})
                       }
                     >
-                      {t("expense")}
+                      {t('expense')}
                     </Button>
                     <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${formData.type === "income"
-                        ? "bg-green-500 hover:bg-green-600 text-white"
-                        : ""
-                        }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "income" })
-                      }
+                      type='button'
+                      variant='outline'
+                      className={`w-full ${
+                        formData.type === 'income'
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : ''
+                      }`}
+                      onClick={() => setFormData({...formData, type: 'income'})}
                     >
-                      {t("income")}
+                      {t('income')}
                     </Button>
                     <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${formData.type === "investment"
-                        ? "bg-blue-500 hover:bg-blue-600 text-white"
-                        : ""
-                        }`}
+                      type='button'
+                      variant='outline'
+                      className={`w-full ${
+                        formData.type === 'investment'
+                          ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                          : ''
+                      }`}
                       onClick={() =>
-                        setFormData({ ...formData, type: "investment" })
+                        setFormData({...formData, type: 'investment'})
                       }
                     >
-                      {t("investment")}
+                      {t('investment')}
                     </Button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("icon")}</label>
-                  <div className="grid grid-cols-6 gap-2 p-2 border rounded-md max-h-[200px] overflow-y-auto">
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium'>{t('icon')}</label>
+                  <div className='grid grid-cols-6 gap-2 p-2 border rounded-md max-h-[200px] overflow-y-auto'>
                     {AVAILABLE_ICONS.map((item) => {
                       const Icon = item.icon;
                       return (
                         <button
                           key={item.name}
-                          type="button"
-                          className={`p-2 rounded-md flex items-center justify-center hover:bg-accent ${formData.icon === item.name
-                            ? "bg-accent ring-2 ring-primary"
-                            : ""
-                            }`}
+                          type='button'
+                          className={`p-2 rounded-md flex items-center justify-center hover:bg-accent ${
+                            formData.icon === item.name
+                              ? 'bg-accent ring-2 ring-primary'
+                              : ''
+                          }`}
                           onClick={() =>
-                            setFormData({ ...formData, icon: item.name })
+                            setFormData({...formData, icon: item.name})
                           }
                           title={item.name}
                         >
-                          <Icon className="h-5 w-5" />
+                          <Icon className='h-5 w-5' />
                         </button>
                       );
                     })}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("parent_category")}
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium'>
+                    {t('parent_category')}
                   </label>
                   <CategorySelector
                     value={formData.parent_id}
                     onChange={(value) =>
-                      setFormData({ ...formData, parent_id: value })
+                      setFormData({...formData, parent_id: value})
                     }
                     type={formData.type}
                     excludeId={editingId || undefined}
@@ -883,38 +743,38 @@ export function CategoriesPage() {
                 </div>
 
                 {/* Budget field - only for expense categories */}
-                {formData.type === "expense" && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      {t("budget")} ({t("monthly_limit")})
+                {formData.type === 'expense' && (
+                  <div className='space-y-2'>
+                    <label className='text-sm font-medium'>
+                      {t('budget')} ({t('monthly_limit')})
                     </label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      type='number'
+                      step='0.01'
+                      min='0'
                       value={formData.budget}
                       onChange={(e) =>
-                        setFormData({ ...formData, budget: e.target.value })
+                        setFormData({...formData, budget: e.target.value})
                       }
-                      placeholder="0.00"
+                      placeholder='0.00'
                     />
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2">
+                <div className='flex items-center space-x-2'>
                   <Switch
-                    id="active-mode"
+                    id='active-mode'
                     checked={formData.active}
                     onCheckedChange={(checked) =>
-                      setFormData({ ...formData, active: checked })
+                      setFormData({...formData, active: checked})
                     }
                   />
-                  <label htmlFor="active-mode" className="text-sm font-medium">
-                    {t("active") || "Active"}
+                  <label htmlFor='active-mode' className='text-sm font-medium'>
+                    {t('active') || 'Active'}
                   </label>
                 </div>
-                <Button type="submit" className="w-full">
-                  {t("save")}
+                <Button type='submit' className='w-full'>
+                  {t('save')}
                 </Button>
               </form>
             </DialogContent>
@@ -923,41 +783,43 @@ export function CategoriesPage() {
       </div>
 
       {/* Mobile View: Grouped by Type */}
-      <div className="space-y-3 md:hidden">
+      <div className='space-y-3 md:hidden'>
         {!categories ? (
           // Skeleton loading state
-          Array.from({ length: 5 }).map((_, i) => (
+          Array.from({length: 5}).map((_, i) => (
             <div
               key={i}
-              className="rounded-lg border bg-card p-4 shadow-sm animate-slide-in-up opacity-0 fill-mode-forwards"
-              style={{ animationDelay: `${i * 0.05}s` }}
+              className='rounded-lg border bg-card p-4 shadow-sm animate-slide-in-up opacity-0 fill-mode-forwards'
+              style={{animationDelay: `${i * 0.05}s`}}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-16" />
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  <Skeleton className='h-8 w-8 rounded-full' />
+                  <div className='space-y-2'>
+                    <Skeleton className='h-4 w-24' />
+                    <Skeleton className='h-3 w-16' />
                   </div>
                 </div>
-                <Skeleton className="h-8 w-8 rounded-md" />
+                <Skeleton className='h-8 w-8 rounded-md' />
               </div>
             </div>
           ))
         ) : categories.length === 0 ? (
-          <div className="text-muted-foreground text-center py-8">
-            {t("no_categories") || "No categories"}
+          <div className='text-muted-foreground text-center py-8'>
+            {t('no_categories') || 'No categories'}
           </div>
         ) : (
-          <div className="pb-20">
+          <div className='pb-20'>
             {/* Render each type group */}
-            {["income", "expense", "investment"].map((type) => {
-              const categoriesOfType = filteredCategories.filter(c => c.type === type);
+            {['income', 'expense', 'investment'].map((type) => {
+              const categoriesOfType = filteredCategories.filter(
+                (c) => c.type === type
+              );
               if (categoriesOfType.length === 0) return null;
 
               // Toggle function using component-level state
               const toggleExpand = (categoryId: string) => {
-                setExpandedCategoryIds(prev => {
+                setExpandedCategoryIds((prev) => {
                   const newSet = new Set(prev);
                   if (newSet.has(categoryId)) {
                     newSet.delete(categoryId);
@@ -969,18 +831,27 @@ export function CategoriesPage() {
               };
 
               // Recursive function to render a category and its children
-              const renderCategory = (category: Category, depth: number = 0, index: number = 0): React.ReactNode => {
-                const children = categoriesOfType.filter(c => c.parent_id === category.id);
-                const budget = category.type === "expense" ? getBudgetForCategory(category.id) : null;
+              const renderCategory = (
+                category: Category,
+                depth: number = 0,
+                index: number = 0
+              ): React.ReactNode => {
+                const children = categoriesOfType.filter(
+                  (c) => c.parent_id === category.id
+                );
+                const budget =
+                  category.type === 'expense'
+                    ? getBudgetForCategory(category.id)
+                    : null;
                 const isExpanded = expandedCategoryIds.has(category.id);
 
                 return (
                   <motion.div
                     key={category.id}
-                    className={depth > 0 ? "mt-1" : ""}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    className={depth > 0 ? 'mt-1' : ''}
+                    initial={{opacity: 0, y: 10}}
+                    animate={{opacity: 1, y: 0}}
+                    exit={{opacity: 0, y: -10}}
                     transition={{
                       duration: 0.2,
                       delay: depth === 0 ? index * 0.05 : 0, // Stagger only for root categories
@@ -990,7 +861,8 @@ export function CategoriesPage() {
                       style={{
                         marginLeft: depth > 0 ? `${depth * 16}px` : '0',
                         paddingLeft: depth > 0 ? '8px' : '0',
-                        borderLeft: depth > 0 ? '2px solid hsl(var(--muted))' : 'none'
+                        borderLeft:
+                          depth > 0 ? '2px solid hsl(var(--muted))' : 'none',
                       }}
                     >
                       <MobileCategoryRow
@@ -1000,7 +872,11 @@ export function CategoriesPage() {
                         childCount={children.length}
                         budgetAmount={budget?.amount}
                         isExpanded={isExpanded}
-                        onToggleExpand={children.length > 0 ? () => toggleExpand(category.id) : undefined}
+                        onToggleExpand={
+                          children.length > 0
+                            ? () => toggleExpand(category.id)
+                            : undefined
+                        }
                       />
                     </div>
 
@@ -1008,13 +884,15 @@ export function CategoriesPage() {
                     <AnimatePresence>
                       {children.length > 0 && isExpanded && (
                         <motion.div
-                          className="space-y-1 overflow-hidden"
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className='space-y-1 overflow-hidden'
+                          initial={{height: 0, opacity: 0}}
+                          animate={{height: 'auto', opacity: 1}}
+                          exit={{height: 0, opacity: 0}}
+                          transition={{duration: 0.3, ease: 'easeInOut'}}
                         >
-                          {children.map((child, childIndex) => renderCategory(child, depth + 1, childIndex))}
+                          {children.map((child, childIndex) =>
+                            renderCategory(child, depth + 1, childIndex)
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -1023,17 +901,21 @@ export function CategoriesPage() {
               };
 
               // Get root categories (no parent) for this type
-              const rootCategories = categoriesOfType.filter(c => !c.parent_id);
+              const rootCategories = categoriesOfType.filter(
+                (c) => !c.parent_id
+              );
 
               return (
-                <div key={type} className="mb-6">
+                <div key={type} className='mb-6'>
                   {/* Type header */}
-                  <h3 className="font-semibold text-sm text-muted-foreground mb-3 px-1 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 uppercase tracking-wider">
+                  <h3 className='font-semibold text-sm text-muted-foreground mb-3 px-1 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 uppercase tracking-wider'>
                     {t(type)}
                   </h3>
 
-                  <div className="space-y-4">
-                    {rootCategories.map((category, index) => renderCategory(category, 0, index))}
+                  <div className='space-y-4'>
+                    {rootCategories.map((category, index) =>
+                      renderCategory(category, 0, index)
+                    )}
                   </div>
                 </div>
               );
@@ -1043,44 +925,44 @@ export function CategoriesPage() {
       </div>
 
       {/* Desktop View: Table with Collapsible */}
-      <div className="hidden md:block rounded-md border">
+      <div className='hidden md:block rounded-md border'>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-8"></TableHead>
-              <TableHead>{t("name")}</TableHead>
-              <TableHead>{t("type")}</TableHead>
-              <TableHead>{t("status") || "Status"}</TableHead>
+              <TableHead className='w-8'></TableHead>
+              <TableHead>{t('name')}</TableHead>
+              <TableHead>{t('type')}</TableHead>
+              <TableHead>{t('status') || 'Status'}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!categories ? (
               // Skeleton loading state for desktop
-              Array.from({ length: 5 }).map((_, i) => (
+              Array.from({length: 5}).map((_, i) => (
                 <TableRow
                   key={i}
-                  className="animate-slide-in-up opacity-0 fill-mode-forwards"
-                  style={{ animationDelay: `${i * 0.03}s` }}
+                  className='animate-slide-in-up opacity-0 fill-mode-forwards'
+                  style={{animationDelay: `${i * 0.03}s`}}
                 >
                   <TableCell>
-                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className='h-4 w-4' />
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4 rounded-full" />
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-4 w-24" />
+                    <div className='flex items-center gap-2'>
+                      <Skeleton className='h-4 w-4 rounded-full' />
+                      <Skeleton className='h-4 w-4' />
+                      <Skeleton className='h-4 w-24' />
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className='h-4 w-16' />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className='h-5 w-16 rounded-full' />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-8 w-8 rounded-md" />
+                    <Skeleton className='h-8 w-8 rounded-md' />
                   </TableCell>
                 </TableRow>
               ))
@@ -1104,10 +986,10 @@ export function CategoriesPage() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title={t("confirm_delete_category") || t("confirm_delete")}
+        title={t('confirm_delete_category') || t('confirm_delete')}
         description={
-          t("confirm_delete_category_description") ||
-          t("confirm_delete_description")
+          t('confirm_delete_category_description') ||
+          t('confirm_delete_description')
         }
       />
 
@@ -1118,26 +1000,29 @@ export function CategoriesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t("warning_subcategories") || "Warning: Subcategories Detected"}
+              {t('warning_subcategories') || 'Warning: Subcategories Detected'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("subcategory_conflict_description", {
+              {t('subcategory_conflict_description', {
                 count: conflictData?.childrenCount,
                 parentName:
-                  conflictData?.parentName || t("root_category") || "Root",
+                  conflictData?.parentName || t('root_category') || 'Root',
               }) ||
-                `This category has ${conflictData?.childrenCount
-                } subcategories. ${conflictData?.action === "delete"
-                  ? "Deleting"
-                  : "Deactivating"
-                } it will make them inaccessible. Do you want to move them to the parent category (${conflictData?.parentName || "Root"
+                `This category has ${
+                  conflictData?.childrenCount
+                } subcategories. ${
+                  conflictData?.action === 'delete'
+                    ? 'Deleting'
+                    : 'Deactivating'
+                } it will make them inaccessible. Do you want to move them to the parent category (${
+                  conflictData?.parentName || 'Root'
                 })?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConflictResolve}>
-              {t("move_children_and_proceed") || "Move Children & Proceed"}
+              {t('move_children_and_proceed') || 'Move Children & Proceed'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1145,41 +1030,41 @@ export function CategoriesPage() {
 
       {/* Budget Dialog */}
       <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
-        <DialogContent className="max-w-sm w-[95vw] rounded-lg">
+        <DialogContent className='max-w-sm w-[95vw] rounded-lg'>
           <DialogHeader>
-            <DialogTitle>{t("set_budget")}</DialogTitle>
+            <DialogTitle>{t('set_budget')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                {t("monthly_limit")}
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <label className='text-sm font-medium'>
+                {t('monthly_limit')}
               </label>
               <Input
-                type="number"
+                type='number'
                 value={budgetAmount}
                 onChange={(e) => setBudgetAmount(e.target.value)}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
+                placeholder='0.00'
+                min='0'
+                step='0.01'
               />
             </div>
-            <div className="flex gap-2">
-              {getBudgetForCategory(budgetCategoryId || "") && (
+            <div className='flex gap-2'>
+              {getBudgetForCategory(budgetCategoryId || '') && (
                 <Button
-                  variant="destructive"
+                  variant='destructive'
                   onClick={handleRemoveBudget}
-                  className="flex-1"
+                  className='flex-1'
                 >
-                  <X className="h-4 w-4 mr-2" />
-                  {t("remove_budget")}
+                  <X className='h-4 w-4 mr-2' />
+                  {t('remove_budget')}
                 </Button>
               )}
               <Button
                 onClick={handleSaveBudget}
                 disabled={!budgetAmount}
-                className="flex-1"
+                className='flex-1'
               >
-                {t("save")}
+                {t('save')}
               </Button>
             </div>
           </div>
@@ -1192,7 +1077,7 @@ export function CategoriesPage() {
         open={detailSheetOpen}
         onOpenChange={setDetailSheetOpen}
         budgetInfo={
-          selectedCategory?.type === "expense"
+          selectedCategory?.type === 'expense'
             ? getCategoryBudgetInfo(selectedCategory.id)
             : null
         }

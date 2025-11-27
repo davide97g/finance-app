@@ -1,151 +1,158 @@
-import { useTranslation } from "react-i18next";
-import { Transaction, Category, Context } from "@/lib/db";
-import { getIconComponent } from "@/lib/icons";
-import { Tag, Trash2, Edit, Check } from "lucide-react";
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
-import { useState } from "react";
-import { SyncStatusBadge } from "./SyncStatus";
+import {useTranslation} from 'react-i18next';
+import {Transaction, Category, Context} from '@/lib/db';
+import {getIconComponent} from '@/lib/icons';
+import {Tag, Trash2, Edit} from 'lucide-react';
+import {motion, useMotionValue, useTransform, PanInfo} from 'framer-motion';
+import {useState} from 'react';
+import {SyncStatusBadge} from './SyncStatus';
 
 interface MobileTransactionRowProps {
-    transaction: Transaction;
-    category?: Category;
-    context?: Context;
-    onEdit?: (transaction: Transaction) => void;
-    onDelete?: (id: string) => void;
-    isVirtual?: boolean;
-    style?: React.CSSProperties;
+  transaction: Transaction;
+  category?: Category;
+  context?: Context;
+  onEdit?: (transaction: Transaction) => void;
+  onDelete?: (id: string) => void;
+  isVirtual?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function MobileTransactionRow({
-    transaction,
-    category,
-    context,
-    onEdit,
-    onDelete,
-    isVirtual,
-    style,
+  transaction,
+  category,
+  context,
+  onEdit,
+  onDelete,
+  style,
 }: MobileTransactionRowProps) {
-    const { t } = useTranslation();
-    const IconComp = category?.icon ? getIconComponent(category.icon) : null;
-    const x = useMotionValue(0);
-    const [swipedState, setSwipedState] = useState<"none" | "left" | "right">("none");
+  const {t} = useTranslation();
+  const IconComp = category?.icon ? getIconComponent(category.icon) : null;
+  const x = useMotionValue(0);
+  const [, setSwipedState] = useState<'none' | 'left' | 'right'>('none');
 
-    // Background color based on swipe direction
-    const background = useTransform(x, [-100, 0, 100], [
-        "rgb(239 68 68)", // Red for delete (left)
-        "rgb(255 255 255)", // White (center)
-        "rgb(59 130 246)", // Blue for edit (right)
-    ]);
+  // Background color based on swipe direction
+  const background = useTransform(
+    x,
+    [-100, 0, 100],
+    [
+      'rgb(239 68 68)', // Red for delete (left)
+      'rgb(255 255 255)', // White (center)
+      'rgb(59 130 246)', // Blue for edit (right)
+    ]
+  );
 
-    const handleDragEnd = (_: any, info: PanInfo) => {
-        const threshold = 300;
-        if (info.offset.x < -threshold && onDelete) {
-            // Swiped left - Delete
-            onDelete(transaction.id);
-            setSwipedState("left");
-        } else if (info.offset.x > threshold && onEdit) {
-            // Swiped right - Edit
-            onEdit(transaction);
-            setSwipedState("right");
-            // Reset position after a delay if it was just an edit trigger
-            setTimeout(() => x.set(0), 300);
-        } else {
-            // Reset
-            setSwipedState("none");
-        }
-    };
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    const threshold = 300;
+    if (info.offset.x < -threshold && onDelete) {
+      // Swiped left - Delete
+      onDelete(transaction.id);
+      setSwipedState('left');
+    } else if (info.offset.x > threshold && onEdit) {
+      // Swiped right - Edit
+      onEdit(transaction);
+      setSwipedState('right');
+      // Reset position after a delay if it was just an edit trigger
+      setTimeout(() => x.set(0), 300);
+    } else {
+      // Reset
+      setSwipedState('none');
+    }
+  };
 
-    const getTypeTextColor = (type: string) => {
-        switch (type) {
-            case "expense":
-                return "text-red-500";
-            case "income":
-                return "text-green-500";
-            case "investment":
-                return "text-blue-500";
-            default:
-                return "";
-        }
-    };
+  const getTypeTextColor = (type: string) => {
+    switch (type) {
+      case 'expense':
+        return 'text-red-500';
+      case 'income':
+        return 'text-green-500';
+      case 'investment':
+        return 'text-blue-500';
+      default:
+        return '';
+    }
+  };
 
-    const hasActions = !!onEdit || !!onDelete;
+  const hasActions = !!onEdit || !!onDelete;
 
-    return (
-        <div style={style} className="relative overflow-hidden rounded-lg mb-2">
-            {/* Background Actions Layer */}
-            {hasActions && (
-                <motion.div
-                    style={{ backgroundColor: background }}
-                    className="absolute inset-0 flex items-center justify-between px-4 rounded-lg"
-                >
-                    <div className="flex items-center text-white font-medium">
-                        <Edit className="h-5 w-5 mr-2" />
-                        {t("edit")}
-                    </div>
-                    <div className="flex items-center text-white font-medium">
-                        {t("delete")}
-                        <Trash2 className="h-5 w-5 ml-2" />
-                    </div>
-                </motion.div>
-            )}
+  return (
+    <div style={style} className='relative overflow-hidden rounded-lg mb-2'>
+      {/* Background Actions Layer */}
+      {hasActions && (
+        <motion.div
+          style={{backgroundColor: background}}
+          className='absolute inset-0 flex items-center justify-between px-4 rounded-lg'
+        >
+          <div className='flex items-center text-white font-medium'>
+            <Edit className='h-5 w-5 mr-2' />
+            {t('edit')}
+          </div>
+          <div className='flex items-center text-white font-medium'>
+            {t('delete')}
+            <Trash2 className='h-5 w-5 ml-2' />
+          </div>
+        </motion.div>
+      )}
 
-            {/* Foreground Content Layer */}
-            <motion.div
-                drag={hasActions ? "x" : false}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={handleDragEnd}
-                style={{ x, touchAction: "pan-y" }} // Important for vertical scrolling
-                className="relative bg-card p-3 rounded-lg border shadow-sm flex items-center gap-3 h-[72px]"
-            >
-                {/* Icon */}
-                <div
-                    className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
-                    style={{
-                        backgroundColor: category?.color ? `${category.color}20` : "#f3f4f6",
-                        color: category?.color || "#6b7280",
-                    }}
-                >
-                    {IconComp ? (
-                        <IconComp className="h-5 w-5" />
-                    ) : (
-                        <div className="h-5 w-5 rounded-full bg-muted" />
-                    )}
-                </div>
-
-                {/* Main Content */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="font-medium text-sm truncate">
-                        {transaction.description || t("transaction")}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="truncate">{category?.name || "-"}</span>
-                        {context && (
-                            <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]">
-                                <Tag className="h-3 w-3" />
-                                <span className="truncate max-w-[80px]">{context.name}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Amount & Status */}
-                <div className="text-right shrink-0 flex flex-col items-end justify-center">
-                    <div
-                        className={`font-bold text-sm ${getTypeTextColor(transaction.type)}`}
-                    >
-                        {transaction.type === "expense"
-                            ? "-"
-                            : transaction.type === "investment"
-                                ? ""
-                                : "+"}
-                        €{transaction.amount.toFixed(2)}
-                    </div>
-                    <div className="mt-1">
-                        <SyncStatusBadge isPending={transaction.pendingSync === 1} />
-                    </div>
-                </div>
-            </motion.div>
+      {/* Foreground Content Layer */}
+      <motion.div
+        drag={hasActions ? 'x' : false}
+        dragConstraints={{left: 0, right: 0}}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+        style={{x, touchAction: 'pan-y'}} // Important for vertical scrolling
+        className='relative bg-card p-3 rounded-lg border shadow-sm flex items-center gap-3 h-[72px]'
+      >
+        {/* Icon */}
+        <div
+          className='h-10 w-10 rounded-full flex items-center justify-center shrink-0'
+          style={{
+            backgroundColor: category?.color
+              ? `${category.color}20`
+              : '#f3f4f6',
+            color: category?.color || '#6b7280',
+          }}
+        >
+          {IconComp ? (
+            <IconComp className='h-5 w-5' />
+          ) : (
+            <div className='h-5 w-5 rounded-full bg-muted' />
+          )}
         </div>
-    );
+
+        {/* Main Content */}
+        <div className='flex-1 min-w-0 flex flex-col justify-center'>
+          <div className='font-medium text-sm truncate'>
+            {transaction.description || t('transaction')}
+          </div>
+          <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+            <span className='truncate'>{category?.name || '-'}</span>
+            {context && (
+              <div className='flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]'>
+                <Tag className='h-3 w-3' />
+                <span className='truncate max-w-[80px]'>{context.name}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Amount & Status */}
+        <div className='text-right shrink-0 flex flex-col items-end justify-center'>
+          <div
+            className={`font-bold text-sm ${getTypeTextColor(
+              transaction.type
+            )}`}
+          >
+            {transaction.type === 'expense'
+              ? '-'
+              : transaction.type === 'investment'
+              ? ''
+              : '+'}
+            €{transaction.amount.toFixed(2)}
+          </div>
+          <div className='mt-1'>
+            <SyncStatusBadge isPending={transaction.pendingSync === 1} />
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
 }
