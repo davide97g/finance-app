@@ -318,5 +318,14 @@
   "compare_with": "Compare with",
   "cumulative_expenses_desc": "Daily cumulative spending comparison",
   "yearly_cumulative_desc": "Monthly cumulative spending comparison by year",
-  "current_month": "Current month"
+  "current_month": "Current month",
+  "period_comparison": "Period Comparison",
+  "comparison_vs_previous_month": "{{current}} vs {{previous}}",
+  "comparison_vs_previous_year": "{{current}} vs {{previous}}",
+  "yearly_comparison": "Year-over-Year Comparison",
+  "cumulative_expenses_comparison": "Cumulative Expenses Comparison",
+  "cumulative_expenses_yearly": "Cumulative Yearly Expenses",
+  "previous_month": "Previous month",
+  "remove_budget": "Remove Budget",
+  "monthly_limit": "Monthly Limit"
 }

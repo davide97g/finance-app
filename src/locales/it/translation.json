@@ -318,5 +318,14 @@
   "compare_with": "Confronta con",
   "cumulative_expenses_desc": "Confronto spese cumulative giornaliere",
   "yearly_cumulative_desc": "Confronto spese cumulative mensili per anno",
-  "current_month": "Mese corrente"
+  "current_month": "Mese corrente",
+  "period_comparison": "Confronto Periodi",
+  "comparison_vs_previous_month": "{{current}} vs {{previous}}",
+  "comparison_vs_previous_year": "{{current}} vs {{previous}}",
+  "yearly_comparison": "Confronto Anno su Anno",
+  "cumulative_expenses_comparison": "Confronto Spese Cumulative",
+  "cumulative_expenses_yearly": "Spese Cumulative Annuali",
+  "previous_month": "Mese precedente",
+  "remove_budget": "Rimuovi Budget",
+  "monthly_limit": "Limite Mensile"
 }
