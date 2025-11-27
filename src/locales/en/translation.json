@@ -333,5 +333,12 @@
   "update_available": "Update available",
   "update_available_description": "A new version is available. Reload to update.",
   "reload": "Reload",
-  "later": "Later"
+  "later": "Later",
+  "main_navigation": "Main navigation",
+  "main_menu": "Main menu",
+  "offline_mode": "Offline mode",
+  "actions": "Actions",
+  "transaction": "Transaction",
+  "show_subcategories": "Show subcategories",
+  "back": "Back"
 }

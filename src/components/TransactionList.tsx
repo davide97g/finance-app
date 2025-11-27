@@ -114,12 +114,16 @@ export function TransactionList({
         };
 
     return (
-      <div key={t_item.id} {...animationProps}>
+      <article 
+        key={t_item.id} 
+        {...animationProps}
+        aria-label={`${t_item.description || t("transaction")}: €${t_item.amount.toFixed(2)} ${t(t_item.type)}`}
+      >
         <div className="flex items-center justify-between mb-2">
-          <div className="font-medium text-sm text-muted-foreground">
+          <time className="font-medium text-sm text-muted-foreground" dateTime={t_item.date}>
             {t_item.date}
-          </div>
-          <div className={`font-bold ${getTypeTextColor(t_item.type)}`}>
+          </time>
+          <div className={`font-bold ${getTypeTextColor(t_item.type)}`} aria-label={`${t("amount")}: €${t_item.amount.toFixed(2)}`}>
             {t_item.type === "expense" ? "-" : t_item.type === "investment" ? "" : "+"}
             €{t_item.amount.toFixed(2)}
           </div>
@@ -131,34 +135,46 @@ export function TransactionList({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md flex items-center gap-1">
-              {IconComp && <IconComp className="h-3 w-3" />}
+              {IconComp && <IconComp className="h-3 w-3" aria-hidden="true" />}
               <span>{category?.name || "-"}</span>
             </div>
             {context && (
               <div className="text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-1 rounded-md flex items-center gap-1">
-                <Tag className="h-3 w-3" />
+                <Tag className="h-3 w-3" aria-hidden="true" />
                 <span>{context.name}</span>
               </div>
             )}
           </div>
           {showActions && (
-            <div className="flex gap-2">
+            <div className="flex gap-2" role="group" aria-label={t("actions")}>
               {onEdit && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(t_item)}>
-                  <Edit className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={() => onEdit(t_item)}
+                  aria-label={t("edit")}
+                >
+                  <Edit className="h-4 w-4" aria-hidden="true" />
                 </Button>
               )}
               {onDelete && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(t_item.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={() => onDelete(t_item.id)}
+                  aria-label={t("delete")}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                 </Button>
               )}
             </div>
           )}
         </div>
-      </div>
+      </article>
     );
-  }, [getCategory, getContext, onEdit, onDelete, showActions]);
+  }, [getCategory, getContext, onEdit, onDelete, showActions, t]);
 
   // Memoized row renderer for desktop
   const renderDesktopRow = useCallback((t_item: Transaction, index: number, isVirtual: boolean) => {
@@ -175,7 +191,9 @@ export function TransactionList({
 
     return (
       <TableRow key={t_item.id} {...animationProps}>
-        <TableCell>{t_item.date}</TableCell>
+        <TableCell>
+          <time dateTime={t_item.date}>{t_item.date}</time>
+        </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">
             {t_item.description}
@@ -184,14 +202,14 @@ export function TransactionList({
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">
-            {IconComp && <IconComp className="h-4 w-4" />}
+            {IconComp && <IconComp className="h-4 w-4" aria-hidden="true" />}
             <span>{category?.name || "-"}</span>
           </div>
         </TableCell>
         <TableCell>
           {context ? (
             <div className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-md">
-              <Tag className="h-3 w-3" />
+              <Tag className="h-3 w-3" aria-hidden="true" />
               {context.name}
             </div>
           ) : (
@@ -205,15 +223,25 @@ export function TransactionList({
         </TableCell>
         {showActions && (
           <TableCell>
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2" role="group" aria-label={t("actions")}>
               {onEdit && (
-                <Button variant="ghost" size="icon" onClick={() => onEdit(t_item)}>
-                  <Edit className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onEdit(t_item)}
+                  aria-label={t("edit")}
+                >
+                  <Edit className="h-4 w-4" aria-hidden="true" />
                 </Button>
               )}
               {onDelete && (
-                <Button variant="ghost" size="icon" onClick={() => onDelete(t_item.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onDelete(t_item.id)}
+                  aria-label={t("delete")}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                 </Button>
               )}
             </div>

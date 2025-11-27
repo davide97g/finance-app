@@ -45,11 +45,14 @@ export function MobileNav({ navigation }: MobileNavProps) {
   };
 
   return (
-    <header className="flex items-center justify-between border-b p-2 pt-[max(0.5rem,env(safe-area-inset-top))] px-[max(0.5rem,env(safe-area-inset-left))] md:hidden bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 fixed top-0 left-0 right-0 z-50">
+    <header 
+      className="flex items-center justify-between border-b p-2 pt-[max(0.5rem,env(safe-area-inset-top))] px-[max(0.5rem,env(safe-area-inset-left))] md:hidden bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 fixed top-0 left-0 right-0 z-50"
+      role="banner"
+    >
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" aria-label={t("open_menu")}>
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0" hideClose={true}>
@@ -61,10 +64,14 @@ export function MobileNav({ navigation }: MobileNavProps) {
             <div className="flex items-center gap-2 border-b p-4 font-bold text-xl">
               <Wallet
                 className={cn("h-6 w-6", !isOnline && "text-destructive")}
+                aria-hidden="true"
               />
               <span className="text-primary">{t("app_title")}</span>
+              {!isOnline && (
+                <span className="sr-only">{t("offline_mode")}</span>
+              )}
             </div>
-            <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
+            <nav className="flex-1 space-y-1 p-2 overflow-y-auto" aria-label={t("main_menu")}>
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
@@ -77,8 +84,9 @@ export function MobileNav({ navigation }: MobileNavProps) {
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     )}
+                    aria-current={isActive ? "page" : undefined}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-4 w-4" aria-hidden="true" />
                     {item.name}
                   </button>
                 );
@@ -92,8 +100,9 @@ export function MobileNav({ navigation }: MobileNavProps) {
                 variant="ghost"
                 className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
                 onClick={handleSignOut}
+                aria-label={t("logout")}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" aria-hidden="true" />
                 {t("logout")}
               </Button>
             </div>
@@ -101,11 +110,17 @@ export function MobileNav({ navigation }: MobileNavProps) {
         </SheetContent>
       </Sheet>
       <div className="flex items-center gap-2 font-bold text-lg">
-        <Wallet className={cn("h-5 w-5", !isOnline && "text-destructive")} />
+        <Wallet 
+          className={cn("h-5 w-5", !isOnline && "text-destructive")} 
+          aria-hidden="true" 
+        />
         <span className="text-primary">{t("app_title")}</span>
+        {!isOnline && (
+          <span className="sr-only">{t("offline_mode")}</span>
+        )}
       </div>
       {/* Placeholder for right side actions if needed, e.g. profile or add */}
-      <div className="w-9" />
+      <div className="w-9" aria-hidden="true" />
     </header>
   );
 }

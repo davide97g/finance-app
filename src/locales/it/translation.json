@@ -333,5 +333,12 @@
   "update_available": "Aggiornamento disponibile",
   "update_available_description": "È disponibile una nuova versione. Ricarica per aggiornare.",
   "reload": "Ricarica",
-  "later": "Dopo"
+  "later": "Dopo",
+  "main_navigation": "Navigazione principale",
+  "main_menu": "Menu principale",
+  "offline_mode": "Modalità offline",
+  "actions": "Azioni",
+  "transaction": "Transazione",
+  "show_subcategories": "Mostra sottocategorie",
+  "back": "Indietro"
 }
