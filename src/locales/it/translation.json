@@ -347,5 +347,10 @@
   "back_online_description": "Le tue modifiche vengono sincronizzate ora.",
   "gone_offline": "Sei offline",
   "gone_offline_description": "Le modifiche saranno salvate localmente e sincronizzate quando tornerai online.",
-  "offline_banner_message": "Offline - le modifiche saranno sincronizzate alla riconnessione"
+  "offline_banner_message": "Offline - le modifiche saranno sincronizzate alla riconnessione",
+  "loading_offline": "Caricamento dati offline...",
+  "loading_offline_description": "Sei offline. Caricamento dei dati salvati localmente.",
+  "offline_no_session_title": "Sei Offline",
+  "offline_no_session_description": "Connettiti a internet per accedere. Una volta effettuato l'accesso, potrai usare l'app offline.",
+  "offline_no_session_hint": "L'app si riconnetterà automaticamente quando tornerai online."
 }

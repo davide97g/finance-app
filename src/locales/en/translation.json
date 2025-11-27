@@ -347,5 +347,10 @@
   "back_online_description": "Your changes are being synced now.",
   "gone_offline": "You're offline",
   "gone_offline_description": "Changes will be saved locally and synced when you're back online.",
-  "offline_banner_message": "Offline - changes will sync when connected"
+  "offline_banner_message": "Offline - changes will sync when connected",
+  "loading_offline": "Loading offline data...",
+  "loading_offline_description": "You're offline. Loading your locally stored data.",
+  "offline_no_session_title": "You're Offline",
+  "offline_no_session_description": "Please connect to the internet to sign in. Once signed in, you can use the app offline.",
+  "offline_no_session_hint": "The app will automatically reconnect when you're back online."
 }

@@ -16,6 +16,8 @@ import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { WifiOff, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // Lazy-loaded pages for better initial bundle size
 const Dashboard = lazy(() =>
@@ -66,18 +68,51 @@ function PageLoadingFallback() {
   );
 }
 
+/**
+ * App-level loading state with offline awareness
+ */
+function AppLoadingState() {
+  const { t } = useTranslation();
+  const isOffline = !navigator.onLine;
+
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4 p-4">
+      {isOffline ? (
+        <>
+          <WifiOff className="h-12 w-12 text-muted-foreground animate-pulse" />
+          <p className="text-lg font-medium text-muted-foreground">
+            {t("loading_offline") || "Loading offline data..."}
+          </p>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
+            {t("loading_offline_description") ||
+              "You're offline. Loading your locally stored data."}
+          </p>
+        </>
+      ) : (
+        <>
+          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          <p className="text-lg font-medium text-muted-foreground">
+            {t("loading") || "Loading..."}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isOffline } = useAuth();
   useOnlineSync(); // Auto-sync when coming online
   useAutoGenerate(); // Generate recurring transactions on app load
   useBudgetNotifications(); // Monitor budget and show warnings
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Loading...
-      </div>
-    );
+    return <AppLoadingState />;
+  }
+
+  // If offline and no cached user, show a friendly message
+  if (!user && isOffline) {
+    return <OfflineAuthFallback />;
   }
 
   if (!user) {
@@ -85,6 +120,30 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+/**
+ * Fallback UI when offline with no cached session
+ */
+function OfflineAuthFallback() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4 p-4 text-center">
+      <WifiOff className="h-16 w-16 text-muted-foreground" />
+      <h2 className="text-xl font-semibold">
+        {t("offline_no_session_title") || "You're Offline"}
+      </h2>
+      <p className="text-muted-foreground max-w-md">
+        {t("offline_no_session_description") ||
+          "Please connect to the internet to sign in. Once signed in, you can use the app offline."}
+      </p>
+      <p className="text-sm text-muted-foreground">
+        {t("offline_no_session_hint") ||
+          "The app will automatically reconnect when you're back online."}
+      </p>
+    </div>
+  );
 }
 
 import { useSettings } from "@/hooks/useSettings";

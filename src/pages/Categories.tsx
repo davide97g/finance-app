@@ -723,158 +723,162 @@ export function CategoriesPage() {
             }`}
           >
             <EyeOff className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t("show_inactive") || "Inactive"}</span>
+            <span className="hidden sm:inline">
+              {t("show_inactive") || "Inactive"}
+            </span>
           </button>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={openNew}
-              size="icon"
-              className="md:w-auto md:px-4 md:h-10"
-            >
-              <Plus className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">{t("add_category")}</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md w-[95vw] rounded-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingId ? t("edit_category") : t("add_category")}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("name")}</label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("color")}</label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) =>
-                      setFormData({ ...formData, color: e.target.value })
-                    }
-                    className="h-10 w-20 p-1"
-                  />
-                  <Input
-                    value={formData.color}
-                    onChange={(e) =>
-                      setFormData({ ...formData, color: e.target.value })
-                    }
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("type")}</label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`w-full ${
-                      formData.type === "expense"
-                        ? "bg-red-500 hover:bg-red-600 text-white"
-                        : ""
-                    }`}
-                    onClick={() =>
-                      setFormData({ ...formData, type: "expense" })
-                    }
-                  >
-                    {t("expense")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`w-full ${
-                      formData.type === "income"
-                        ? "bg-green-500 hover:bg-green-600 text-white"
-                        : ""
-                    }`}
-                    onClick={() => setFormData({ ...formData, type: "income" })}
-                  >
-                    {t("income")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`w-full ${
-                      formData.type === "investment"
-                        ? "bg-blue-500 hover:bg-blue-600 text-white"
-                        : ""
-                    }`}
-                    onClick={() =>
-                      setFormData({ ...formData, type: "investment" })
-                    }
-                  >
-                    {t("investment")}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("icon")}</label>
-                <div className="grid grid-cols-6 gap-2 p-2 border rounded-md max-h-[200px] overflow-y-auto">
-                  {AVAILABLE_ICONS.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.name}
-                        type="button"
-                        className={`p-2 rounded-md flex items-center justify-center hover:bg-accent ${
-                          formData.icon === item.name
-                            ? "bg-accent ring-2 ring-primary"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          setFormData({ ...formData, icon: item.name })
-                        }
-                        title={item.name}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {t("parent_category")}
-                </label>
-                <CategorySelector
-                  value={formData.parent_id}
-                  onChange={(value) =>
-                    setFormData({ ...formData, parent_id: value })
-                  }
-                  type={formData.type}
-                  excludeId={editingId || undefined}
-                  modal
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active-mode"
-                  checked={formData.active}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, active: checked })
-                  }
-                />
-                <label htmlFor="active-mode" className="text-sm font-medium">
-                  {t("active") || "Active"}
-                </label>
-              </div>
-              <Button type="submit" className="w-full">
-                {t("save")}
+            <DialogTrigger asChild>
+              <Button
+                onClick={openNew}
+                size="icon"
+                className="md:w-auto md:px-4 md:h-10"
+              >
+                <Plus className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">{t("add_category")}</span>
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md w-[95vw] rounded-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingId ? t("edit_category") : t("add_category")}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("name")}</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("color")}</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={formData.color}
+                      onChange={(e) =>
+                        setFormData({ ...formData, color: e.target.value })
+                      }
+                      className="h-10 w-20 p-1"
+                    />
+                    <Input
+                      value={formData.color}
+                      onChange={(e) =>
+                        setFormData({ ...formData, color: e.target.value })
+                      }
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("type")}</label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={`w-full ${
+                        formData.type === "expense"
+                          ? "bg-red-500 hover:bg-red-600 text-white"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setFormData({ ...formData, type: "expense" })
+                      }
+                    >
+                      {t("expense")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={`w-full ${
+                        formData.type === "income"
+                          ? "bg-green-500 hover:bg-green-600 text-white"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setFormData({ ...formData, type: "income" })
+                      }
+                    >
+                      {t("income")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={`w-full ${
+                        formData.type === "investment"
+                          ? "bg-blue-500 hover:bg-blue-600 text-white"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setFormData({ ...formData, type: "investment" })
+                      }
+                    >
+                      {t("investment")}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("icon")}</label>
+                  <div className="grid grid-cols-6 gap-2 p-2 border rounded-md max-h-[200px] overflow-y-auto">
+                    {AVAILABLE_ICONS.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.name}
+                          type="button"
+                          className={`p-2 rounded-md flex items-center justify-center hover:bg-accent ${
+                            formData.icon === item.name
+                              ? "bg-accent ring-2 ring-primary"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setFormData({ ...formData, icon: item.name })
+                          }
+                          title={item.name}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    {t("parent_category")}
+                  </label>
+                  <CategorySelector
+                    value={formData.parent_id}
+                    onChange={(value) =>
+                      setFormData({ ...formData, parent_id: value })
+                    }
+                    type={formData.type}
+                    excludeId={editingId || undefined}
+                    modal
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="active-mode"
+                    checked={formData.active}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, active: checked })
+                    }
+                  />
+                  <label htmlFor="active-mode" className="text-sm font-medium">
+                    {t("active") || "Active"}
+                  </label>
+                </div>
+                <Button type="submit" className="w-full">
+                  {t("save")}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

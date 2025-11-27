@@ -63,10 +63,13 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Precache all static assets
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        // Precache ALL JS/CSS chunks including lazy-loaded ones
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,json}"],
         // Don't precache source maps
         globIgnores: ["**/*.map"],
+        // Navigation fallback for SPA - critical for offline
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           // HTML pages - Network First with fast fallback
           {
@@ -131,9 +134,26 @@ export default defineConfig({
               },
             },
           },
-          // Supabase API calls - Network First with offline fallback
+          // Supabase Auth API - Network Only with offline fallback handling
           {
-            urlPattern: ({ url }) => url.hostname.includes("supabase"),
+            urlPattern: ({ url }) =>
+              url.hostname.includes("supabase") &&
+              url.pathname.includes("/auth/"),
+            handler: "NetworkOnly",
+            options: {
+              backgroundSync: {
+                name: "auth-queue",
+                options: {
+                  maxRetentionTime: 24 * 60, // Retry for 24 hours
+                },
+              },
+            },
+          },
+          // Supabase Data API calls - Network First with offline fallback
+          {
+            urlPattern: ({ url }) =>
+              url.hostname.includes("supabase") &&
+              !url.pathname.includes("/auth/"),
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api",
