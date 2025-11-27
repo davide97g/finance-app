@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, ChevronRight, MoreVertical } from "lucide-react";
+import { Plus, X, ChevronRight, MoreVertical, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { CategoryDetailSheet } from "@/components/CategoryDetailSheet";
 import { AVAILABLE_ICONS, getIconComponent } from "@/lib/icons";
@@ -82,6 +82,8 @@ function MobileCategoryList({
         const isExpanded = expandedCategories.has(c.id);
         const isRoot = depth === 0;
 
+        const isInactive = c.active === 0;
+
         return (
           <Collapsible
             key={c.id}
@@ -89,13 +91,13 @@ function MobileCategoryList({
             onOpenChange={() => toggleCategory(c.id)}
           >
             <div
-              className={`rounded-lg border bg-card shadow-sm ${
+              className={`rounded-lg border bg-card shadow-sm transition-opacity ${
                 isRoot && index < 20
                   ? "animate-slide-in-up opacity-0 fill-mode-forwards"
                   : ""
               } ${
                 !isRoot ? "ml-4 border-l-2 border-l-muted-foreground/20" : ""
-              }`}
+              } ${isInactive ? "opacity-50" : ""}`}
               style={
                 isRoot && index < 20
                   ? { animationDelay: `${index * 0.05}s` }
@@ -115,10 +117,13 @@ function MobileCategoryList({
                           size="icon"
                           className="h-8 w-8 p-0 shrink-0"
                         >
-                          <ChevronRight 
-                            className={`h-4 w-4 transition-transform duration-200 ${
-                              isExpanded ? "rotate-90" : ""
-                            }`} 
+                          <ChevronRight
+                            className="h-4 w-4 transition-transform duration-200 ease-out"
+                            style={{
+                              transform: isExpanded
+                                ? "rotate(90deg)"
+                                : "rotate(0deg)",
+                            }}
                           />
                         </Button>
                       </CollapsibleTrigger>
@@ -128,7 +133,9 @@ function MobileCategoryList({
                     <div
                       className={`${
                         isRoot ? "h-8 w-8" : "h-6 w-6"
-                      } rounded-full flex items-center justify-center text-white shrink-0`}
+                      } rounded-full flex items-center justify-center text-white shrink-0 ${
+                        isInactive ? "grayscale" : ""
+                      }`}
                       style={{ backgroundColor: c.color }}
                     >
                       {c.icon &&
@@ -148,6 +155,9 @@ function MobileCategoryList({
                         } flex items-center gap-2 flex-wrap`}
                       >
                         <span className="truncate">{c.name}</span>
+                        {isInactive && (
+                          <EyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
+                        )}
                         {children.length > 0 && (
                           <Badge
                             variant="secondary"
@@ -157,14 +167,6 @@ function MobileCategoryList({
                           </Badge>
                         )}
                         <SyncStatusBadge isPending={c.pendingSync === 1} />
-                        {c.active === 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs shrink-0"
-                          >
-                            {t("inactive") || "Inactive"}
-                          </Badge>
-                        )}
                       </div>
                       {isRoot && (
                         <div className="text-sm text-muted-foreground capitalize">
@@ -231,6 +233,7 @@ function DesktopCategoryRows({
         const isExpanded = expandedCategories.has(c.id);
         const isRoot = depth === 0;
         const indentPx = depth * 24; // 24px per level
+        const isInactive = c.active === 0;
 
         return (
           <React.Fragment key={c.id}>
@@ -238,12 +241,18 @@ function DesktopCategoryRows({
               className={`${
                 isRoot && index < 20
                   ? "animate-slide-in-up opacity-0 fill-mode-forwards"
+                  : !isRoot
+                  ? "animate-fade-in"
                   : ""
               } ${
                 children.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""
-              } ${!isRoot ? "bg-muted/20" : ""}`}
+              } ${!isRoot ? "bg-muted/20" : ""} ${
+                isInactive ? "opacity-50" : ""
+              }`}
               style={
                 isRoot && index < 20
+                  ? { animationDelay: `${index * 0.03}s` }
+                  : !isRoot
                   ? { animationDelay: `${index * 0.03}s` }
                   : {}
               }
@@ -256,10 +265,13 @@ function DesktopCategoryRows({
                     className="h-6 w-6"
                     onClick={() => toggleCategory(c.id)}
                   >
-                    <ChevronRight 
-                      className={`h-4 w-4 transition-transform duration-200 ${
-                        isExpanded ? "rotate-90" : ""
-                      }`} 
+                    <ChevronRight
+                      className="h-4 w-4 transition-transform duration-200 ease-out"
+                      style={{
+                        transform: isExpanded
+                          ? "rotate(90deg)"
+                          : "rotate(0deg)",
+                      }}
                     />
                   </Button>
                 ) : null}
@@ -275,7 +287,7 @@ function DesktopCategoryRows({
                   <div
                     className={`${
                       isRoot ? "h-4 w-4" : "h-3 w-3"
-                    } rounded-full shrink-0`}
+                    } rounded-full shrink-0 ${isInactive ? "grayscale" : ""}`}
                     style={{ backgroundColor: c.color }}
                   />
                   {c.icon &&
@@ -386,6 +398,9 @@ export function CategoriesPage() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null
   );
+
+  // Filter State
+  const [showInactive, setShowInactive] = useState(false);
 
   // Conflict Resolution State
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
@@ -614,13 +629,20 @@ export function CategoriesPage() {
     return budgetsWithSpent?.find((b) => b.category_id === categoryId);
   };
 
+  // Filter categories based on showInactive state
+  const filteredCategories = useMemo(() => {
+    if (!categories) return [];
+    if (showInactive) return categories;
+    return categories.filter((c) => c.active !== 0);
+  }, [categories, showInactive]);
+
   // Build a map of parent_id -> children for quick lookup
   const childrenMap = useMemo(() => {
-    if (!categories) return new Map<string, typeof categories>();
+    if (!filteredCategories.length) return new Map<string, Category[]>();
 
-    const map = new Map<string | undefined, typeof categories>();
+    const map = new Map<string | undefined, Category[]>();
 
-    categories.forEach((cat) => {
+    filteredCategories.forEach((cat) => {
       const parentId = cat.parent_id || undefined;
       const siblings = map.get(parentId) || [];
       siblings.push(cat);
@@ -628,7 +650,7 @@ export function CategoriesPage() {
     });
 
     return map;
-  }, [categories]);
+  }, [filteredCategories]);
 
   // Get root categories (no parent)
   const rootCategories = useMemo(() => {
@@ -688,9 +710,22 @@ export function CategoriesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t("categories")}</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <div className="flex items-center gap-2">
+          {/* Show Inactive Toggle */}
+          <button
+            onClick={() => setShowInactive(!showInactive)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              showInactive
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted/50"
+            }`}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("show_inactive") || "Inactive"}</span>
+          </button>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button
               onClick={openNew}
@@ -840,6 +875,7 @@ export function CategoriesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Mobile View: Card Stack with Collapsible */}

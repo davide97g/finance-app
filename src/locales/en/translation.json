@@ -198,6 +198,7 @@
   "details": "Details",
   "active": "Active",
   "inactive": "Inactive",
+  "show_inactive": "Inactive",
   "warning_subcategories": "Warning: Subcategories Detected",
   "subcategory_conflict_description": "This category has {{count}} subcategories. {{action}} it will make them inaccessible. Do you want to move them to the parent category ({{parentName}})?",
   "move_children_and_proceed": "Move Children & Proceed",

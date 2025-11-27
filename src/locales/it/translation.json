@@ -198,6 +198,7 @@
   "details": "Dettagli",
   "active": "Attivo",
   "inactive": "Inattivo",
+  "show_inactive": "Inattive",
   "warning_subcategories": "Attenzione: Sottocategorie Rilevate",
   "subcategory_conflict_description": "Questa categoria ha {{count}} sottocategorie. {{action}} la renderà inaccessibile. Vuoi spostarle nella categoria genitore ({{parentName}})?",
   "move_children_and_proceed": "Sposta Figli e Procedi",
