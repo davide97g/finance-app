@@ -463,12 +463,12 @@ export function CategoriesPage() {
           return (
             <div
               key={c.id}
-              className="rounded-lg border bg-card p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20 active:scale-[0.98] animate-slide-in-up"
-              style={{ animationDelay: `${index * 50}ms` }}>
+              className={`rounded-lg border bg-card p-4 shadow-sm ${index < 20 ? "animate-slide-in-up opacity-0 fill-mode-forwards" : ""}`}
+              style={index < 20 ? { animationDelay: `${index * 0.05}s` } : {}}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className="h-8 w-8 rounded-full flex items-center justify-center text-white transition-transform duration-200 hover:scale-110"
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-white"
                     style={{ backgroundColor: c.color }}
                   >
                     {c.icon &&
@@ -499,20 +499,18 @@ export function CategoriesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 transition-all duration-200 hover:scale-110 active:scale-95"
+                      className="h-8 w-8"
                       onClick={() => handleOpenBudgetDialog(c.id)}
                     >
                       <Target
-                        className={`h-4 w-4 transition-colors ${
-                          budgetInfo ? "text-primary" : ""
-                        }`}
+                        className={`h-4 w-4 ${budgetInfo ? "text-primary" : ""}`}
                       />
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 transition-all duration-200 hover:scale-110 active:scale-95"
+                    className="h-8 w-8"
                     onClick={() => handleEdit(c)}
                   >
                     <Edit className="h-4 w-4" />
@@ -520,7 +518,7 @@ export function CategoriesPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:text-destructive active:scale-95"
+                    className="h-8 w-8"
                     onClick={() => handleDeleteClick(c.id)}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -529,7 +527,7 @@ export function CategoriesPage() {
               </div>
               {/* Budget progress bar for mobile */}
               {budgetInfo && (
-                <div className="mt-3 space-y-1 animate-fade-in">
+                <div className="mt-3 space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>
                       {t("budget")}: {budgetInfo.amount.toFixed(2)}
