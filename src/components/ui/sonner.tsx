@@ -1,11 +1,15 @@
+import { useMobile } from "@/hooks/useMobile"
 import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
+    const isMobile = useMobile()
+    
     return (
         <Sonner
             className="toaster group"
+            position={isMobile ? "top-center" : "top-right"}
             toastOptions={{
                 classNames: {
                     toast:
