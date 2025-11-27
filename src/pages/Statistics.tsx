@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, startTransition } from "react";
 import { useStatistics } from "@/hooks/useStatistics";
 import { FlipCard } from "@/components/ui/flip-card";
+import { LazyChart } from "@/components/LazyChart";
+import { createColorShade } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -78,7 +80,7 @@ export function StatisticsPage() {
     setFlippedCards((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
   };
 
-  // Get statistics based on current selection
+  // Get statistics based on current selection - pass mode for lazy calculation
   const {
     monthlyStats,
     monthlyNetBalance,
@@ -111,7 +113,18 @@ export function StatisticsPage() {
     selectedYear,
     comparisonMonth,
     comparisonYear,
+    mode: activeTab,
   });
+
+  // #4 - Loading state: data is loading if currentStats haven't been calculated yet
+  const isLoading =
+    activeTab === "monthly"
+      ? monthlyStats.income === 0 &&
+        monthlyStats.expense === 0 &&
+        monthlyStats.investment === 0
+      : yearlyStats.income === 0 &&
+        yearlyStats.expense === 0 &&
+        yearlyStats.investment === 0;
 
   // Determine which stats to display based on active tab
   const currentStats = activeTab === "monthly" ? monthlyStats : yearlyStats;
@@ -137,73 +150,7 @@ export function StatisticsPage() {
     return Array.from(allChildren);
   }, [currentExpensesByHierarchy]);
 
-  // Helper function to convert hex color to HSL and create shade variations
-  const hexToHsl = (
-    hex: string
-  ): { h: number; s: number; l: number } | null => {
-    // Remove # if present
-    hex = hex.replace(/^#/, "");
-    if (hex.length !== 6) return null;
-
-    const r = parseInt(hex.slice(0, 2), 16) / 255;
-    const g = parseInt(hex.slice(2, 4), 16) / 255;
-    const b = parseInt(hex.slice(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0;
-    let s = 0;
-    const l = (max + min) / 2;
-
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r:
-          h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-          break;
-        case g:
-          h = ((b - r) / d + 2) / 6;
-          break;
-        case b:
-          h = ((r - g) / d + 4) / 6;
-          break;
-      }
-    }
-
-    return { h: h * 360, s: s * 100, l: l * 100 };
-  };
-
-  // Create shade of a color (lighter or darker based on index)
-  const createShade = (
-    baseColor: string,
-    index: number,
-    total: number
-  ): string => {
-    const hsl = hexToHsl(baseColor);
-    if (!hsl) {
-      // Fallback if color parsing fails
-      return `hsl(${(index * 60) % 360}, 70%, ${45 + ((index * 10) % 30)}%)`;
-    }
-
-    // Create variations: first item is darkest, last is lightest
-    // Range from 30% to 70% lightness for good visibility
-    const minLightness = 30;
-    const maxLightness = 70;
-    const lightnessRange = maxLightness - minLightness;
-    const lightnessStep = total > 1 ? lightnessRange / (total - 1) : 0;
-    const newLightness = minLightness + index * lightnessStep;
-
-    // Also slightly vary saturation for more distinction
-    const saturationVariation = Math.max(
-      50,
-      Math.min(90, hsl.s + (index % 2 === 0 ? 5 : -5))
-    );
-
-    return `hsl(${hsl.h.toFixed(0)}, ${saturationVariation.toFixed(
-      0
-    )}%, ${newLightness.toFixed(0)}%)`;
-  };
+  // Color utilities moved to @/lib/utils - using hexToHsl and createColorShade
 
   // Generate chart config with shaded colors per root category
   const stackedBarConfig = useMemo(() => {
@@ -219,7 +166,7 @@ export function StatisticsPage() {
         if (!config[uniqueKey]) {
           config[uniqueKey] = {
             label: child.name,
-            color: createShade(rootColor, index, childCount),
+            color: createColorShade(rootColor, index, childCount),
           };
         }
       });
@@ -333,7 +280,7 @@ export function StatisticsPage() {
       <Tabs
         value={activeTab}
         onValueChange={(value: string) =>
-          setActiveTab(value as "monthly" | "yearly")
+          startTransition(() => setActiveTab(value as "monthly" | "yearly"))
         }
       >
         <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -748,41 +695,9 @@ export function StatisticsPage() {
                 <CardTitle>{t("income_vs_expense")}</CardTitle>
               </CardHeader>
               <CardContent className="flex-1 pb-0 min-w-0">
-                <ChartContainer
-                  config={chartConfig}
-                  className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
-                >
-                  <PieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={60}
-                      strokeWidth={5}
-                    />
-                    <ChartLegend
-                      content={
-                        <ChartLegendContent className="flex-wrap gap-2" />
-                      }
-                    />
-                  </PieChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            {/* Radial Chart - Category Distribution */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-0">
-                <CardTitle>{t("category_distribution")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 pb-0 min-w-0">
-                {currentCategoryPercentages.length > 0 ? (
+                <LazyChart height={300} isLoading={isLoading}>
                   <ChartContainer
-                    config={categoryChartConfig}
+                    config={chartConfig}
                     className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                   >
                     <PieChart>
@@ -791,7 +706,7 @@ export function StatisticsPage() {
                         content={<ChartTooltipContent hideLabel />}
                       />
                       <Pie
-                        data={currentCategoryPercentages}
+                        data={pieData}
                         dataKey="value"
                         nameKey="name"
                         innerRadius={60}
@@ -804,11 +719,47 @@ export function StatisticsPage() {
                       />
                     </PieChart>
                   </ChartContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
-                  </div>
-                )}
+                </LazyChart>
+              </CardContent>
+            </Card>
+
+            {/* Radial Chart - Category Distribution */}
+            <Card className="flex flex-col min-w-0">
+              <CardHeader className="items-center pb-0">
+                <CardTitle>{t("category_distribution")}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pb-0 min-w-0">
+                <LazyChart height={300} isLoading={isLoading}>
+                  {currentCategoryPercentages.length > 0 ? (
+                    <ChartContainer
+                      config={categoryChartConfig}
+                      className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
+                    >
+                      <PieChart>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Pie
+                          data={currentCategoryPercentages}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={60}
+                          strokeWidth={5}
+                        />
+                        <ChartLegend
+                          content={
+                            <ChartLegendContent className="flex-wrap gap-2" />
+                          }
+                        />
+                      </PieChart>
+                    </ChartContainer>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </LazyChart>
               </CardContent>
             </Card>
 
@@ -818,70 +769,66 @@ export function StatisticsPage() {
                 <CardTitle>{t("expense_breakdown")}</CardTitle>
               </CardHeader>
               <CardContent className="min-w-0">
-                {currentExpensesByHierarchy.length > 0 ? (
-                  <ChartContainer
-                    config={stackedBarConfig}
-                    className="w-full max-w-[100%] overflow-hidden"
-                    style={{
-                      height: `${Math.max(
-                        currentExpensesByHierarchy.length * 50,
-                        250
-                      )}px`,
-                    }}
-                  >
-                    <BarChart
-                      accessibilityLayer
-                      data={currentExpensesByHierarchy}
-                      layout="vertical"
-                      margin={{ left: 0, right: 50, top: 0, bottom: 0 }}
-                      stackOffset="none"
+                <LazyChart
+                  height={Math.max(currentExpensesByHierarchy.length * 50, 250)}
+                  isLoading={isLoading}
+                >
+                  {currentExpensesByHierarchy.length > 0 ? (
+                    <ChartContainer
+                      config={stackedBarConfig}
+                      className="w-full max-w-[100%] overflow-hidden"
+                      style={{
+                        height: `${Math.max(
+                          currentExpensesByHierarchy.length * 50,
+                          250
+                        )}px`,
+                      }}
                     >
-                      <CartesianGrid horizontal={false} />
-                      <YAxis
-                        dataKey="rootName"
-                        type="category"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
-                        width={120}
-                        className="text-xs font-medium"
-                      />
-                      <XAxis type="number" hide />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent
-                            formatter={(value, name) => (
-                              <span>
-                                {name}: €{Number(value).toFixed(2)}
-                              </span>
-                            )}
-                          />
-                        }
-                      />
-                      <ChartLegend content={<ChartLegendContent />} />
-                      {allChildCategories.map((childName, index) => (
-                        <Bar
-                          key={childName}
-                          dataKey={childName}
-                          stackId="stack"
-                          fill={
-                            stackedBarConfig[childName]?.color ||
-                            `hsl(var(--chart-${(index % 5) + 1}))`
-                          }
-                          radius={
-                            index === allChildCategories.length - 1
-                              ? [0, 4, 4, 0]
-                              : [0, 0, 0, 0]
+                      <BarChart
+                        accessibilityLayer
+                        data={currentExpensesByHierarchy}
+                        layout="vertical"
+                        margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
+                        stackOffset="none"
+                      >
+                        <CartesianGrid horizontal={false} />
+                        <YAxis dataKey="rootName" type="category" hide />
+                        <XAxis type="number" hide />
+                        <ChartTooltip
+                          content={
+                            <ChartTooltipContent
+                              formatter={(value, name) => (
+                                <span>
+                                  {name}: €{Number(value).toFixed(2)}
+                                </span>
+                              )}
+                            />
                           }
                         />
-                      ))}
-                    </BarChart>
-                  </ChartContainer>
-                ) : (
-                  <div className="flex h-[400px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
-                  </div>
-                )}
+                        {allChildCategories.map((childName, index) => (
+                          <Bar
+                            key={childName}
+                            dataKey={childName}
+                            stackId="stack"
+                            fill={
+                              stackedBarConfig[childName]?.color ||
+                              `hsl(var(--chart-${(index % 5) + 1}))`
+                            }
+                            radius={
+                              index === allChildCategories.length - 1
+                                ? [0, 4, 4, 0]
+                                : [0, 0, 0, 0]
+                            }
+                          />
+                        ))}
+                      </BarChart>
+                    </ChartContainer>
+                  ) : (
+                    <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </LazyChart>
               </CardContent>
             </Card>
           </div>
@@ -1062,86 +1009,88 @@ export function StatisticsPage() {
                   <h4 className="text-sm font-medium mb-4">
                     {t("cumulative_expenses_comparison")}
                   </h4>
-                  <ChartContainer
-                    config={{
-                      current: {
-                        label: t("current_month"),
-                        color: "hsl(0 84.2% 60.2% )",
-                      },
-                      previous: {
-                        label: t("previous_month"),
-                        color: "hsl(0 84.2% 60.2% )",
-                      },
-                    }}
-                    className="h-[250px] w-full"
-                  >
-                    <AreaChart
-                      data={dailyCumulativeExpenses.map((d, i) => ({
-                        day: d.day,
-                        current: d.cumulative,
-                        previous:
-                          previousMonthCumulativeExpenses[i]?.cumulative || 0,
-                      }))}
-                      margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                  <LazyChart height={250}>
+                    <ChartContainer
+                      config={{
+                        current: {
+                          label: t("current_month"),
+                          color: "hsl(0 84.2% 60.2% )",
+                        },
+                        previous: {
+                          label: t("previous_month"),
+                          color: "hsl(0 84.2% 60.2% )",
+                        },
+                      }}
+                      className="h-[250px] w-full"
                     >
-                      <defs>
-                        <linearGradient
-                          id="currentGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="var(--color-current)"
-                            stopOpacity={0.8}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="var(--color-current)"
-                            stopOpacity={0.1}
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="previousGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="var(--color-previous)"
-                            stopOpacity={0.6}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="var(--color-previous)"
-                            stopOpacity={0.1}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" />
-                      <YAxis tickFormatter={(v) => `€${v}`} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Area
-                        type="monotone"
-                        dataKey="previous"
-                        stroke="var(--color-previous)"
-                        fill="url(#previousGradient)"
-                        strokeDasharray="5 5"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="current"
-                        stroke="var(--color-current)"
-                        fill="url(#currentGradient)"
-                      />
-                      <ChartLegend content={<ChartLegendContent />} />
-                    </AreaChart>
-                  </ChartContainer>
+                      <AreaChart
+                        data={dailyCumulativeExpenses.map((d, i) => ({
+                          day: d.day,
+                          current: d.cumulative,
+                          previous:
+                            previousMonthCumulativeExpenses[i]?.cumulative || 0,
+                        }))}
+                        margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="currentGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="var(--color-current)"
+                              stopOpacity={0.8}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="var(--color-current)"
+                              stopOpacity={0.1}
+                            />
+                          </linearGradient>
+                          <linearGradient
+                            id="previousGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="var(--color-previous)"
+                              stopOpacity={0.6}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="var(--color-previous)"
+                              stopOpacity={0.1}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="day" />
+                        <YAxis tickFormatter={(v) => `€${v}`} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Area
+                          type="monotone"
+                          dataKey="previous"
+                          stroke="var(--color-previous)"
+                          fill="url(#previousGradient)"
+                          strokeDasharray="5 5"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="current"
+                          stroke="var(--color-current)"
+                          fill="url(#currentGradient)"
+                        />
+                        <ChartLegend content={<ChartLegendContent />} />
+                      </AreaChart>
+                    </ChartContainer>
+                  </LazyChart>
                 </div>
               )}
             </CardContent>
@@ -1264,29 +1213,31 @@ export function StatisticsPage() {
               </CardHeader>
               <CardContent className="pb-0">
                 {monthlyExpenses.length > 0 ? (
-                  <ChartContainer
-                    config={{
-                      value: {
-                        label: t("expense"),
-                        color: "hsl(var(--color-expense))",
-                      },
-                    }}
-                    className="mx-auto aspect-square max-h-[250px]"
-                  >
-                    <RadarChart data={monthlyExpenses}>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent />}
-                      />
-                      <PolarAngleAxis dataKey="month" />
-                      <PolarGrid />
-                      <Radar
-                        dataKey="value"
-                        fill="var(--color-value)"
-                        fillOpacity={0.6}
-                      />
-                    </RadarChart>
-                  </ChartContainer>
+                  <LazyChart height={250}>
+                    <ChartContainer
+                      config={{
+                        value: {
+                          label: t("expense"),
+                          color: "hsl(var(--color-expense))",
+                        },
+                      }}
+                      className="mx-auto aspect-square max-h-[250px]"
+                    >
+                      <RadarChart data={monthlyExpenses}>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent />}
+                        />
+                        <PolarAngleAxis dataKey="month" />
+                        <PolarGrid />
+                        <Radar
+                          dataKey="value"
+                          fill="var(--color-value)"
+                          fillOpacity={0.6}
+                        />
+                      </RadarChart>
+                    </ChartContainer>
+                  </LazyChart>
                 ) : (
                   <div className="flex h-[250px] items-center justify-center text-muted-foreground">
                     {t("no_data")}
@@ -1308,29 +1259,31 @@ export function StatisticsPage() {
               </CardHeader>
               <CardContent className="pb-0">
                 {monthlyIncome.length > 0 ? (
-                  <ChartContainer
-                    config={{
-                      value: {
-                        label: t("income"),
-                        color: "hsl(var(--color-income))",
-                      },
-                    }}
-                    className="mx-auto aspect-square max-h-[250px]"
-                  >
-                    <RadarChart data={monthlyIncome}>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent />}
-                      />
-                      <PolarAngleAxis dataKey="month" />
-                      <PolarGrid />
-                      <Radar
-                        dataKey="value"
-                        fill="var(--color-value)"
-                        fillOpacity={0.6}
-                      />
-                    </RadarChart>
-                  </ChartContainer>
+                  <LazyChart height={250}>
+                    <ChartContainer
+                      config={{
+                        value: {
+                          label: t("income"),
+                          color: "hsl(var(--color-income))",
+                        },
+                      }}
+                      className="mx-auto aspect-square max-h-[250px]"
+                    >
+                      <RadarChart data={monthlyIncome}>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent />}
+                        />
+                        <PolarAngleAxis dataKey="month" />
+                        <PolarGrid />
+                        <Radar
+                          dataKey="value"
+                          fill="var(--color-value)"
+                          fillOpacity={0.6}
+                        />
+                      </RadarChart>
+                    </ChartContainer>
+                  </LazyChart>
                 ) : (
                   <div className="flex h-[250px] items-center justify-center text-muted-foreground">
                     {t("no_data")}
@@ -1354,29 +1307,31 @@ export function StatisticsPage() {
               </CardHeader>
               <CardContent className="pb-0">
                 {monthlyInvestments.length > 0 ? (
-                  <ChartContainer
-                    config={{
-                      value: {
-                        label: t("investment"),
-                        color: "hsl(var(--color-investment))",
-                      },
-                    }}
-                    className="mx-auto aspect-square max-h-[250px]"
-                  >
-                    <RadarChart data={monthlyInvestments}>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent />}
-                      />
-                      <PolarAngleAxis dataKey="month" />
-                      <PolarGrid />
-                      <Radar
-                        dataKey="value"
-                        fill="var(--color-value)"
-                        fillOpacity={0.6}
-                      />
-                    </RadarChart>
-                  </ChartContainer>
+                  <LazyChart height={250}>
+                    <ChartContainer
+                      config={{
+                        value: {
+                          label: t("investment"),
+                          color: "hsl(var(--color-investment))",
+                        },
+                      }}
+                      className="mx-auto aspect-square max-h-[250px]"
+                    >
+                      <RadarChart data={monthlyInvestments}>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent />}
+                        />
+                        <PolarAngleAxis dataKey="month" />
+                        <PolarGrid />
+                        <Radar
+                          dataKey="value"
+                          fill="var(--color-value)"
+                          fillOpacity={0.6}
+                        />
+                      </RadarChart>
+                    </ChartContainer>
+                  </LazyChart>
                 ) : (
                   <div className="flex h-[250px] items-center justify-center text-muted-foreground">
                     {t("no_data")}
@@ -1400,38 +1355,40 @@ export function StatisticsPage() {
               </CardHeader>
               <CardContent className="flex-1 pb-0 min-w-0">
                 {yearlyCategoryPercentages.length > 0 ? (
-                  <ChartContainer
-                    config={yearlyCategoryPercentages.reduce(
-                      (acc, item, index) => {
-                        acc[item.name] = {
-                          label: item.name,
-                          color: `hsl(var(--chart-${(index % 5) + 1}))`,
-                        };
-                        return acc;
-                      },
-                      {} as ChartConfig
-                    )}
-                    className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
-                  >
-                    <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                      />
-                      <Pie
-                        data={yearlyCategoryPercentages}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={60}
-                        strokeWidth={5}
-                      />
-                      <ChartLegend
-                        content={
-                          <ChartLegendContent className="flex-wrap gap-2" />
-                        }
-                      />
-                    </PieChart>
-                  </ChartContainer>
+                  <LazyChart height={300}>
+                    <ChartContainer
+                      config={yearlyCategoryPercentages.reduce(
+                        (acc, item, index) => {
+                          acc[item.name] = {
+                            label: item.name,
+                            color: `hsl(var(--chart-${(index % 5) + 1}))`,
+                          };
+                          return acc;
+                        },
+                        {} as ChartConfig
+                      )}
+                      className="mx-auto aspect-square max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
+                    >
+                      <PieChart>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Pie
+                          data={yearlyCategoryPercentages}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={60}
+                          strokeWidth={5}
+                        />
+                        <ChartLegend
+                          content={
+                            <ChartLegendContent className="flex-wrap gap-2" />
+                          }
+                        />
+                      </PieChart>
+                    </ChartContainer>
+                  </LazyChart>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                     {t("no_data")}
@@ -1447,64 +1404,62 @@ export function StatisticsPage() {
               </CardHeader>
               <CardContent className="min-w-0">
                 {currentExpensesByHierarchy.length > 0 ? (
-                  <ChartContainer
-                    config={stackedBarConfig}
-                    className="w-full max-w-[100%] overflow-hidden"
-                    style={{
-                      height: `${Math.max(
-                        currentExpensesByHierarchy.slice(0, 8).length * 50,
-                        300
-                      )}px`,
-                    }}
+                  <LazyChart
+                    height={Math.max(
+                      currentExpensesByHierarchy.slice(0, 8).length * 50,
+                      300
+                    )}
                   >
-                    <BarChart
-                      accessibilityLayer
-                      data={currentExpensesByHierarchy.slice(0, 8)}
-                      layout="vertical"
-                      margin={{ left: 0, right: 50, top: 0, bottom: 0 }}
-                      stackOffset="none"
+                    <ChartContainer
+                      config={stackedBarConfig}
+                      className="w-full max-w-[100%] overflow-hidden"
+                      style={{
+                        height: `${Math.max(
+                          currentExpensesByHierarchy.slice(0, 8).length * 50,
+                          300
+                        )}px`,
+                      }}
                     >
-                      <CartesianGrid horizontal={false} />
-                      <YAxis
-                        dataKey="rootName"
-                        type="category"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
-                        width={120}
-                        className="text-xs font-medium"
-                      />
-                      <XAxis type="number" hide />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent
-                            formatter={(value, name) => (
-                              <span>
-                                {name}: €{Number(value).toFixed(2)}
-                              </span>
-                            )}
-                          />
-                        }
-                      />
-                      <ChartLegend content={<ChartLegendContent />} />
-                      {allChildCategories.map((childName, index) => (
-                        <Bar
-                          key={childName}
-                          dataKey={childName}
-                          stackId="stack"
-                          fill={
-                            stackedBarConfig[childName]?.color ||
-                            `hsl(var(--chart-${(index % 5) + 1}))`
-                          }
-                          radius={
-                            index === allChildCategories.length - 1
-                              ? [0, 4, 4, 0]
-                              : [0, 0, 0, 0]
+                      <BarChart
+                        accessibilityLayer
+                        data={currentExpensesByHierarchy.slice(0, 8)}
+                        layout="vertical"
+                        margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
+                        stackOffset="none"
+                      >
+                        <CartesianGrid horizontal={false} />
+                        <YAxis dataKey="rootName" type="category" hide />
+                        <XAxis type="number" hide />
+                        <ChartTooltip
+                          content={
+                            <ChartTooltipContent
+                              formatter={(value, name) => (
+                                <span>
+                                  {name}: €{Number(value).toFixed(2)}
+                                </span>
+                              )}
+                            />
                           }
                         />
-                      ))}
-                    </BarChart>
-                  </ChartContainer>
+                        {allChildCategories.map((childName, index) => (
+                          <Bar
+                            key={childName}
+                            dataKey={childName}
+                            stackId="stack"
+                            fill={
+                              stackedBarConfig[childName]?.color ||
+                              `hsl(var(--chart-${(index % 5) + 1}))`
+                            }
+                            radius={
+                              index === allChildCategories.length - 1
+                                ? [0, 4, 4, 0]
+                                : [0, 0, 0, 0]
+                            }
+                          />
+                        ))}
+                      </BarChart>
+                    </ChartContainer>
+                  </LazyChart>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                     {t("no_data")}
@@ -1660,50 +1615,52 @@ export function StatisticsPage() {
                   <h4 className="text-sm font-medium mb-4">
                     {t("cumulative_expenses_yearly")}
                   </h4>
-                  <ChartContainer
-                    config={{
-                      current: {
-                        label: selectedYear,
-                        color: "hsl(0 84.2% 60.2%)",
-                      },
-                      previous: {
-                        label: previousYear,
-                        color: "hsl(0 84.2% 60.2% / 0.3)",
-                      },
-                    }}
-                    className="h-[250px] w-full"
-                  >
-                    <AreaChart
-                      data={yearlyCumulativeExpenses.map((d, i) => ({
-                        month: d.month,
-                        current: d.cumulative,
-                        previous:
-                          previousYearCumulativeExpenses[i]?.cumulative || 0,
-                      }))}
-                      margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                  <LazyChart height={250}>
+                    <ChartContainer
+                      config={{
+                        current: {
+                          label: selectedYear,
+                          color: "hsl(0 84.2% 60.2%)",
+                        },
+                        previous: {
+                          label: previousYear,
+                          color: "hsl(0 84.2% 60.2% / 0.3)",
+                        },
+                      }}
+                      className="h-[250px] w-full"
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis tickFormatter={(v) => `€${v}`} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Area
-                        type="monotone"
-                        dataKey="previous"
-                        stroke="var(--color-previous)"
-                        fill="var(--color-previous)"
-                        fillOpacity={0.3}
-                        strokeDasharray="5 5"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="current"
-                        stroke="var(--color-current)"
-                        fill="var(--color-current)"
-                        fillOpacity={0.3}
-                      />
-                      <ChartLegend content={<ChartLegendContent />} />
-                    </AreaChart>
-                  </ChartContainer>
+                      <AreaChart
+                        data={yearlyCumulativeExpenses.map((d, i) => ({
+                          month: d.month,
+                          current: d.cumulative,
+                          previous:
+                            previousYearCumulativeExpenses[i]?.cumulative || 0,
+                        }))}
+                        margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis tickFormatter={(v) => `€${v}`} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Area
+                          type="monotone"
+                          dataKey="previous"
+                          stroke="var(--color-previous)"
+                          fill="var(--color-previous)"
+                          fillOpacity={0.3}
+                          strokeDasharray="5 5"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="current"
+                          stroke="var(--color-current)"
+                          fill="var(--color-current)"
+                          fillOpacity={0.3}
+                        />
+                        <ChartLegend content={<ChartLegendContent />} />
+                      </AreaChart>
+                    </ChartContainer>
+                  </LazyChart>
                 </div>
               )}
             </CardContent>
@@ -1723,65 +1680,67 @@ export function StatisticsPage() {
             </CardHeader>
             <CardContent>
               {monthlyTrendData.length > 0 ? (
-                <ChartContainer
-                  config={{
-                    income: {
-                      label: t("income"),
-                      color: "hsl(142.1 70.6% 45.3%)",
-                    },
-                    expense: {
-                      label: t("expense"),
-                      color: "hsl(0 84.2% 60.2%)",
-                    },
-                    balance: {
-                      label: t("balance"),
-                      color: "hsl(217.2 91.2% 59.8%)",
-                    },
-                  }}
-                  className="h-[350px] w-full"
-                >
-                  <LineChart
-                    data={monthlyTrendData}
-                    margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                <LazyChart height={350}>
+                  <ChartContainer
+                    config={{
+                      income: {
+                        label: t("income"),
+                        color: "hsl(142.1 70.6% 45.3%)",
+                      },
+                      expense: {
+                        label: t("expense"),
+                        color: "hsl(0 84.2% 60.2%)",
+                      },
+                      balance: {
+                        label: t("balance"),
+                        color: "hsl(217.2 91.2% 59.8%)",
+                      },
+                    }}
+                    className="h-[350px] w-full"
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="period"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `€${value}`}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Line
-                      type="monotone"
-                      dataKey="income"
-                      stroke="var(--color-income)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="expense"
-                      stroke="var(--color-expense)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="balance"
-                      stroke="var(--color-balance)"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ChartContainer>
+                    <LineChart
+                      data={monthlyTrendData}
+                      margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="period"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `€${value}`}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="income"
+                        stroke="var(--color-income)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="expense"
+                        stroke="var(--color-expense)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="balance"
+                        stroke="var(--color-balance)"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                </LazyChart>
               ) : (
                 <div className="h-[350px] flex items-center justify-center text-muted-foreground">
                   {t("no_data")}
@@ -1800,40 +1759,42 @@ export function StatisticsPage() {
             </CardHeader>
             <CardContent>
               {activeTab === "yearly" && monthlyCashFlow.length > 0 ? (
-                <ChartContainer
-                  config={{
-                    income: {
-                      label: t("income"),
-                      color: "hsl(142.1 70.6% 45.3%)",
-                    },
-                    expense: {
-                      label: t("expense"),
-                      color: "hsl(0 84.2% 60.2%)",
-                    },
-                  }}
-                  className="h-[300px] w-full"
-                >
-                  <ComposedChart
-                    data={monthlyCashFlow}
-                    margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                <LazyChart height={300}>
+                  <ChartContainer
+                    config={{
+                      income: {
+                        label: t("income"),
+                        color: "hsl(142.1 70.6% 45.3%)",
+                      },
+                      expense: {
+                        label: t("expense"),
+                        color: "hsl(0 84.2% 60.2%)",
+                      },
+                    }}
+                    className="h-[300px] w-full"
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="period" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar
-                      dataKey="income"
-                      fill="hsl(142.1 70.6% 45.3%)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="expense"
-                      fill="hsl(0 84.2% 60.2%)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </ComposedChart>
-                </ChartContainer>
+                    <ComposedChart
+                      data={monthlyCashFlow}
+                      margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="period" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Bar
+                        dataKey="income"
+                        fill="hsl(142.1 70.6% 45.3%)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="expense"
+                        fill="hsl(0 84.2% 60.2%)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </ComposedChart>
+                  </ChartContainer>
+                </LazyChart>
               ) : (
                 <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                   {t("no_data")}

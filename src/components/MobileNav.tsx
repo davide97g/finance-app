@@ -46,7 +46,7 @@ export function MobileNav({ navigation }: MobileNavProps) {
 
   return (
     <header
-      className="flex items-center justify-between border-b p-2 md:hidden bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 fixed top-0 left-0 right-0 z-50"
+      className="mobile-header-safe flex items-center justify-between border-b px-2 pb-2 md:hidden bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 fixed top-0 left-0 right-0 z-50"
       role="banner"
     >
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>

@@ -29,9 +29,13 @@
         align-items: center;
         justify-content: center;
         height: 100vh;
+        height: 100dvh;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
         font-family: system-ui, -apple-system, sans-serif;
         background: #fff;
         color: #333;
+        box-sizing: border-box;
       }
       @media (prefers-color-scheme: dark) {
         #app-loading {

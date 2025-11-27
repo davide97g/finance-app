@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, Category } from "../lib/db";
+import { db, Category, Transaction } from "../lib/db";
 import { format, subMonths } from "date-fns";
 import { useMemo } from "react";
 
@@ -15,6 +15,8 @@ interface UseStatisticsParams {
   comparisonMonth?: string;
   /** Custom year for comparison (format: 'YYYY'), defaults to previous year */
   comparisonYear?: string;
+  /** Active mode - only calculates data for the active tab for performance */
+  mode?: "monthly" | "yearly";
 }
 
 /**
@@ -55,6 +57,7 @@ export function useStatistics(params?: UseStatisticsParams) {
   const now = new Date();
   const currentMonth = params?.selectedMonth || format(now, "yyyy-MM");
   const currentYear = params?.selectedYear || format(now, "yyyy");
+  const mode = params?.mode || "monthly"; // Default to monthly for backwards compatibility
 
   // Calculate previous periods for comparison
   const defaultPreviousMonth = format(
@@ -65,49 +68,63 @@ export function useStatistics(params?: UseStatisticsParams) {
   const defaultPreviousYear = (parseInt(currentYear) - 1).toString();
   const previousYear = params?.comparisonYear || defaultPreviousYear;
 
-  // Get selected month transactions
+  // #2 - CONDITIONAL QUERIES: Only fetch data needed for active mode
+  // Monthly queries - only run in monthly mode
   const transactions = useLiveQuery(
-    () => db.transactions.where("year_month").equals(currentMonth).toArray(),
-    [currentMonth]
+    () =>
+      mode === "monthly"
+        ? db.transactions.where("year_month").equals(currentMonth).toArray()
+        : Promise.resolve([] as Transaction[]),
+    [currentMonth, mode]
   );
 
-  // Get previous month transactions for comparison
+  // Get previous month transactions for comparison - only in monthly mode
   const previousMonthTransactions = useLiveQuery(
-    () => db.transactions.where("year_month").equals(previousMonth).toArray(),
-    [previousMonth]
+    () =>
+      mode === "monthly"
+        ? db.transactions.where("year_month").equals(previousMonth).toArray()
+        : Promise.resolve([] as Transaction[]),
+    [previousMonth, mode]
   );
 
-  // Get all transactions for the selected year
+  // Get all transactions for the selected year - only in yearly mode
   const yearlyTransactions = useLiveQuery(
     () =>
-      db.transactions
-        .where("year_month")
-        .between(`${currentYear}-01`, `${currentYear}-12`, true, true)
-        .toArray(),
-    [currentYear]
+      mode === "yearly"
+        ? db.transactions
+            .where("year_month")
+            .between(`${currentYear}-01`, `${currentYear}-12`, true, true)
+            .toArray()
+        : Promise.resolve([] as Transaction[]),
+    [currentYear, mode]
   );
 
-  // Get previous year transactions for comparison
+  // Get previous year transactions for comparison - only in yearly mode
   const previousYearTransactions = useLiveQuery(
     () =>
-      db.transactions
-        .where("year_month")
-        .between(`${previousYear}-01`, `${previousYear}-12`, true, true)
-        .toArray(),
-    [previousYear]
+      mode === "yearly"
+        ? db.transactions
+            .where("year_month")
+            .between(`${previousYear}-01`, `${previousYear}-12`, true, true)
+            .toArray()
+        : Promise.resolve([] as Transaction[]),
+    [previousYear, mode]
   );
 
   const categories = useLiveQuery(() => db.categories.toArray());
   const contexts = useLiveQuery(() => db.contexts.toArray());
 
-  // Monthly statistics
+  // Monthly statistics - #1 Lazy calculation: skip when in yearly mode
   const monthlyStats = useMemo(() => {
-    const stats = {
+    const defaultStats = {
       income: 0,
       expense: 0,
       investment: 0,
       byCategory: [] as { name: string; value: number; color: string }[],
     };
+
+    // Skip calculation if in yearly mode
+    if (mode !== "monthly") return defaultStats;
 
     if (transactions && categories) {
       const categoryMap = new Map(categories.map((c) => [c.id, c]));
@@ -116,18 +133,20 @@ export function useStatistics(params?: UseStatisticsParams) {
         if (t.deleted_at) return;
 
         const amount = Number(t.amount);
-        if (t.type === "income") stats.income += amount;
-        else if (t.type === "expense") stats.expense += amount;
-        else if (t.type === "investment") stats.investment += amount;
+        if (t.type === "income") defaultStats.income += amount;
+        else if (t.type === "expense") defaultStats.expense += amount;
+        else if (t.type === "investment") defaultStats.investment += amount;
 
         if (t.type === "expense" && t.category_id) {
           const cat = categoryMap.get(t.category_id);
           if (cat) {
-            const existing = stats.byCategory.find((c) => c.name === cat.name);
+            const existing = defaultStats.byCategory.find(
+              (c) => c.name === cat.name
+            );
             if (existing) {
               existing.value += amount;
             } else {
-              stats.byCategory.push({
+              defaultStats.byCategory.push({
                 name: cat.name,
                 value: amount,
                 color: cat.color,
@@ -137,10 +156,10 @@ export function useStatistics(params?: UseStatisticsParams) {
         }
       });
     }
-    return stats;
-  }, [transactions, categories]);
+    return defaultStats;
+  }, [transactions, categories, mode]);
 
-  // Yearly statistics
+  // Yearly statistics - #1 Lazy calculation: skip when in monthly mode
   const yearlyStats = useMemo(() => {
     const stats = {
       income: 0,
@@ -148,6 +167,9 @@ export function useStatistics(params?: UseStatisticsParams) {
       investment: 0,
       byCategory: [] as { name: string; value: number; color: string }[],
     };
+
+    // Skip calculation if in monthly mode
+    if (mode !== "yearly") return stats;
 
     if (yearlyTransactions && categories) {
       const categoryMap = new Map(categories.map((c) => [c.id, c]));
@@ -178,7 +200,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       });
     }
     return stats;
-  }, [yearlyTransactions, categories]);
+  }, [yearlyTransactions, categories, mode]);
 
   // Helper function to get root category (traverses up the parent chain)
   const getRootCategory = (
@@ -191,9 +213,10 @@ export function useStatistics(params?: UseStatisticsParams) {
     return getRootCategory(cat.parent_id, categoryMap);
   };
 
-  // Hierarchical expense data for stacked bar chart (monthly)
+  // Hierarchical expense data for stacked bar chart (monthly) - #1 Lazy calculation
   const monthlyExpensesByHierarchy = useMemo(() => {
-    if (!transactions || !categories) return [];
+    // Skip calculation if in yearly mode
+    if (mode !== "monthly" || !transactions || !categories) return [];
 
     const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
@@ -263,11 +286,12 @@ export function useStatistics(params?: UseStatisticsParams) {
         _children: Array.from(entry.children.values()),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [transactions, categories]);
+  }, [transactions, categories, mode]);
 
-  // Hierarchical expense data for stacked bar chart (yearly)
+  // Hierarchical expense data for stacked bar chart (yearly) - #1 Lazy calculation
   const yearlyExpensesByHierarchy = useMemo(() => {
-    if (!yearlyTransactions || !categories) return [];
+    // Skip calculation if in monthly mode
+    if (mode !== "yearly" || !yearlyTransactions || !categories) return [];
 
     const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
@@ -332,7 +356,7 @@ export function useStatistics(params?: UseStatisticsParams) {
         _children: Array.from(entry.children.values()),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [yearlyTransactions, categories]);
+  }, [yearlyTransactions, categories, mode]);
 
   // Calculate net balances
   const monthlyNetBalance = useMemo(
@@ -344,9 +368,10 @@ export function useStatistics(params?: UseStatisticsParams) {
     [yearlyStats]
   );
 
-  // Calculate category percentages for radial chart (monthly) - Only root categories with aggregated children
+  // Calculate category percentages for radial chart (monthly) - #1 Lazy calculation
   const monthlyCategoryPercentages = useMemo(() => {
-    if (!categories || !transactions) return [];
+    // Skip calculation if in yearly mode
+    if (mode !== "monthly" || !categories || !transactions) return [];
 
     const totalMonthlyExpense = monthlyStats.expense;
     const categoryMap = new Map(categories.map((c) => [c.id, c]));
@@ -401,11 +426,12 @@ export function useStatistics(params?: UseStatisticsParams) {
           : 0,
       fill: `hsl(var(--chart-${(index % 5) + 1}))`,
     }));
-  }, [monthlyStats, categories, transactions]);
+  }, [monthlyStats, categories, transactions, mode]);
 
-  // Calculate category percentages for radial chart (yearly) - Only root categories with aggregated children
+  // Calculate category percentages for radial chart (yearly) - #1 Lazy calculation
   const yearlyCategoryPercentages = useMemo(() => {
-    if (!categories || !yearlyTransactions) return [];
+    // Skip calculation if in monthly mode
+    if (mode !== "yearly" || !categories || !yearlyTransactions) return [];
 
     const totalYearlyExpense = yearlyStats.expense;
     const categoryMap = new Map(categories.map((c) => [c.id, c]));
@@ -460,10 +486,19 @@ export function useStatistics(params?: UseStatisticsParams) {
           : 0,
       fill: `hsl(var(--chart-${(index % 5) + 1}))`,
     }));
-  }, [yearlyStats, categories, yearlyTransactions]);
+  }, [yearlyStats, categories, yearlyTransactions, mode]);
 
-  // Prepare monthly data for radar charts (selected year, all 12 months)
+  // Prepare monthly data for radar charts (selected year, all 12 months) - #1 Lazy calculation
   const { monthlyExpenses, monthlyIncome, monthlyInvestments } = useMemo(() => {
+    const defaultData = {
+      monthlyExpenses: [] as { month: string; value: number }[],
+      monthlyIncome: [] as { month: string; value: number }[],
+      monthlyInvestments: [] as { month: string; value: number }[],
+    };
+
+    // Skip calculation if in monthly mode - this data is only for yearly view
+    if (mode !== "yearly") return defaultData;
+
     const expenses: { month: string; value: number }[] = [];
     const income: { month: string; value: number }[] = [];
     const investments: { month: string; value: number }[] = [];
@@ -511,72 +546,69 @@ export function useStatistics(params?: UseStatisticsParams) {
       monthlyIncome: income,
       monthlyInvestments: investments,
     };
-  }, [yearlyTransactions]);
+  }, [yearlyTransactions, mode]);
 
-  // Calculate daily cumulative expenses for current month
+  // Calculate daily cumulative expenses for current month - #1 Lazy calculation
   const dailyCumulativeExpenses = useMemo(() => {
     const result: { day: string; cumulative: number; projection?: number }[] =
       [];
 
-    if (transactions) {
-      // Get the number of days in the current month
-      const [year, month] = currentMonth.split("-");
-      const daysInMonth = new Date(
-        parseInt(year),
-        parseInt(month),
-        0
-      ).getDate();
+    // Skip calculation if in yearly mode
+    if (mode !== "monthly" || !transactions) return result;
 
-      // Get current day (only if we're viewing the current month)
-      const today = new Date();
-      const isCurrentMonth = currentMonth === format(today, "yyyy-MM");
-      const currentDay = isCurrentMonth ? today.getDate() : daysInMonth;
+    // Get the number of days in the current month
+    const [year, month] = currentMonth.split("-");
+    const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
 
-      // Initialize daily totals
-      const dailyTotals = new Map<number, number>();
-      for (let day = 1; day <= daysInMonth; day++) {
-        dailyTotals.set(day, 0);
+    // Get current day (only if we're viewing the current month)
+    const today = new Date();
+    const isCurrentMonth = currentMonth === format(today, "yyyy-MM");
+    const currentDay = isCurrentMonth ? today.getDate() : daysInMonth;
+
+    // Initialize daily totals
+    const dailyTotals = new Map<number, number>();
+    for (let day = 1; day <= daysInMonth; day++) {
+      dailyTotals.set(day, 0);
+    }
+
+    // Aggregate expenses by day
+    transactions.forEach((t) => {
+      if (t.deleted_at || t.type !== "expense") return;
+      const day = new Date(t.date).getDate();
+      dailyTotals.set(day, (dailyTotals.get(day) || 0) + Number(t.amount));
+    });
+
+    // Calculate cumulative totals
+    let cumulative = 0;
+    let projectionValue = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      cumulative += dailyTotals.get(day) || 0;
+
+      // Set projection value at current day
+      if (day === currentDay) {
+        projectionValue = cumulative;
       }
 
-      // Aggregate expenses by day
-      transactions.forEach((t) => {
-        if (t.deleted_at || t.type !== "expense") return;
-        const day = new Date(t.date).getDate();
-        dailyTotals.set(day, (dailyTotals.get(day) || 0) + Number(t.amount));
+      result.push({
+        day: day.toString(),
+        cumulative: Math.round(cumulative * 100) / 100,
+        // Projection starts from current day and maintains constant value
+        projection:
+          day >= currentDay
+            ? Math.round(projectionValue * 100) / 100
+            : undefined,
       });
-
-      // Calculate cumulative totals
-      let cumulative = 0;
-      let projectionValue = 0;
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        cumulative += dailyTotals.get(day) || 0;
-
-        // Set projection value at current day
-        if (day === currentDay) {
-          projectionValue = cumulative;
-        }
-
-        result.push({
-          day: day.toString(),
-          cumulative: Math.round(cumulative * 100) / 100,
-          // Projection starts from current day and maintains constant value
-          projection:
-            day >= currentDay
-              ? Math.round(projectionValue * 100) / 100
-              : undefined,
-        });
-      }
     }
     return result;
-  }, [transactions, currentMonth]);
+  }, [transactions, currentMonth, mode]);
 
   // ============================================
   // NEW CHART DATA CALCULATIONS
   // ============================================
 
   // 1. TEMPORAL TREND DATA (Line/Area Chart)
-  // Yearly view: Monthly trend
+  // Yearly view: Monthly trend - #1 Lazy calculation
   const monthlyTrendData = useMemo(() => {
     const data: {
       period: string;
@@ -585,89 +617,101 @@ export function useStatistics(params?: UseStatisticsParams) {
       balance: number;
     }[] = [];
 
-    if (yearlyTransactions) {
-      // Monthly trend for selected year
-      const monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      const monthlyMap = new Map<number, { income: number; expense: number }>();
+    // Skip calculation if in monthly mode
+    if (mode !== "yearly" || !yearlyTransactions) return data;
+    // Monthly trend for selected year
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const monthlyMap = new Map<number, { income: number; expense: number }>();
 
-      for (let i = 0; i < 12; i++) {
-        monthlyMap.set(i, { income: 0, expense: 0 });
+    // Determine how many months to show (don't show future months for current year)
+    const today = new Date();
+    const isCurrentYear = currentYear === today.getFullYear().toString();
+    const maxMonth = isCurrentYear ? today.getMonth() : 11; // 0-indexed
+
+    for (let i = 0; i <= maxMonth; i++) {
+      monthlyMap.set(i, { income: 0, expense: 0 });
+    }
+
+    yearlyTransactions.forEach((t) => {
+      if (t.deleted_at) return;
+      const monthIdx = new Date(t.date).getMonth();
+      if (monthIdx > maxMonth) return; // Skip future months
+      const amount = Number(t.amount);
+      const entry = monthlyMap.get(monthIdx);
+      if (entry) {
+        if (t.type === "income") entry.income += amount;
+        else if (t.type === "expense") entry.expense += amount;
       }
+    });
 
-      yearlyTransactions.forEach((t) => {
-        if (t.deleted_at) return;
-        const monthIdx = new Date(t.date).getMonth();
-        const amount = Number(t.amount);
-        const entry = monthlyMap.get(monthIdx);
-        if (entry) {
-          if (t.type === "income") entry.income += amount;
-          else if (t.type === "expense") entry.expense += amount;
-        }
+    for (let i = 0; i <= maxMonth; i++) {
+      const entry = monthlyMap.get(i)!;
+      data.push({
+        period: monthNames[i],
+        income: Math.round(entry.income * 100) / 100,
+        expense: Math.round(entry.expense * 100) / 100,
+        balance: Math.round((entry.income - entry.expense) * 100) / 100,
       });
-
-      for (let i = 0; i < 12; i++) {
-        const entry = monthlyMap.get(i)!;
-        data.push({
-          period: monthNames[i],
-          income: Math.round(entry.income * 100) / 100,
-          expense: Math.round(entry.expense * 100) / 100,
-          balance: Math.round((entry.income - entry.expense) * 100) / 100,
-        });
-      }
     }
     return data;
-  }, [yearlyTransactions]);
+  }, [yearlyTransactions, mode, currentYear]);
 
   // 2. CASH FLOW DATA (Stacked Bar/Area Chart)
-  // Monthly aggregation for yearly view
+  // Monthly aggregation for yearly view - #1 Lazy calculation
   const monthlyCashFlow = useMemo(() => {
     const data: { period: string; income: number; expense: number }[] = [];
 
-    if (yearlyTransactions) {
-      // Monthly cash flow for selected year
-      const monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
+    // Skip calculation if in monthly mode
+    if (mode !== "yearly" || !yearlyTransactions) return data;
+    // Monthly cash flow for selected year
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
 
-      for (let i = 0; i < 12; i++) {
-        data.push({ period: monthNames[i], income: 0, expense: 0 });
-      }
+    // Determine how many months to show (don't show future months for current year)
+    const today = new Date();
+    const isCurrentYear = currentYear === today.getFullYear().toString();
+    const maxMonth = isCurrentYear ? today.getMonth() : 11; // 0-indexed
 
-      yearlyTransactions.forEach((t) => {
-        if (t.deleted_at) return;
-        const monthIdx = new Date(t.date).getMonth();
-        const amount = Number(t.amount);
-
-        if (t.type === "income") data[monthIdx].income += amount;
-        else if (t.type === "expense") data[monthIdx].expense += amount;
-      });
+    for (let i = 0; i <= maxMonth; i++) {
+      data.push({ period: monthNames[i], income: 0, expense: 0 });
     }
+
+    yearlyTransactions.forEach((t) => {
+      if (t.deleted_at) return;
+      const monthIdx = new Date(t.date).getMonth();
+      if (monthIdx > maxMonth) return; // Skip future months
+      const amount = Number(t.amount);
+
+      if (t.type === "income") data[monthIdx].income += amount;
+      else if (t.type === "expense") data[monthIdx].expense += amount;
+    });
     return data;
-  }, [yearlyTransactions]);
+  }, [yearlyTransactions, mode, currentYear]);
 
   // 3. CONTEXT ANALYTICS - Enhanced with detailed stats
   const contextStats = useMemo(() => {

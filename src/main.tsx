@@ -4,6 +4,23 @@ import "./index.css";
 import App from "./App.tsx";
 import "./i18n";
 
+// #7 - Filter Recharts dimension warnings in development
+// These occur during initial render when containers haven't been measured yet
+if (import.meta.env.DEV) {
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    const message = args[0];
+    if (
+      typeof message === "string" &&
+      message.includes("The width") &&
+      message.includes("of chart should be greater than 0")
+    ) {
+      return; // Suppress Recharts dimension warning
+    }
+    originalWarn.apply(console, args);
+  };
+}
+
 // Remove loading indicator once React takes over
 const loadingEl = document.getElementById("app-loading");
 if (loadingEl) {

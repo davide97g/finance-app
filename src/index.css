@@ -310,19 +310,42 @@
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
   }
 
-  /* Root container handles safe areas at the highest level */
+  /* Root container - safe areas handled by individual components for fixed positioning compatibility */
   #root {
     min-height: 100vh;
     min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
-    /* Safe areas applied at root level - prevents layout shifts on navigation */
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
   }
 }
 
 /* Utility classes for safe area */
 @layer utilities {
+  /* Mobile header - needs explicit safe area for iOS standalone PWA */
+  .mobile-header-safe {
+    /* Fallback for browsers without env() support */
+    padding-top: 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    /* Safe area aware padding */
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+  }
+
+  /* Main content area - accounts for header height + safe area */
+  .main-content-safe {
+    /* Fallback: header is roughly 56px (3.5rem) */
+    padding-top: 4rem;
+    /* Safe area aware: header padding (max 0.5rem or safe-area-top) + header content (~2.5rem) + spacing (1rem) */
+    padding-top: calc(max(0.5rem, env(safe-area-inset-top, 0px)) + 3rem + 1rem);
+  }
+
+  /* Desktop doesn't need the extra padding */
+  @media (min-width: 768px) {
+    .main-content-safe {
+      padding-top: 2rem;
+    }
+  }
+
   .safe-top {
     padding-top: var(--safe-area-inset-top);
   }
