@@ -8,6 +8,38 @@ import {
   validate,
 } from "../lib/validation";
 
+/**
+ * Hook for managing expense/income categories with hierarchical support.
+ *
+ * Categories support parent-child relationships for nested organization.
+ * All operations are validated with Zod and trigger sync with the server.
+ *
+ * @param groupId - Filter categories by group:
+ *   - `undefined`: Return all categories (no filter)
+ *   - `null`: Return only personal categories (no group_id)
+ *   - `string`: Return categories for specific group + personal categories
+ *
+ * @returns Object containing:
+ *   - `categories`: Filtered array of active categories
+ *   - `addCategory`: Create a new category
+ *   - `updateCategory`: Update an existing category
+ *   - `deleteCategory`: Soft-delete a category
+ *   - `reparentChildren`: Move child categories to a new parent
+ *
+ * @example
+ * ```tsx
+ * const { categories, addCategory } = useCategories();
+ *
+ * // Create a new category
+ * await addCategory({
+ *   user_id: 'user-123',
+ *   name: 'Groceries',
+ *   type: 'expense',
+ *   color: '#22c55e',
+ *   icon: 'shopping-cart'
+ * });
+ * ```
+ */
 export function useCategories(groupId?: string | null) {
   const categories = useLiveQuery(() => db.categories.toArray());
 

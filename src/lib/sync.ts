@@ -1,3 +1,17 @@
+/**
+ * @fileoverview Bidirectional sync engine for local-first offline support.
+ *
+ * Implements a robust synchronization strategy between IndexedDB (local) and
+ * Supabase (remote) with:
+ * - Exponential backoff retry logic for transient failures
+ * - Batch processing to avoid overwhelming the server
+ * - Error quarantine for persistently failing items
+ * - Last-write-wins conflict resolution
+ * - Delta sync using server-assigned sync tokens
+ *
+ * @module lib/sync
+ */
+
 import { db } from "./db";
 import { supabase } from "./supabase";
 

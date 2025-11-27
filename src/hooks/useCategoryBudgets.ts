@@ -7,16 +7,56 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { CategoryBudgetInputSchema, validate } from "../lib/validation";
 
+/**
+ * Extended budget type with spending calculations and category info.
+ */
 export interface CategoryBudgetWithSpent extends CategoryBudget {
+  /** Amount already spent against this budget */
   spent: number;
+  /** Percentage of budget used (0-100+) */
   percentage: number;
+  /** Remaining budget (can be negative if over) */
   remaining: number;
+  /** Whether spending exceeds budget amount */
   isOverBudget: boolean;
+  /** Name of the associated category */
   categoryName?: string;
+  /** Color of the associated category */
   categoryColor?: string;
+  /** Icon of the associated category */
   categoryIcon?: string;
 }
 
+/**
+ * Hook for managing category-level budgets with spending tracking.
+ *
+ * Supports both monthly and yearly budget periods. Automatically calculates
+ * spending against each budget and provides warnings for over-budget categories.
+ *
+ * @param selectedMonth - Month to track spending for (format: 'YYYY-MM')
+ * @param selectedYear - Year to track spending for (format: 'YYYY')
+ *
+ * @returns Object containing:
+ *   - `categoryBudgets`: Budgets enriched with spending data
+ *   - `getBudgetForCategory`: Get budget for a specific category
+ *   - `setCategoryBudget`: Create or update a category budget
+ *   - `removeCategoryBudget`: Soft-delete a budget
+ *   - `overBudgetCategories`: Categories that exceeded their budget
+ *   - `warningCategories`: Categories at 80%+ of budget
+ *
+ * @example
+ * ```tsx
+ * const { categoryBudgets, setCategoryBudget, overBudgetCategories } = useCategoryBudgets();
+ *
+ * // Set a monthly budget of €500 for groceries
+ * await setCategoryBudget(groceryCategoryId, 500, 'monthly');
+ *
+ * // Check for alerts
+ * if (overBudgetCategories.length > 0) {
+ *   alert(`${overBudgetCategories.length} categories over budget!`);
+ * }
+ * ```
+ */
 export function useCategoryBudgets(
   selectedMonth?: string,
   selectedYear?: string

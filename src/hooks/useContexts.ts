@@ -8,6 +8,30 @@ import {
   validate,
 } from "../lib/validation";
 
+/**
+ * Hook for managing transaction contexts (e.g., "Work", "Personal", "Vacation").
+ *
+ * Contexts provide an additional dimension for categorizing transactions
+ * beyond the category hierarchy. Useful for tracking spending by project,
+ * trip, or life area.
+ *
+ * @returns Object containing:
+ *   - `contexts`: Array of active (non-deleted) contexts
+ *   - `addContext`: Create a new context
+ *   - `updateContext`: Update an existing context
+ *   - `deleteContext`: Soft-delete a context
+ *
+ * @example
+ * ```tsx
+ * const { contexts, addContext } = useContexts();
+ *
+ * // Create a new context
+ * await addContext({
+ *   user_id: 'user-123',
+ *   name: 'Summer Vacation 2024'
+ * });
+ * ```
+ */
 export function useContexts() {
   const contexts = useLiveQuery(() => db.contexts.toArray());
 

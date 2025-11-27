@@ -3,13 +3,54 @@ import { db } from "../lib/db";
 import { format, subMonths } from "date-fns";
 import { useMemo } from "react";
 
+/**
+ * Parameters for configuring the statistics hook.
+ */
 interface UseStatisticsParams {
-  selectedMonth?: string; // Format: 'yyyy-MM'
-  selectedYear?: string; // Format: 'yyyy'
-  comparisonMonth?: string; // Format: 'yyyy-MM' - optional custom month for comparison
-  comparisonYear?: string; // Format: 'yyyy' - optional custom year for comparison
+  /** Selected month for monthly stats (format: 'YYYY-MM') */
+  selectedMonth?: string;
+  /** Selected year for yearly stats (format: 'YYYY') */
+  selectedYear?: string;
+  /** Custom month for comparison (format: 'YYYY-MM'), defaults to previous month */
+  comparisonMonth?: string;
+  /** Custom year for comparison (format: 'YYYY'), defaults to previous year */
+  comparisonYear?: string;
 }
 
+/**
+ * Hook for calculating comprehensive financial statistics and analytics.
+ *
+ * Provides aggregated data for dashboard charts, period comparisons,
+ * burn rate projections, and category breakdowns.
+ *
+ * @param params - Optional configuration for period selection
+ *
+ * @returns Object containing:
+ *   - `monthlyStats` / `yearlyStats`: Income, expense, investment totals by category
+ *   - `monthlyNetBalance` / `yearlyNetBalance`: Net income - expenses
+ *   - `monthlyCategoryPercentages` / `yearlyCategoryPercentages`: For pie/radial charts
+ *   - `monthlyExpenses` / `monthlyIncome` / `monthlyInvestments`: 12-month arrays
+ *   - `dailyCumulativeExpenses`: Daily cumulative for line charts
+ *   - `monthlyTrendData` / `monthlyCashFlow`: Trend analysis data
+ *   - `contextStats`: Spending breakdown by context
+ *   - `burnRate` / `yearlyBurnRate`: Projection calculations
+ *   - `monthlyComparison` / `yearlyComparison`: Period-over-period changes
+ *   - `categoryComparison`: Which categories increased/decreased
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   monthlyStats,
+ *   burnRate,
+ *   monthlyComparison
+ * } = useStatistics({ selectedMonth: '2024-06' });
+ *
+ * // Display summary
+ * console.log(`Spent: €${monthlyStats.expense}`);
+ * console.log(`Burn rate: €${burnRate.dailyAverage}/day`);
+ * console.log(`vs last month: ${monthlyComparison.expense.change.toFixed(1)}%`);
+ * ```
+ */
 export function useStatistics(params?: UseStatisticsParams) {
   const now = new Date();
   const currentMonth = params?.selectedMonth || format(now, "yyyy-MM");

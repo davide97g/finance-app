@@ -3,6 +3,32 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, Setting } from "../lib/db";
 import { useAuth } from "./useAuth";
 
+/**
+ * Hook for managing user preferences and application settings.
+ *
+ * Settings are stored locally per user and include display preferences,
+ * currency, language, and behavioral options.
+ *
+ * Automatically creates default settings for new users on first access.
+ *
+ * @returns Object containing:
+ *   - `settings`: Current user settings or undefined if loading
+ *   - `updateSettings`: Partial update function for settings
+ *
+ * @example
+ * ```tsx
+ * const { settings, updateSettings } = useSettings();
+ *
+ * // Change theme
+ * await updateSettings({ theme: 'dark' });
+ *
+ * // Change multiple settings
+ * await updateSettings({
+ *   language: 'it',
+ *   start_of_week: 'sunday'
+ * });
+ * ```
+ */
 export function useSettings() {
   const { user } = useAuth();
 

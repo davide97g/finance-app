@@ -3,6 +3,32 @@ import { supabase } from "../lib/supabase";
 import { db } from "../lib/db";
 import { User } from "@supabase/supabase-js";
 
+/**
+ * Hook for managing user authentication state via Supabase Auth.
+ *
+ * Automatically subscribes to auth state changes and handles
+ * local cache cleanup on sign out.
+ *
+ * @returns Object containing:
+ *   - `user`: Current authenticated user or null
+ *   - `loading`: Whether initial auth check is in progress
+ *   - `signOut`: Function to sign out and clear local data
+ *
+ * @example
+ * ```tsx
+ * const { user, loading, signOut } = useAuth();
+ *
+ * if (loading) return <Spinner />;
+ * if (!user) return <LoginPage />;
+ *
+ * return (
+ *   <div>
+ *     Welcome, {user.email}
+ *     <button onClick={signOut}>Sign Out</button>
+ *   </div>
+ * );
+ * ```
+ */
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

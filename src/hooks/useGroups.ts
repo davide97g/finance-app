@@ -11,12 +11,49 @@ import {
   validate,
 } from "../lib/validation";
 
+/**
+ * Extended group type with member information and computed properties.
+ */
 export interface GroupWithMembers extends Group {
+  /** List of active members in the group */
   members: GroupMember[];
+  /** Whether the current user created this group */
   isCreator: boolean;
+  /** Current user's expense share percentage (0-100) */
   myShare: number;
 }
 
+/**
+ * Hook for managing shared expense groups with member management and balance calculation.
+ *
+ * Groups allow multiple users to track shared expenses with customizable
+ * percentage splits. The hook provides CRUD operations for groups and members,
+ * plus balance calculations showing who owes whom.
+ *
+ * @returns Object containing:
+ *   - `groups`: Array of groups where user is member/creator
+ *   - `createGroup`: Create a new group (creator gets 100% initial share)
+ *   - `updateGroup`: Update group name/description
+ *   - `deleteGroup`: Soft-delete group with option to keep/delete transactions
+ *   - `addMember`: Add a user to the group
+ *   - `removeMember`: Remove a member from the group
+ *   - `updateMemberShare`: Update a single member's share percentage
+ *   - `updateAllShares`: Batch update all member shares
+ *   - `getGroupBalance`: Calculate expense balances for all members
+ *
+ * @example
+ * ```tsx
+ * const { groups, createGroup, getGroupBalance } = useGroups();
+ *
+ * // Create a group for shared apartment expenses
+ * const groupId = await createGroup('Apartment', 'Monthly shared bills');
+ *
+ * // Check who owes money
+ * const { balances } = await getGroupBalance(groupId);
+ * // balances[userId].balance > 0 means they are owed money
+ * // balances[userId].balance < 0 means they owe money
+ * ```
+ */
 export function useGroups() {
   const { user } = useAuth();
 
