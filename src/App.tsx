@@ -13,6 +13,7 @@ import { useAutoGenerate } from "@/hooks/useAutoGenerate";
 import { useBudgetNotifications } from "@/hooks/useBudgetNotifications";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -179,6 +180,7 @@ function App() {
         <ThemeProvider>
           <Toaster />
           <PWAUpdateNotification />
+          <PWAInstallPrompt />
           <OfflineIndicator />
           <Routes>
             <Route path="/auth" element={<AuthPage />} />

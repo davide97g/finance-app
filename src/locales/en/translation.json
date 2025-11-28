@@ -373,5 +373,8 @@
   "tap_for_average": "Tap for monthly avg",
   "tap_to_flip": "Tap to flip",
   "per_month": "/mo",
-  "months_with_data": "months with data"
+  "months_with_data": "months with data",
+  "install_app": "Install App",
+  "install_app_desc": "Install this app on your device for a better experience.",
+  "install": "Install"
 }

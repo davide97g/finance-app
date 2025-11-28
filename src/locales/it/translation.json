@@ -373,5 +373,8 @@
   "tap_for_average": "Tocca per media mensile",
   "tap_to_flip": "Tocca per girare",
   "per_month": "/mese",
-  "months_with_data": "mesi con dati"
+  "months_with_data": "mesi con dati",
+  "install_app": "Installa App",
+  "install_app_desc": "Installa questa app sul tuo dispositivo per un'esperienza migliore.",
+  "install": "Installa"
 }
