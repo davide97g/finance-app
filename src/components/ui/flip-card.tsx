@@ -25,6 +25,8 @@ interface FlipCardProps {
   backClassName?: string;
   /** Whether the card is interactive */
   disabled?: boolean;
+  /** Disable click on entire card - flip must be triggered externally via onFlip */
+  disableGlobalClick?: boolean;
 }
 
 const directionConfig: Record<
@@ -50,39 +52,42 @@ const FlipCard = React.forwardRef<HTMLDivElement, FlipCardProps>(
       frontClassName,
       backClassName,
       disabled = false,
+      disableGlobalClick = false,
     },
     ref
   ) => {
     const { axis, direction: dir } = directionConfig[direction];
     const rotation = isFlipped ? dir * 180 : 0;
+    const isClickable = !disabled && !disableGlobalClick;
 
     return (
       <motion.div
         ref={ref}
         className={cn(
-          "relative cursor-pointer select-none",
-          disabled && "cursor-default pointer-events-none",
+          "relative select-none",
+          isClickable && "cursor-pointer",
+          disabled && "pointer-events-none",
           className
         )}
-        onClick={disabled ? undefined : onFlip}
+        onClick={isClickable ? onFlip : undefined}
         onKeyDown={
-          disabled
-            ? undefined
-            : (e) => {
+          isClickable
+            ? (e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   onFlip?.();
                 }
               }
+            : undefined
         }
-        tabIndex={disabled ? -1 : 0}
-        role="button"
-        aria-pressed={isFlipped}
+        tabIndex={isClickable ? 0 : -1}
+        role={isClickable ? "button" : undefined}
+        aria-pressed={isClickable ? isFlipped : undefined}
         style={{
           perspective: 1000,
           transformStyle: "preserve-3d",
         }}
-        whileTap={disabled ? undefined : { scale: 0.98 }}
+        whileTap={isClickable ? { scale: 0.98 } : undefined}
       >
         {/* Front Face */}
         <motion.div

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Menu, Wallet, LogOut } from "lucide-react";
+import { Menu, LogOut, Squirrel } from "lucide-react";
+import { Acorn } from "@/components/icons/Acorn";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -62,7 +63,7 @@ export function MobileNav({ navigation }: MobileNavProps) {
           </SheetDescription>
           <div className="flex h-full flex-col pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)]">
             <div className="flex items-center gap-2 border-b p-4 font-bold text-xl">
-              <Wallet
+              <Squirrel
                 className={cn("h-6 w-6", !isOnline && "text-destructive")}
                 aria-hidden="true"
               />
@@ -113,7 +114,7 @@ export function MobileNav({ navigation }: MobileNavProps) {
         </SheetContent>
       </Sheet>
       <div className="flex items-center gap-2 font-bold text-lg">
-        <Wallet
+        <Squirrel
           className={cn("h-5 w-5", !isOnline && "text-destructive")}
           aria-hidden="true"
         />

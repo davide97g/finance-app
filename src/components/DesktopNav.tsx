@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Wallet, LogOut } from "lucide-react";
+import { LogOut, Squirrel } from "lucide-react";
+import { Acorn } from "@/components/icons/Acorn";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,7 +37,7 @@ export function DesktopNav({ navigation }: DesktopNavProps) {
       aria-label={t("main_navigation")}
     >
       <div className="flex h-14 items-center border-b px-4 font-bold text-xl shrink-0">
-        <Wallet
+        <Squirrel
           className={cn("mr-2 h-6 w-6", !isOnline && "text-destructive")}
           aria-hidden="true"
         />

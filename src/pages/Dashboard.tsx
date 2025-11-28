@@ -22,11 +22,12 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
-  Wallet,
   ArrowUpRight,
   ArrowDownRight,
   PiggyBank,
+  ArrowDownUp,
 } from "lucide-react";
+import { Acorn } from "@/components/icons/Acorn";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
@@ -54,16 +55,16 @@ export function Dashboard() {
   // Chart config - memoized since it depends on translation
   const chartConfig = useMemo(
     () =>
-    ({
-      cumulative: {
-        label: t("cumulative_expenses"),
-        color: "hsl(0 84.2% 60.2%)",
-      },
-      projection: {
-        label: t("projection"),
-        color: "#eb630fff",
-      },
-    } satisfies ChartConfig),
+      ({
+        cumulative: {
+          label: t("cumulative_expenses"),
+          color: "hsl(0 84.2% 60.2%)",
+        },
+        projection: {
+          label: t("projection"),
+          color: "#eb630fff",
+        },
+      } satisfies ChartConfig),
     [t]
   );
 
@@ -118,7 +119,8 @@ export function Dashboard() {
   // Chart Card Flip State
   const [chartFaceAIndex, setChartFaceAIndex] = useState(0);
   const [chartFaceBIndex, setChartFaceBIndex] = useState(1);
-  const chartViewsCount = 3; // Chart, Budget, Recent Transactions
+  // Chart views: 0=Chart, 1=Recent Transactions, 2=Budget (only if budget is set)
+  const chartViewsCount = monthlyBudget ? 3 : 2;
 
   const currentChartVisibleIndex = isChartFlipped
     ? chartFaceBIndex
@@ -150,8 +152,9 @@ export function Dashboard() {
           {Array.from({ length: chartViewsCount }).map((_, i) => (
             <div
               key={i}
-              className={`h-1.5 w-1.5 rounded-full transition-colors ${i === index ? "bg-primary" : "bg-muted-foreground/30"
-                }`}
+              className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                i === index ? "bg-primary" : "bg-muted-foreground/30"
+              }`}
             />
           ))}
         </div>
@@ -165,7 +168,8 @@ export function Dashboard() {
                 <div className="flex flex-col space-y-1.5">
                   <CardTitle>{t("monthly_expenses_trend")}</CardTitle>
                   <CardDescription>
-                    {t("cumulative_daily_expenses")} - {format(now, "MMMM yyyy")}
+                    {t("cumulative_daily_expenses")} -{" "}
+                    {format(now, "MMMM yyyy")}
                   </CardDescription>
                 </div>
                 {dotIndicators}
@@ -274,9 +278,17 @@ export function Dashboard() {
                     />
                     <span>{t("chart_legend_projection")}</span>
                   </div>
-                  <div className="ml-auto text-muted-foreground/70">
-                    {t("tap_to_flip")}
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto h-6 w-6 text-muted-foreground/70 hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChartFlip();
+                    }}
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -299,19 +311,30 @@ export function Dashboard() {
                     isLoading={transactions === undefined}
                   />
                 </ScrollArea>
-                <div className="mt-2 text-xs text-right text-muted-foreground/70 pt-2">
-                  {t("tap_to_flip")}
+                <div className="mt-2 flex justify-end pt-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/70 hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChartFlip();
+                    }}
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           );
-        case 2: // Budget (Moved to index 2)
+        case 2: // Budget (only shown if budget is set)
+          if (!monthlyBudget) return null;
           return (
             <Card className="h-full flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex flex-col space-y-1.5">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
+                    <Acorn className="h-4 w-4" />
                     {t("monthly_budget")}
                   </CardTitle>
                   <CardDescription>{format(now, "MMMM yyyy")}</CardDescription>
@@ -319,103 +342,98 @@ export function Dashboard() {
                 {dotIndicators}
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-center space-y-6">
-                {monthlyBudget ? (
-                  <>
-                    <div className="space-y-6">
-                      {/* Budget Overview */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground text-sm">
-                            {t("spent")}
-                          </span>
-                          <span className="text-3xl font-bold text-red-600">
-                            €{totalExpense.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground text-sm">
-                            {t("budget")}
-                          </span>
-                          <span className="text-3xl font-bold">
-                            €{monthlyBudget.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="space-y-2">
-                        <div className="h-6 w-full bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-500 rounded-full ${isOverBudget
-                                ? "bg-red-500"
-                                : budgetUsedPercentage > 80
-                                  ? "bg-yellow-500"
-                                  : "bg-green-500"
-                              }`}
-                            style={{
-                              width: `${Math.min(budgetUsedPercentage, 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-base">
-                          <span
-                            className={`font-medium ${isOverBudget
-                                ? "text-red-600"
-                                : budgetUsedPercentage > 80
-                                  ? "text-yellow-600"
-                                  : "text-green-600"
-                              }`}
-                          >
-                            {budgetUsedPercentage.toFixed(0)}% {t("used")}
-                          </span>
-                          <span
-                            className={
-                              isOverBudget
-                                ? "text-red-600 font-medium"
-                                : "text-green-600 font-medium"
-                            }
-                          >
-                            {isOverBudget
-                              ? `+€${Math.abs(budgetRemaining).toFixed(2)} ${t(
-                                "over"
-                              )}`
-                              : `€${budgetRemaining.toFixed(2)} ${t(
-                                "remaining"
-                              )}`}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Daily Average Info */}
-                      <div className="pt-4 border-t">
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>{t("daily_average")}</span>
-                          <span>
-                            €
-                            {(
-                              totalExpense / Math.max(new Date().getDate(), 1)
-                            ).toFixed(2)}
-                            /{t("day")}
-                          </span>
-                        </div>
-                      </div>
+                <div className="space-y-6">
+                  {/* Budget Overview */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground text-sm">
+                        {t("spent")}
+                      </span>
+                      <span className="text-3xl font-bold text-red-600">
+                        €{totalExpense.toFixed(2)}
+                      </span>
                     </div>
-                    <div className="mt-auto text-xs text-right text-muted-foreground/70">
-                      {t("tap_to_flip")}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                    <Wallet className="h-16 w-16 mb-6 opacity-50" />
-                    <p className="text-lg font-medium">{t("no_budget_set")}</p>
-                    <p className="text-sm mt-2">
-                      {t("set_budget_in_settings")}
-                    </p>
-                    <div className="mt-auto pt-8 text-xs text-muted-foreground/70">
-                      {t("tap_to_flip")}
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground text-sm">
+                        {t("budget")}
+                      </span>
+                      <span className="text-3xl font-bold">
+                        €{monthlyBudget.toFixed(2)}
+                      </span>
                     </div>
                   </div>
-                )}
+
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="h-6 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 rounded-full ${
+                          isOverBudget
+                            ? "bg-red-500"
+                            : budgetUsedPercentage > 80
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
+                        }`}
+                        style={{
+                          width: `${Math.min(budgetUsedPercentage, 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-base">
+                      <span
+                        className={`font-medium ${
+                          isOverBudget
+                            ? "text-red-600"
+                            : budgetUsedPercentage > 80
+                            ? "text-yellow-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {budgetUsedPercentage.toFixed(0)}% {t("used")}
+                      </span>
+                      <span
+                        className={
+                          isOverBudget
+                            ? "text-red-600 font-medium"
+                            : "text-green-600 font-medium"
+                        }
+                      >
+                        {isOverBudget
+                          ? `+€${Math.abs(budgetRemaining).toFixed(2)} ${t(
+                              "over"
+                            )}`
+                          : `€${budgetRemaining.toFixed(2)} ${t("remaining")}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Daily Average Info */}
+                  <div className="pt-4 border-t">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>{t("daily_average")}</span>
+                      <span>
+                        €
+                        {(
+                          totalExpense / Math.max(new Date().getDate(), 1)
+                        ).toFixed(2)}
+                        /{t("day")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-auto flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/70 hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChartFlip();
+                    }}
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           );
@@ -437,6 +455,7 @@ export function Dashboard() {
       categories,
       transactions,
       chartViewsCount,
+      handleChartFlip,
     ]
   );
 
@@ -482,22 +501,23 @@ export function Dashboard() {
           {Array.from({ length: statsCount }).map((_, i) => (
             <div
               key={i}
-              className={`h-1.5 w-1.5 rounded-full transition-colors ${i === index
+              className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                i === index
                   ? index === 0
                     ? "bg-red-500"
                     : index === 1
-                      ? "bg-green-500"
-                      : index === 2
-                        ? balance >= 0
-                          ? "bg-emerald-500"
-                          : "bg-red-500"
-                        : isOverBudget
-                          ? "bg-red-500"
-                          : budgetUsedPercentage > 80
-                            ? "bg-amber-500"
-                            : "bg-blue-500"
+                    ? "bg-green-500"
+                    : index === 2
+                    ? balance >= 0
+                      ? "bg-emerald-500"
+                      : "bg-red-500"
+                    : isOverBudget
+                    ? "bg-red-500"
+                    : budgetUsedPercentage > 80
+                    ? "bg-amber-500"
+                    : "bg-blue-500"
                   : "bg-muted-foreground/30"
-                }`}
+              }`}
             />
           ))}
         </div>
@@ -521,9 +541,17 @@ export function Dashboard() {
               <p className="text-3xl font-bold tracking-tight text-red-500">
                 -€{totalExpense.toFixed(2)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1 text-right">
-                {t("tap_to_flip")}
-              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-2 right-2 h-6 w-6 text-muted-foreground/70 hover:text-primary z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatFlip();
+                }}
+              >
+                <ArrowDownUp className="h-4 w-4" />
+              </Button>
               <div className="absolute -right-4 -bottom-4 opacity-[0.07] text-red-500">
                 <TrendingDown className="h-24 w-24" />
               </div>
@@ -546,9 +574,17 @@ export function Dashboard() {
               <p className="text-3xl font-bold tracking-tight text-green-500">
                 +€{totalIncome.toFixed(2)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1 text-right">
-                {t("tap_to_flip")}
-              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-2 right-2 h-6 w-6 text-muted-foreground/70 hover:text-primary z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatFlip();
+                }}
+              >
+                <ArrowDownUp className="h-4 w-4" />
+              </Button>
               <div className="absolute -right-4 -bottom-4 opacity-[0.07] text-green-500">
                 <TrendingUp className="h-24 w-24" />
               </div>
@@ -560,10 +596,11 @@ export function Dashboard() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`p-1.5 rounded-md ${balance >= 0
+                    className={`p-1.5 rounded-md ${
+                      balance >= 0
                         ? "bg-emerald-500/15 text-green-500"
                         : "bg-red-500/15 text-red-500"
-                      }`}
+                    }`}
                   >
                     <PiggyBank className="h-5 w-5" />
                   </div>
@@ -574,17 +611,27 @@ export function Dashboard() {
                 {dotIndicators}
               </div>
               <p
-                className={`text-3xl font-bold tracking-tight ${balance >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
+                className={`text-3xl font-bold tracking-tight ${
+                  balance >= 0 ? "text-green-500" : "text-red-500"
+                }`}
               >
                 {balance >= 0 ? "+" : "-"}€{Math.abs(balance).toFixed(2)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1 text-right">
-                {t("tap_to_flip")}
-              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-2 right-2 h-6 w-6 text-muted-foreground/70 hover:text-primary z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatFlip();
+                }}
+              >
+                <ArrowDownUp className="h-4 w-4" />
+              </Button>
               <div
-                className={`absolute -right-4 -bottom-4 opacity-[0.07] ${balance >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
+                className={`absolute -right-4 -bottom-4 opacity-[0.07] ${
+                  balance >= 0 ? "text-green-500" : "text-red-500"
+                }`}
               >
                 <PiggyBank className="h-24 w-24" />
               </div>
@@ -597,14 +644,15 @@ export function Dashboard() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`p-1.5 rounded-md ${isOverBudget
+                    className={`p-1.5 rounded-md ${
+                      isOverBudget
                         ? "bg-red-500/20 text-red-600"
                         : budgetUsedPercentage > 80
-                          ? "bg-amber-500/20 text-amber-600"
-                          : "bg-blue-500/20 text-blue-600"
-                      }`}
+                        ? "bg-amber-500/20 text-amber-600"
+                        : "bg-blue-500/20 text-blue-600"
+                    }`}
                   >
-                    <Wallet className="h-5 w-5" />
+                    <Acorn className="h-5 w-5" />
                   </div>
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {t("budget")}
@@ -614,12 +662,13 @@ export function Dashboard() {
               </div>
               <div className="flex items-baseline gap-2">
                 <p
-                  className={`text-3xl font-bold tracking-tight ${isOverBudget
+                  className={`text-3xl font-bold tracking-tight ${
+                    isOverBudget
                       ? "text-red-600"
                       : budgetUsedPercentage > 80
-                        ? "text-amber-600"
-                        : "text-blue-600"
-                    }`}
+                      ? "text-amber-600"
+                      : "text-blue-600"
+                  }`}
                 >
                   {budgetUsedPercentage.toFixed(0)}%
                 </p>
@@ -629,26 +678,39 @@ export function Dashboard() {
               </div>
               <div className="mt-2 h-2 w-full bg-muted/50 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 rounded-full ${isOverBudget
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    isOverBudget
                       ? "bg-red-500"
                       : budgetUsedPercentage > 80
-                        ? "bg-amber-500"
-                        : "bg-blue-500"
-                    }`}
+                      ? "bg-amber-500"
+                      : "bg-blue-500"
+                  }`}
                   style={{
                     width: `${Math.min(budgetUsedPercentage, 100)}%`,
                   }}
                 />
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-2 right-2 h-6 w-6 text-muted-foreground/70 hover:text-primary z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatFlip();
+                }}
+              >
+                <ArrowDownUp className="h-4 w-4" />
+              </Button>
               <div
-                className={`absolute -right-4 -bottom-4 opacity-[0.07] ${isOverBudget
+                className={`absolute -right-4 -bottom-4 opacity-[0.07] ${
+                  isOverBudget
                     ? "text-red-500"
                     : budgetUsedPercentage > 80
-                      ? "text-amber-500"
-                      : "text-blue-500"
-                  }`}
+                    ? "text-amber-500"
+                    : "text-blue-500"
+                }`}
               >
-                <Wallet className="h-24 w-24" />
+                <Acorn className="h-24 w-24" />
               </div>
             </div>
           );
@@ -665,6 +727,7 @@ export function Dashboard() {
       isOverBudget,
       budgetUsedPercentage,
       statsCount,
+      handleStatFlip,
     ]
   );
 
@@ -738,6 +801,7 @@ export function Dashboard() {
           isFlipped={isFlipped}
           onFlip={handleStatFlip}
           direction="top"
+          disableGlobalClick
           frontContent={renderStatCard(faceAIndex)}
           backContent={renderStatCard(faceBIndex)}
         />
@@ -750,6 +814,7 @@ export function Dashboard() {
           isFlipped={isChartFlipped}
           onFlip={handleChartFlip}
           direction="top"
+          disableGlobalClick
           frontContent={renderChartCard(chartFaceAIndex)}
           backContent={renderChartCard(chartFaceBIndex)}
         />
@@ -788,8 +853,9 @@ export function Dashboard() {
             </CardHeader>
             <CardContent>
               <div
-                className={`text-2xl font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
+                className={`text-2xl font-bold ${
+                  balance >= 0 ? "text-green-600" : "text-red-600"
+                }`}
               >
                 €{balance.toFixed(2)}
               </div>
@@ -838,8 +904,9 @@ export function Dashboard() {
                 <Button
                   type="button"
                   variant="outline"
-                  className={`w-full ${formData.type === "expense" ? getTypeColor("expense") : ""
-                    }`}
+                  className={`w-full ${
+                    formData.type === "expense" ? getTypeColor("expense") : ""
+                  }`}
                   onClick={() => setFormData({ ...formData, type: "expense" })}
                 >
                   {t("expense")}
@@ -847,8 +914,9 @@ export function Dashboard() {
                 <Button
                   type="button"
                   variant="outline"
-                  className={`w-full ${formData.type === "income" ? getTypeColor("income") : ""
-                    }`}
+                  className={`w-full ${
+                    formData.type === "income" ? getTypeColor("income") : ""
+                  }`}
                   onClick={() => setFormData({ ...formData, type: "income" })}
                 >
                   {t("income")}
@@ -856,10 +924,11 @@ export function Dashboard() {
                 <Button
                   type="button"
                   variant="outline"
-                  className={`w-full ${formData.type === "investment"
-                    ? getTypeColor("investment")
-                    : ""
-                    }`}
+                  className={`w-full ${
+                    formData.type === "investment"
+                      ? getTypeColor("investment")
+                      : ""
+                  }`}
                   onClick={() =>
                     setFormData({ ...formData, type: "investment" })
                   }

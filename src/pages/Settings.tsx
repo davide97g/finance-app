@@ -42,16 +42,14 @@ import {
   Sun,
   Moon,
   Monitor,
-  Copy,
-  Check,
   Trash2,
   AlertTriangle,
   Upload,
   Download,
   FileJson,
-  Wallet,
   X,
 } from "lucide-react";
+import { Acorn } from "@/components/icons/Acorn";
 import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
 import { useTheme } from "next-themes";
@@ -71,7 +69,6 @@ export function SettingsPage() {
   const [manualSyncing, setManualSyncing] = useState(false);
   const [fullSyncing, setFullSyncing] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [copiedUserId, setCopiedUserId] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [importingData, setImportingData] = useState(false);
   const [exportingData, setExportingData] = useState(false);
@@ -103,14 +100,6 @@ export function SettingsPage() {
     } finally {
       setFullSyncing(false);
     }
-  };
-
-  const copyUserId = async () => {
-    if (!user) return;
-    await navigator.clipboard.writeText(user.id);
-    setCopiedUserId(true);
-    setTimeout(() => setCopiedUserId(false), 2000);
-    toast.success(t("user_id_copied"));
   };
 
   const handleClearCache = async () => {
@@ -287,88 +276,7 @@ export function SettingsPage() {
         <p className="text-muted-foreground">{t("settings_general_desc")}</p>
       </div>
       <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("settings_account")}</CardTitle>
-            <CardDescription>{t("settings_account_desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="user-id">{t("user_id")}</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="user-id"
-                  value={user?.id || ""}
-                  readOnly
-                  className="font-mono text-sm"
-                />
-                <Button variant="outline" size="icon" onClick={copyUserId}>
-                  {copiedUserId ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t("user_id_share_hint")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("sync")}</CardTitle>
-            <CardDescription>{t("sync_desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <SyncIndicator
-                isSyncing={isSyncing}
-                isOnline={isOnline}
-                lastSyncTime={lastSyncTime}
-                isRealtimeConnected={isRealtimeConnected}
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleManualSync}
-                  disabled={isSyncing || !isOnline}
-                  size="sm"
-                  variant="outline"
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 ${
-                      manualSyncing ? "animate-spin" : ""
-                    }`}
-                  />
-                  {t("sync_now")}
-                </Button>
-                <Button
-                  onClick={handleFullSync}
-                  disabled={isSyncing || !isOnline}
-                  size="sm"
-                  variant="secondary"
-                  title={
-                    t("full_sync_desc") || "Re-download all data from server"
-                  }
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 ${
-                      fullSyncing ? "animate-spin" : ""
-                    }`}
-                  />
-                  {t("full_sync") || "Full Sync"}
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("full_sync_hint") ||
-                "Use 'Full Sync' if data seems out of sync after direct database changes."}
-            </p>
-          </CardContent>
-        </Card>
-
+        {/* 1. General */}
         <Card>
           <CardHeader>
             <CardTitle>{t("settings_general")}</CardTitle>
@@ -479,81 +387,14 @@ export function SettingsPage() {
                 </div>
               </div>
             </div>
-            <Separator />
-            <div className="grid gap-2">
-              <Label htmlFor="start_of_week">{t("start_of_week")}</Label>
-              <Select
-                value={settings.start_of_week}
-                onValueChange={(value) =>
-                  updateSettings({ start_of_week: value })
-                }
-              >
-                <SelectTrigger id="start_of_week" className="max-w-[200px]">
-                  <SelectValue placeholder={t("select_start_day")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monday">{t("monday")}</SelectItem>
-                  <SelectItem value="sunday">{t("sunday")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("settings_calculations")}</CardTitle>
-            <CardDescription>{t("settings_calculations_desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="investments-total" className="text-base">
-                  {t("include_investments")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("include_investments_desc")}
-                </p>
-              </div>
-              <div className="pl-2">
-                <Switch
-                  id="investments-total"
-                  checked={settings.include_investments_in_expense_totals}
-                  onCheckedChange={(checked) =>
-                    updateSettings({
-                      include_investments_in_expense_totals: checked,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="group-expenses" className="text-base">
-                  {t("include_group_expenses")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("include_group_expenses_desc")}
-                </p>
-              </div>
-              <div className="pl-2">
-                <Switch
-                  id="group-expenses"
-                  checked={settings.include_group_expenses ?? false}
-                  onCheckedChange={(checked) =>
-                    updateSettings({ include_group_expenses: checked })
-                  }
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+        {/* 2. Monthly Budget */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
+              <Acorn className="h-5 w-5" />
               {t("monthly_budget")}
             </CardTitle>
             <CardDescription>{t("monthly_budget_desc")}</CardDescription>
@@ -602,6 +443,62 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* 3. Synchronization */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("sync")}</CardTitle>
+            <CardDescription>{t("sync_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <SyncIndicator
+                isSyncing={isSyncing}
+                isOnline={isOnline}
+                lastSyncTime={lastSyncTime}
+                isRealtimeConnected={isRealtimeConnected}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleManualSync}
+                  disabled={isSyncing || !isOnline}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 sm:flex-none"
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${
+                      manualSyncing ? "animate-spin" : ""
+                    }`}
+                  />
+                  {t("sync_now")}
+                </Button>
+                <Button
+                  onClick={handleFullSync}
+                  disabled={isSyncing || !isOnline}
+                  size="sm"
+                  variant="secondary"
+                  className="flex-1 sm:flex-none"
+                  title={
+                    t("full_sync_desc") || "Re-download all data from server"
+                  }
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${
+                      fullSyncing ? "animate-spin" : ""
+                    }`}
+                  />
+                  {t("full_sync") || "Full Sync"}
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("full_sync_hint") ||
+                "Use 'Full Sync' if data seems out of sync after direct database changes."}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* 4. Data Management */}
         <Card>
           <CardHeader>
             <CardTitle>{t("data_management")}</CardTitle>
@@ -609,7 +506,7 @@ export function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Clear Local Cache */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label className="text-base flex items-center gap-2">
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -625,6 +522,7 @@ export function SettingsPage() {
                     variant="destructive"
                     size="sm"
                     disabled={clearingCache}
+                    className="w-full sm:w-auto"
                   >
                     {clearingCache ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -659,7 +557,7 @@ export function SettingsPage() {
             <Separator />
 
             {/* Export Data */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label className="text-base flex items-center gap-2">
                   <Download className="h-4 w-4 text-muted-foreground" />
@@ -675,6 +573,7 @@ export function SettingsPage() {
                   size="sm"
                   onClick={handleExportData}
                   disabled={exportingData}
+                  className="w-full sm:w-auto"
                 >
                   {exportingData ? (
                     <RefreshCw className="h-4 w-4 animate-spin mr-2" />
@@ -689,7 +588,7 @@ export function SettingsPage() {
             <Separator />
 
             {/* Import Data (Dev Feature) */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label className="text-base flex items-center gap-2">
                   <Upload className="h-4 w-4 text-muted-foreground" />
@@ -715,6 +614,7 @@ export function SettingsPage() {
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={importingData}
+                  className="w-full sm:w-auto"
                 >
                   {importingData ? (
                     <RefreshCw className="h-4 w-4 animate-spin mr-2" />

@@ -1,5 +1,5 @@
-import {useTranslation} from 'react-i18next';
-import {Button} from '@/components/ui/button';
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -7,24 +7,25 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import {Edit, Trash2, Tag} from 'lucide-react';
-import {SyncStatusBadge} from '@/components/SyncStatus';
-import {Transaction, Category, Context} from '@/lib/db';
-import {useMobile} from '@/hooks/useMobile';
-import {useMemo, useRef, useCallback} from 'react';
-import {Skeleton} from '@/components/ui/skeleton';
-import {getIconComponent} from '@/lib/icons';
-import {useVirtualizer} from '@tanstack/react-virtual';
-import {UI_DEFAULTS} from '@/lib/constants';
-import {format, isToday, isYesterday, parseISO} from 'date-fns';
-import {it, enUS} from 'date-fns/locale';
-import {MobileTransactionRow} from './MobileTransactionRow';
+} from "@/components/ui/table";
+import { Edit, Trash2, Tag, Users } from "lucide-react";
+import { SyncStatusBadge } from "@/components/SyncStatus";
+import { Transaction, Category, Context, Group } from "@/lib/db";
+import { useMobile } from "@/hooks/useMobile";
+import { useMemo, useRef, useCallback } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getIconComponent } from "@/lib/icons";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { UI_DEFAULTS } from "@/lib/constants";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
+import { it, enUS } from "date-fns/locale";
+import { MobileTransactionRow } from "./MobileTransactionRow";
 
 interface TransactionListProps {
   transactions: Transaction[] | undefined;
   categories: Category[] | undefined;
   contexts?: Context[];
+  groups?: Group[];
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (id: string) => void;
   showActions?: boolean;
@@ -39,20 +40,21 @@ const MOBILE_HEADER_HEIGHT = 40;
 const DESKTOP_ROW_HEIGHT = 53;
 
 type GroupedItem =
-  | {type: 'header'; date: string; label: string}
-  | {type: 'transaction'; data: Transaction};
+  | { type: "header"; date: string; label: string }
+  | { type: "transaction"; data: Transaction };
 
 export function TransactionList({
   transactions,
   categories,
   contexts,
+  groups,
   onEdit,
   onDelete,
   showActions = true,
   isLoading = false,
   height,
 }: TransactionListProps) {
-  const {t, i18n} = useTranslation();
+  const { t, i18n } = useTranslation();
   const isMobile = useMobile();
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +78,14 @@ export function TransactionList({
     return map;
   }, [contexts]);
 
+  const groupMap = useMemo(() => {
+    const map = new Map<string, Group>();
+    groups?.forEach((g) => {
+      map.set(g.id, g);
+    });
+    return map;
+  }, [groups]);
+
   const getCategory = (id?: string) => {
     if (!id) return undefined;
     return categoryMap.get(id);
@@ -86,16 +96,21 @@ export function TransactionList({
     return contextMap.get(id);
   };
 
+  const getGroup = (id?: string | null) => {
+    if (!id) return undefined;
+    return groupMap.get(id);
+  };
+
   const getTypeTextColor = (type: string) => {
     switch (type) {
-      case 'expense':
-        return 'text-red-500';
-      case 'income':
-        return 'text-green-500';
-      case 'investment':
-        return 'text-blue-500';
+      case "expense":
+        return "text-red-500";
+      case "income":
+        return "text-green-500";
+      case "investment":
+        return "text-blue-500";
       default:
-        return '';
+        return "";
     }
   };
 
@@ -103,25 +118,25 @@ export function TransactionList({
   const groupedItems = useMemo(() => {
     if (!transactions) return [];
     const items: GroupedItem[] = [];
-    let lastDate = '';
+    let lastDate = "";
 
     transactions.forEach((transaction) => {
       if (transaction.date !== lastDate) {
         const dateObj = parseISO(transaction.date);
-        let label = format(dateObj, 'd MMMM yyyy', {
-          locale: i18n.language === 'it' ? it : enUS,
+        let label = format(dateObj, "d MMMM yyyy", {
+          locale: i18n.language === "it" ? it : enUS,
         });
 
         if (isToday(dateObj)) {
-          label = t('today');
+          label = t("today");
         } else if (isYesterday(dateObj)) {
-          label = t('yesterday');
+          label = t("yesterday");
         }
 
-        items.push({type: 'header', date: transaction.date, label});
+        items.push({ type: "header", date: transaction.date, label });
         lastDate = transaction.date;
       }
-      items.push({type: 'transaction', data: transaction});
+      items.push({ type: "transaction", data: transaction });
     });
 
     return items;
@@ -133,7 +148,7 @@ export function TransactionList({
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
       if (isMobile) {
-        return groupedItems[index].type === 'header'
+        return groupedItems[index].type === "header"
           ? MOBILE_HEADER_HEIGHT
           : MOBILE_ROW_HEIGHT;
       }
@@ -147,13 +162,14 @@ export function TransactionList({
     (t_item: Transaction, index: number, isVirtual: boolean) => {
       const category = getCategory(t_item.category_id);
       const context = getContext(t_item.context_id);
+      const group = getGroup(t_item.group_id);
       const IconComp = category?.icon ? getIconComponent(category.icon) : null;
 
       const animationProps =
         !isVirtual && index < 20
           ? {
-              className: 'animate-slide-in-up opacity-0 fill-mode-forwards',
-              style: {animationDelay: `${index * 0.03}s`},
+              className: "animate-slide-in-up opacity-0 fill-mode-forwards",
+              style: { animationDelay: `${index * 0.03}s` },
             }
           : {};
 
@@ -163,63 +179,73 @@ export function TransactionList({
             <time dateTime={t_item.date}>{t_item.date}</time>
           </TableCell>
           <TableCell>
-            <div className='flex items-center gap-2'>
+            <div className="flex items-center gap-2">
               {t_item.description}
               <SyncStatusBadge isPending={t_item.pendingSync === 1} />
             </div>
           </TableCell>
           <TableCell>
-            <div className='flex items-center gap-2'>
-              {IconComp && <IconComp className='h-4 w-4' aria-hidden='true' />}
-              <span>{category?.name || '-'}</span>
+            <div className="flex items-center gap-2">
+              {IconComp && <IconComp className="h-4 w-4" aria-hidden="true" />}
+              <span>{category?.name || "-"}</span>
             </div>
           </TableCell>
           <TableCell>
             {context ? (
-              <div className='inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-md'>
-                <Tag className='h-3 w-3' aria-hidden='true' />
+              <div className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-md">
+                <Tag className="h-3 w-3" aria-hidden="true" />
                 {context.name}
               </div>
             ) : (
-              <span className='text-muted-foreground'>-</span>
+              <span className="text-muted-foreground">-</span>
             )}
           </TableCell>
-          <TableCell className='capitalize'>{t(t_item.type)}</TableCell>
+          <TableCell>
+            {group ? (
+              <div className="inline-flex items-center gap-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md">
+                <Users className="h-3 w-3" aria-hidden="true" />
+                {group.name}
+              </div>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </TableCell>
+          <TableCell className="capitalize">{t(t_item.type)}</TableCell>
           <TableCell className={`text-right ${getTypeTextColor(t_item.type)}`}>
-            {t_item.type === 'expense'
-              ? '-'
-              : t_item.type === 'investment'
-              ? ''
-              : '+'}
+            {t_item.type === "expense"
+              ? "-"
+              : t_item.type === "investment"
+              ? ""
+              : "+"}
             €{t_item.amount.toFixed(2)}
           </TableCell>
           {showActions && (
             <TableCell>
               <div
-                className='flex items-center justify-end gap-2'
-                role='group'
-                aria-label={t('actions')}
+                className="flex items-center justify-end gap-2"
+                role="group"
+                aria-label={t("actions")}
               >
                 {onEdit && (
                   <Button
-                    variant='ghost'
-                    size='icon'
+                    variant="ghost"
+                    size="icon"
                     onClick={() => onEdit(t_item)}
-                    aria-label={t('edit')}
+                    aria-label={t("edit")}
                   >
-                    <Edit className='h-4 w-4' aria-hidden='true' />
+                    <Edit className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 )}
                 {onDelete && (
                   <Button
-                    variant='ghost'
-                    size='icon'
+                    variant="ghost"
+                    size="icon"
                     onClick={() => onDelete(t_item.id)}
-                    aria-label={t('delete')}
+                    aria-label={t("delete")}
                   >
                     <Trash2
-                      className='h-4 w-4 text-destructive'
-                      aria-hidden='true'
+                      className="h-4 w-4 text-destructive"
+                      aria-hidden="true"
                     />
                   </Button>
                 )}
@@ -234,21 +260,22 @@ export function TransactionList({
 
   if (isLoading) {
     return (
-      <div className='space-y-4'>
-        {Array.from({length: 5}).map((_, i) => (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className='rounded-lg border bg-card p-4 shadow-sm space-y-3'
+            className="rounded-lg border bg-card p-3 shadow-sm flex items-center gap-3 h-[72px] animate-slide-in-up opacity-0 fill-mode-forwards"
+            style={{ animationDelay: `${i * 0.05}s` }}
           >
-            <div className='flex justify-between'>
-              <Skeleton className='h-4 w-24' />
-              <Skeleton className='h-4 w-16' />
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
             </div>
-            <div className='flex justify-between'>
-              <Skeleton className='h-4 w-32' />
-              <Skeleton className='h-4 w-4 rounded-full' />
+            <div className="text-right space-y-2">
+              <Skeleton className="h-4 w-16 ml-auto" />
+              <Skeleton className="h-3 w-8 ml-auto" />
             </div>
-            <Skeleton className='h-6 w-20 rounded-md' />
           </div>
         ))}
       </div>
@@ -257,8 +284,8 @@ export function TransactionList({
 
   if (!transactions || transactions.length === 0) {
     return (
-      <div className='text-muted-foreground text-center py-4'>
-        {t('no_transactions')}
+      <div className="text-muted-foreground text-center py-4">
+        {t("no_transactions")}
       </div>
     );
   }
@@ -270,33 +297,33 @@ export function TransactionList({
       return (
         <div
           ref={parentRef}
-          className='overflow-auto'
-          style={{height: height ?? 400}}
+          className="overflow-auto"
+          style={{ height: height ?? 400 }}
         >
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative',
+              width: "100%",
+              position: "relative",
             }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const item = groupedItems[virtualRow.index];
 
-              if (item.type === 'header') {
+              if (item.type === "header") {
                 return (
                   <div
                     key={virtualRow.key}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       left: 0,
-                      width: '100%',
+                      width: "100%",
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
-                      padding: '8px 4px',
+                      padding: "8px 4px",
                     }}
-                    className='font-semibold text-sm text-muted-foreground sticky z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
+                    className="font-semibold text-sm text-muted-foreground sticky z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
                   >
                     {item.label}
                   </div>
@@ -307,19 +334,20 @@ export function TransactionList({
                 <div
                   key={virtualRow.key}
                   style={{
-                    position: 'absolute',
+                    position: "absolute",
                     top: 0,
                     left: 0,
-                    width: '100%',
+                    width: "100%",
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
-                    padding: '0 4px',
+                    padding: "0 4px",
                   }}
                 >
                   <MobileTransactionRow
                     transaction={item.data}
                     category={getCategory(item.data.category_id)}
                     context={getContext(item.data.context_id)}
+                    group={getGroup(item.data.group_id)}
                     onEdit={onEdit}
                     onDelete={onDelete}
                     isVirtual={true}
@@ -334,13 +362,13 @@ export function TransactionList({
 
     // Non-virtualized mobile list for small datasets
     return (
-      <div className='space-y-1'>
+      <div className="space-y-1">
         {groupedItems.map((item) => {
-          if (item.type === 'header') {
+          if (item.type === "header") {
             return (
               <div
                 key={`header-${item.date}`}
-                className='font-semibold text-sm text-muted-foreground pt-4 pb-2 px-1 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
+                className="font-semibold text-sm text-muted-foreground pt-4 pb-2 px-1 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
               >
                 {item.label}
               </div>
@@ -352,6 +380,7 @@ export function TransactionList({
               transaction={item.data}
               category={getCategory(item.data.category_id)}
               context={getContext(item.data.context_id)}
+              group={getGroup(item.data.group_id)}
               onEdit={onEdit}
               onDelete={onDelete}
               isVirtual={false}
@@ -366,44 +395,45 @@ export function TransactionList({
   // Virtualized table for large datasets
   if (shouldVirtualize) {
     return (
-      <div className='rounded-md border'>
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('date')}</TableHead>
-              <TableHead>{t('description')}</TableHead>
-              <TableHead>{t('category')}</TableHead>
-              <TableHead>{t('context')}</TableHead>
-              <TableHead>{t('type')}</TableHead>
-              <TableHead className='text-right'>{t('amount')}</TableHead>
+              <TableHead>{t("date")}</TableHead>
+              <TableHead>{t("description")}</TableHead>
+              <TableHead>{t("category")}</TableHead>
+              <TableHead>{t("context")}</TableHead>
+              <TableHead>{t("group")}</TableHead>
+              <TableHead>{t("type")}</TableHead>
+              <TableHead className="text-right">{t("amount")}</TableHead>
               {showActions && <TableHead></TableHead>}
             </TableRow>
           </TableHeader>
         </Table>
         <div
           ref={parentRef}
-          className='overflow-auto'
-          style={{height: height ?? 400}}
+          className="overflow-auto"
+          style={{ height: height ?? 400 }}
         >
           <Table>
             <TableBody>
               <tr
                 style={{
                   height: `${rowVirtualizer.getTotalSize()}px`,
-                  display: 'block',
+                  display: "block",
                 }}
               >
-                <td style={{display: 'block', position: 'relative'}}>
+                <td style={{ display: "block", position: "relative" }}>
                   {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                     const t_item = transactions[virtualRow.index];
                     return (
                       <div
                         key={virtualRow.key}
                         style={{
-                          position: 'absolute',
+                          position: "absolute",
                           top: 0,
                           left: 0,
-                          width: '100%',
+                          width: "100%",
                           transform: `translateY(${virtualRow.start}px)`,
                         }}
                       >
@@ -426,16 +456,17 @@ export function TransactionList({
 
   // Non-virtualized table for small datasets
   return (
-    <div className='rounded-md border'>
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('date')}</TableHead>
-            <TableHead>{t('description')}</TableHead>
-            <TableHead>{t('category')}</TableHead>
-            <TableHead>{t('context')}</TableHead>
-            <TableHead>{t('type')}</TableHead>
-            <TableHead className='text-right'>{t('amount')}</TableHead>
+            <TableHead>{t("date")}</TableHead>
+            <TableHead>{t("description")}</TableHead>
+            <TableHead>{t("category")}</TableHead>
+            <TableHead>{t("context")}</TableHead>
+            <TableHead>{t("group")}</TableHead>
+            <TableHead>{t("type")}</TableHead>
+            <TableHead className="text-right">{t("amount")}</TableHead>
             {showActions && <TableHead></TableHead>}
           </TableRow>
         </TableHeader>

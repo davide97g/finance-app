@@ -30,14 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ArrowLeft,
-  Plus,
-  Users,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-} from "lucide-react";
+import { ArrowLeft, Plus, Users, TrendingUp, TrendingDown } from "lucide-react";
+import { Acorn } from "@/components/icons/Acorn";
 import { TransactionList } from "@/components/TransactionList";
 import { CategorySelector } from "@/components/CategorySelector";
 import { getIconComponent } from "@/lib/icons";
@@ -317,7 +311,7 @@ export function GroupDetailPage() {
             <CardTitle className="text-sm font-medium">
               {t("total_expenses")}
             </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Acorn className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
