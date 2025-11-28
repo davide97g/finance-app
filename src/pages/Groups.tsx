@@ -51,7 +51,6 @@ import {
   ExternalLink,
   Edit,
 } from "lucide-react";
-import { Acorn } from "@/components/icons/Acorn";
 import { toast } from "sonner";
 
 interface GroupFormData {
@@ -392,7 +391,6 @@ export function GroupsPage() {
                       size="sm"
                       onClick={() => handleViewBalance(group)}
                     >
-                      <Acorn className="h-4 w-4 mr-2" />
                       {t("balance")}
                     </Button>
                     {group.isCreator && (
@@ -423,9 +421,7 @@ export function GroupsPage() {
                       className="h-8 w-8"
                       onClick={() => handleViewBalance(group)}
                       title={t("balance")}
-                    >
-                      <Acorn className="h-4 w-4" />
-                    </Button>
+                    ></Button>
                     {group.isCreator && (
                       <>
                         <Button

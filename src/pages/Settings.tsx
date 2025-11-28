@@ -6,7 +6,6 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import { db, Transaction, Category } from "@/lib/db";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,7 +48,6 @@ import {
   FileJson,
   X,
 } from "lucide-react";
-import { Acorn } from "@/components/icons/Acorn";
 import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
 import { useTheme } from "next-themes";
@@ -394,7 +392,6 @@ export function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Acorn className="h-5 w-5" />
               {t("monthly_budget")}
             </CardTitle>
             <CardDescription>{t("monthly_budget_desc")}</CardDescription>

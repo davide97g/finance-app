@@ -5,8 +5,8 @@ import i18n from "@/i18n";
 
 // Singleton to ensure only one instance shows toasts and triggers sync
 let globalHandlersRegistered = false;
-let onlineListeners: Set<(isOnline: boolean) => void> = new Set();
-let syncingListeners: Set<(isSyncing: boolean) => void> = new Set();
+const onlineListeners: Set<(isOnline: boolean) => void> = new Set();
+const syncingListeners: Set<(isSyncing: boolean) => void> = new Set();
 
 /**
  * Register global event handlers once (singleton pattern).

@@ -27,7 +27,6 @@ import {
   PiggyBank,
   ArrowDownUp,
 } from "lucide-react";
-import { Acorn } from "@/components/icons/Acorn";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
@@ -334,7 +333,6 @@ export function Dashboard() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex flex-col space-y-1.5">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Acorn className="h-4 w-4" />
                     {t("monthly_budget")}
                   </CardTitle>
                   <CardDescription>{format(now, "MMMM yyyy")}</CardDescription>
@@ -651,9 +649,7 @@ export function Dashboard() {
                         ? "bg-amber-500/20 text-amber-600"
                         : "bg-blue-500/20 text-blue-600"
                     }`}
-                  >
-                    <Acorn className="h-5 w-5" />
-                  </div>
+                  ></div>
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {t("budget")}
                   </span>
@@ -709,9 +705,7 @@ export function Dashboard() {
                     ? "text-amber-500"
                     : "text-blue-500"
                 }`}
-              >
-                <Acorn className="h-24 w-24" />
-              </div>
+              ></div>
             </div>
           );
         default:
