@@ -1,84 +1,47 @@
 import { useState, useEffect } from "react";
-import { safeSync } from "../lib/sync";
+import { syncManager } from "../lib/sync";
 import { toast } from "sonner";
 import i18n from "@/i18n";
 
 // Singleton to ensure only one instance shows toasts and triggers sync
 let globalHandlersRegistered = false;
 const onlineListeners: Set<(isOnline: boolean) => void> = new Set();
-const syncingListeners: Set<(isSyncing: boolean) => void> = new Set();
-
-// Debounce timeouts for online/offline events
-let onlineDebounceTimeout: NodeJS.Timeout | null = null;
-let offlineDebounceTimeout: NodeJS.Timeout | null = null;
 
 /**
  * Register global event handlers once (singleton pattern).
  * This ensures toasts are shown only once regardless of how many
  * components use the useOnlineSync hook.
- * Includes debouncing to prevent spam on unstable networks.
  */
 function ensureGlobalHandlers() {
   if (globalHandlersRegistered) return;
   globalHandlersRegistered = true;
 
-  const handleOnline = () => {
-    // Clear offline timeout if exists
-    if (offlineDebounceTimeout) {
-      clearTimeout(offlineDebounceTimeout);
-      offlineDebounceTimeout = null;
-    }
+  const handleOnline = async () => {
+    // Notify all listeners
+    onlineListeners.forEach((cb) => cb(true));
 
-    // Debounce online event (300ms) to filter rapid blips
-    if (onlineDebounceTimeout) {
-      clearTimeout(onlineDebounceTimeout);
-    }
+    // Show toast only once (globally)
+    toast.success(i18n.t("back_online"), {
+      description: i18n.t("back_online_description"),
+      duration: 3000,
+    });
 
-    onlineDebounceTimeout = setTimeout(async () => {
-      onlineDebounceTimeout = null;
-
-      // Now actually handle online
-      onlineListeners.forEach((cb) => cb(true));
-
-      // Show toast only once (globally)
-      toast.success(i18n.t("back_online"), {
-        description: i18n.t("back_online_description"),
-        duration: 3000,
-      });
-
-      console.log("[OnlineSync] Back online (debounced), syncing...");
-      syncingListeners.forEach((cb) => cb(true));
-      await safeSync("useOnlineSync");
-      syncingListeners.forEach((cb) => cb(false));
-    }, 300); // 300ms debounce - filters rapid connection changes
+    // ✅ Push only - non serve pull, verrà fatto al prossimo refresh
+    console.log("[OnlineSync] Back online, pushing pending changes...");
+    await syncManager.pushOnly();
   };
 
   const handleOffline = () => {
-    // Clear online timeout if exists
-    if (onlineDebounceTimeout) {
-      clearTimeout(onlineDebounceTimeout);
-      onlineDebounceTimeout = null;
-    }
+    // Notify all listeners
+    onlineListeners.forEach((cb) => cb(false));
 
-    // Debounce offline event (1s) - more conservative to avoid false alarms
-    if (offlineDebounceTimeout) {
-      clearTimeout(offlineDebounceTimeout);
-    }
+    // Show toast only once (globally)
+    toast.warning(i18n.t("gone_offline"), {
+      description: i18n.t("gone_offline_description"),
+      duration: 5000,
+    });
 
-    offlineDebounceTimeout = setTimeout(() => {
-      offlineDebounceTimeout = null;
-
-      // Now actually handle offline
-      onlineListeners.forEach((cb) => cb(false));
-
-      // Show toast only once (globally)
-      toast.warning(i18n.t("gone_offline"), {
-        description: i18n.t("gone_offline_description"),
-        duration: 5000,
-      });
-
-      console.log("[OnlineSync] Gone offline (debounced)");
-    }, 1000); // 1s debounce - more conservative for offline
+    console.log("[OnlineSync] Gone offline");
   };
 
   window.addEventListener("online", handleOnline);
@@ -86,21 +49,18 @@ function ensureGlobalHandlers() {
 }
 
 /**
- * Hook for managing online/offline state with automatic sync.
+ * Hook for managing online/offline state.
  *
  * Uses a singleton pattern to ensure:
- * - Toast notifications are shown only once  (not per component)
- * - Sync is triggered only once when coming back online
+ * - Toast notifications are shown only once (not per component)
+ * - Push is triggered only once when coming back online
  * - All components using this hook stay in sync
- * - Debouncing prevents spam on unstable networks
  *
  * @returns Object containing:
  *   - `isOnline`: Whether the browser is currently online
- *   - `isSyncing`: Whether a sync operation is in progress
  */
 export function useOnlineSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     // Register global handlers (only happens once across all instances)
@@ -108,16 +68,12 @@ export function useOnlineSync() {
 
     // Subscribe this component to state changes
     const onlineCallback = (online: boolean) => setIsOnline(online);
-    const syncingCallback = (syncing: boolean) => setIsSyncing(syncing);
-
     onlineListeners.add(onlineCallback);
-    syncingListeners.add(syncingCallback);
 
     return () => {
       onlineListeners.delete(onlineCallback);
-      syncingListeners.delete(syncingCallback);
     };
   }, []);
 
-  return { isOnline, isSyncing };
+  return { isOnline };
 }

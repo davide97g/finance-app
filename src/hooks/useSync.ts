@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { syncManager, SyncStatus, SyncError } from "../lib/sync";
-import { TIMING } from "../lib/constants";
 
 export interface UseSyncResult {
   /** Whether a sync operation is currently in progress */
@@ -22,9 +21,13 @@ export interface UseSyncResult {
 }
 
 export function useSync(): UseSyncResult {
-  const [status, setStatus] = useState<SyncStatus>(() =>
-    syncManager.getStatus()
-  );
+  const [status, setStatus] = useState<SyncStatus>({
+    isSyncing: false,
+    lastSyncAt: null,
+    pendingCount: 0,
+    errorCount: 0,
+    errors: [],
+  });
 
   const sync = useCallback(async () => {
     await syncManager.sync();
@@ -42,38 +45,18 @@ export function useSync(): UseSyncResult {
     // Subscribe to sync status changes
     const unsubscribe = syncManager.onSyncChange(setStatus);
 
-    // Delay initial sync by 2 seconds to avoid blocking app startup
-    // This allows the UI to render instantly with cached data
-    let initialSyncTimeout: NodeJS.Timeout | null = setTimeout(() => {
-      console.log("[useSync] Starting background sync after 2s delay");
-      initialSyncTimeout = null;
-      sync();
+    // ✅ Sync all'avvio (dopo 2s delay)
+    // Usa fullSync() per essere sicuri di avere tutti i dati
+    const initialSyncTimeout = setTimeout(() => {
+      console.log("[useSync] Starting full sync after 2s delay");
+      syncManager.fullSync();
     }, 2000);
 
-    // Listen for online event to cancel initial sync timeout
-    // This prevents race condition with useOnlineSync
-    const handleOnline = () => {
-      if (initialSyncTimeout) {
-        clearTimeout(initialSyncTimeout);
-        initialSyncTimeout = null;
-        console.log(
-          "[useSync] Cancelled initial sync - online event triggered sync"
-        );
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-
-    // Periodic sync every 5 minutes
-    const interval = setInterval(sync, TIMING.SYNC_INTERVAL);
-
     return () => {
-      if (initialSyncTimeout) clearTimeout(initialSyncTimeout);
-      window.removeEventListener("online", handleOnline);
+      clearTimeout(initialSyncTimeout);
       unsubscribe();
-      clearInterval(interval);
     };
-  }, [sync]);
+  }, []);
 
   return {
     isSyncing: status.isSyncing,

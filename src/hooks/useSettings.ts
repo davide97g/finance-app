@@ -52,7 +52,9 @@ export function useSettings() {
             default_view: "list",
             include_investments_in_expense_totals: false,
             include_group_expenses: false,
-            updated_at: new Date().toISOString(),
+            // Set to epoch 0 so that if remote settings exist, they will always win
+            // (remoteTime > localTime) during the initial sync
+            updated_at: new Date(0).toISOString(),
           });
         }
       });

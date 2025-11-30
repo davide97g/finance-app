@@ -5,19 +5,14 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { Squirrel } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { applyThemeColor } from "@/lib/theme-colors";
 import { useTheme } from "next-themes";
+import { PendingChangesIndicator } from "@/components/PendingChangesIndicator";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { theme } = useTheme();
-
-  // Initialize Realtime subscriptions
-  // This hook handles subscribe/unsubscribe based on auth state
-  // The hook manages its own lifecycle internally
-  useRealtimeSync();
 
   // Apply accent color when settings or theme changes
   useEffect(() => {
@@ -42,6 +37,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
               <Squirrel className="size-5 text-primary" />
               <h1 className="font-semibold text-lg">{t("app_title")}</h1>
+            </div>
+            {/* Pending Changes Indicator */}
+            <div className="ml-auto">
+              <PendingChangesIndicator />
             </div>
           </div>
         </header>

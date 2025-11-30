@@ -246,6 +246,26 @@ export interface CategoryBudget {
 }
 
 /**
+ * Public user profile.
+ */
+export interface Profile {
+  /** UUID primary key (matches auth.users.id) */
+  id: string;
+  /** User's email (publicly visible) */
+  email?: string;
+  /** User's full name */
+  full_name?: string;
+  /** URL to user's avatar image */
+  avatar_url?: string;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+}
+
+/**
  * Dexie database class for the expense tracker application.
  *
  * Provides typed access to all IndexedDB tables with proper indexing
@@ -279,6 +299,7 @@ export class AppDatabase extends Dexie {
   recurring_transactions!: Table<RecurringTransaction>;
   user_settings!: Table<Setting>;
   category_budgets!: Table<CategoryBudget>;
+  profiles!: Table<Profile>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -319,6 +340,22 @@ export class AppDatabase extends Dexie {
       category_budgets:
         "id, user_id, category_id, period, pendingSync, deleted_at",
     });
+
+    // Version 4: Add profiles
+    this.version(4).stores({
+      groups: "id, created_by, pendingSync, deleted_at",
+      group_members: "id, group_id, user_id, pendingSync, removed_at",
+      transactions:
+        "id, user_id, group_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at",
+      categories: "id, user_id, group_id, type, pendingSync, deleted_at",
+      contexts: "id, user_id, pendingSync, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, type, frequency, pendingSync, deleted_at",
+      user_settings: "user_id",
+      category_budgets:
+        "id, user_id, category_id, period, pendingSync, deleted_at",
+      profiles: "id, pendingSync",
+    });
   }
 
   /**
@@ -336,6 +373,7 @@ export class AppDatabase extends Dexie {
       this.recurring_transactions.clear(),
       this.user_settings.clear(),
       this.category_budgets.clear(),
+      this.profiles.clear(),
     ]);
   }
 }

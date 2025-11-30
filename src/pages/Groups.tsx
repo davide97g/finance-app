@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useGroups, GroupWithMembers } from "@/hooks/useGroups";
 import { useAuth } from "@/hooks/useAuth";
+import { useSync } from "@/hooks/useSync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,9 +45,11 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   IdCard,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { GroupCard } from "@/components/GroupCard";
+import { UserAvatar } from "@/components/UserAvatar";
 
 import { supabase } from "@/lib/supabase";
 
@@ -64,6 +67,7 @@ export function GroupsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { sync, isSyncing } = useSync();
   const {
     groups,
     createGroup,
@@ -83,8 +87,8 @@ export function GroupsPage() {
     null
   );
   const [deleteTransactions, setDeleteTransactions] = useState(false);
-  const [managingMembers, setManagingMembers] =
-    useState<GroupWithMembers | null>(null);
+  const [managingGroupId, setManagingGroupId] =
+    useState<string | null>(null);
   const [viewingBalance, setViewingBalance] = useState<GroupWithMembers | null>(
     null
   );
@@ -102,6 +106,11 @@ export function GroupsPage() {
     share: 0,
   });
   const [memberShares, setMemberShares] = useState<Record<string, number>>({});
+
+  // Derive managingGroup from groups list to ensure reactivity
+  const managingGroup = useMemo(() => {
+    return groups?.find((g) => g.id === managingGroupId) || null;
+  }, [groups, managingGroupId]);
 
   // Calculate total share
   const totalShare = useMemo(() => {
@@ -144,14 +153,14 @@ export function GroupsPage() {
   };
 
   const handleAddMember = async () => {
-    if (!managingMembers || !newMemberData.userId.trim()) {
+    if (!managingGroup || !newMemberData.userId.trim()) {
       toast.error(t("user_id_required"));
       return;
     }
 
     // Check if user is already a member
     if (
-      managingMembers.members.some(
+      managingGroup.members.some(
         (m) => m.user_id === newMemberData.userId.trim()
       )
     ) {
@@ -182,7 +191,7 @@ export function GroupsPage() {
     }
 
     await addMember(
-      managingMembers.id,
+      managingGroup.id,
       newMemberData.userId.trim(),
       0
     );
@@ -196,7 +205,7 @@ export function GroupsPage() {
   };
 
   const handleSaveShares = async () => {
-    if (!managingMembers) return;
+    if (!managingGroup) return;
     if (!isShareValid) {
       toast.error(t("shares_must_equal_100"));
       return;
@@ -207,8 +216,8 @@ export function GroupsPage() {
       share,
     }));
 
-    await updateAllShares(managingMembers.id, shares);
-    setManagingMembers(null);
+    await updateAllShares(managingGroup.id, shares);
+    setManagingGroupId(null);
     toast.success(t("shares_updated"));
   };
 
@@ -237,7 +246,7 @@ export function GroupsPage() {
       shares[m.id] = m.share;
     });
     setMemberShares(shares);
-    setManagingMembers(group);
+    setManagingGroupId(group.id);
   };
 
   if (!groups) {
@@ -262,6 +271,18 @@ export function GroupsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">{t("groups")}</h2>
         <div className="flex gap-2">
+          {/* Refresh Button */}
+          <Button
+            onClick={() => sync()}
+            disabled={isSyncing}
+            variant="outline"
+            size="icon"
+            className="md:w-auto md:px-4 md:h-10"
+            title={t("sync_now") || "Sync now"}
+          >
+            <RefreshCw className={`h-4 w-4 md:mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span className="hidden md:inline">{isSyncing ? t("syncing") || "Syncing..." : t("sync_now") || "Sync"}</span>
+          </Button>
           <Button variant="outline" size="icon" onClick={copyUserId} className="md:w-auto md:px-4 md:h-10">
             {copiedUserId ? (
               <Check className="h-4 w-4 md:mr-2" />
@@ -440,8 +461,8 @@ export function GroupsPage() {
 
       {/* Manage Members Dialog */}
       <Dialog
-        open={!!managingMembers}
-        onOpenChange={(open) => !open && setManagingMembers(null)}
+        open={!!managingGroup}
+        onOpenChange={(open) => !open && setManagingGroupId(null)}
       >
         <DialogContent
           className="max-w-lg"
@@ -485,24 +506,21 @@ export function GroupsPage() {
               </div>
               <ScrollArea className="h-[200px]">
                 <div className="space-y-2">
-                  {managingMembers?.members.map((member) => (
+                  {managingGroup?.members.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center gap-2 p-2 rounded-lg bg-muted"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {member.user_id === user?.id ? (
-                            <span className="flex items-center gap-1">
-                              {t("you")}
-                              <Crown className="h-3 w-3 text-yellow-500" />
-                            </span>
-                          ) : (
-                            <span className="font-mono text-xs">
-                              {member.user_id.slice(0, 8)}...
-                            </span>
-                          )}
-                        </p>
+                      <div className="flex-1 flex items-center gap-2 overflow-hidden">
+                        <UserAvatar userId={member.user_id} showName className="min-w-0" />
+                        {member.user_id === user?.id && (
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({t("you")})
+                          </span>
+                        )}
+                        {managingGroup.created_by === member.user_id && (
+                          <Crown className="h-3 w-3 text-yellow-500 shrink-0" />
+                        )}
                       </div>
                       <Input
                         type="number"
@@ -541,7 +559,7 @@ export function GroupsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setManagingMembers(null)}>
+            <Button variant="outline" onClick={() => setManagingGroupId(null)}>
               {t("cancel")}
             </Button>
             <Button onClick={handleSaveShares} disabled={!isShareValid}>

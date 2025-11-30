@@ -23,6 +23,7 @@ const TABLES = [
   "contexts",
   "recurring_transactions",
   "category_budgets",
+  "profiles",
 ] as const;
 
 type TableName = (typeof TABLES)[number];
@@ -200,18 +201,18 @@ export class SyncManager {
   onSyncChange(callback: SyncListener): () => void {
     this.syncListeners.add(callback);
     // Immediately notify with current status
-    callback(this.getStatus());
+    this.getStatus().then((status) => callback(status));
     return () => this.syncListeners.delete(callback);
   }
 
   /**
    * Get current sync status
    */
-  getStatus(): SyncStatus {
+  async getStatus(): Promise<SyncStatus> {
     return {
       isSyncing: this.isSyncing,
       lastSyncAt: this.lastSyncAt,
-      pendingCount: this.getPendingCount(),
+      pendingCount: await this.getPendingCount(),
       errorCount: this.errorMap.size,
       errors: Array.from(this.errorMap.values()),
     };
@@ -242,18 +243,26 @@ export class SyncManager {
   /**
    * Get count of pending items across all tables
    */
-  private getPendingCount(): number {
-    // This is a sync method, so we return 0 if we can't calculate
-    // In real use, this would be updated when the db changes
-    return 0;
+  private async getPendingCount(): Promise<number> {
+    let total = 0;
+
+    for (const tableName of TABLES) {
+      const count = await db.table(tableName)
+        .where('pendingSync')
+        .equals(1)
+        .count();
+      total += count;
+    }
+
+    return total;
   }
 
   // ============================================================================
   // PRIVATE METHODS
   // ============================================================================
 
-  private notifyListeners(): void {
-    const status = this.getStatus();
+  private async notifyListeners(): Promise<void> {
+    const status = await this.getStatus();
     this.syncListeners.forEach((cb) => {
       try {
         cb(status);
@@ -687,7 +696,7 @@ export const syncManager = new SyncManager();
  * ```
  */
 export async function safeSync(source?: string): Promise<void> {
-  const status = syncManager.getStatus();
+  const status = await syncManager.getStatus();
 
   if (status.isSyncing) {
     console.log(

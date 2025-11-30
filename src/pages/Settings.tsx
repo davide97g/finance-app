@@ -1,7 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import { db, Transaction, Category } from "@/lib/db";
 import { safeSync, syncManager } from "@/lib/sync";
@@ -58,7 +57,6 @@ import { v4 as uuidv4 } from "uuid";
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
   const { isOnline } = useOnlineSync();
-  const { isConnected: isRealtimeConnected } = useRealtimeSync();
   const { user } = useAuth();
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
@@ -449,7 +447,6 @@ export function SettingsPage() {
                 isSyncing={isSyncing}
                 isOnline={isOnline}
                 lastSyncTime={lastSyncTime}
-                isRealtimeConnected={isRealtimeConnected}
               />
               <div className="flex flex-wrap gap-2">
                 <Button

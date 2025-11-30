@@ -418,3 +418,81 @@ alter publication supabase_realtime add table public.categories;
 alter publication supabase_realtime add table public.contexts;
 alter publication supabase_realtime add table public.recurring_transactions;
 alter publication supabase_realtime add table public.category_budgets;
+-- Function to check if a user exists by ID
+-- This is secure because it uses SECURITY DEFINER to access auth.users
+-- but only returns a boolean, leaking no other information.
+
+create or replace function public.check_user_exists(user_id uuid)
+returns boolean
+language plpgsql
+security definer
+as $$
+begin
+  return exists (
+    select 1 from auth.users where id = user_id
+  );
+end;
+$$;
+-- ============================================================================
+-- PUBLIC PROFILES
+-- ============================================================================
+
+-- 1. Create Table
+create table if not exists public.profiles (
+  id uuid references auth.users(id) on delete cascade primary key,
+  email text,
+  full_name text,
+  avatar_url text,
+  updated_at timestamptz default now(),
+  sync_token bigint default nextval('global_sync_token_seq')
+);
+
+-- 2. Enable RLS
+alter table public.profiles enable row level security;
+
+-- 3. RLS Policies
+-- Everyone can read profiles (needed for group members to see each other)
+create policy "Public profiles are viewable by everyone" 
+  on public.profiles for select 
+  using (true);
+
+-- Users can only insert their own profile
+create policy "Users can insert their own profile" 
+  on public.profiles for insert 
+  with check (auth.uid() = id);
+
+-- Users can only update their own profile
+create policy "Users can update own profile" 
+  on public.profiles for update 
+  using (auth.uid() = id);
+
+-- 4. Triggers for Sync Token
+create trigger update_profiles_sync_token
+  before update on public.profiles
+  for each row execute procedure update_sync_token();
+
+-- 5. Automatic Profile Creation Trigger
+-- This function copies data from auth.users to public.profiles when a new user signs up
+create or replace function public.handle_new_user() 
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, full_name, avatar_url)
+  values (
+    new.id, 
+    new.email, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Trigger the function every time a user is created
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- 6. Realtime Publication
+-- Add profiles to the realtime publication so clients can subscribe to changes
+alter publication supabase_realtime add table public.profiles;

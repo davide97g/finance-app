@@ -5,6 +5,7 @@ import { useGroups, GroupWithMembers } from "@/hooks/useGroups";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
 import { useAuth } from "@/hooks/useAuth";
+import { useSync } from "@/hooks/useSync";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
-import { ArrowLeft, Plus, Users, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, Plus, Users, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { TransactionList } from "@/components/TransactionList";
 import { getIconComponent } from "@/lib/icons";
 import { TransactionDialog, TransactionFormData } from "@/components/TransactionDialog";
@@ -26,6 +27,7 @@ export function GroupDetailPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { sync, isSyncing } = useSync();
   const { groups, getGroupBalance } = useGroups();
   const { transactions, addTransaction, deleteTransaction } = useTransactions(
     undefined,
@@ -136,6 +138,18 @@ export function GroupDetailPage() {
             <p className="text-sm text-muted-foreground">{group.description}</p>
           )}
         </div>
+        {/* Refresh Button */}
+        <Button
+          onClick={() => sync()}
+          disabled={isSyncing}
+          variant="outline"
+          size="icon"
+          className="md:w-auto md:px-4 md:h-10"
+          title={t("sync_now") || "Sync now"}
+        >
+          <RefreshCw className={`h-4 w-4 md:mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+          <span className="hidden md:inline">{isSyncing ? t("syncing") || "Syncing..." : t("sync_now") || "Sync"}</span>
+        </Button>
         <Button size="icon" className="md:w-auto md:px-4 md:h-10" onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">{t("add_transaction")}</span>

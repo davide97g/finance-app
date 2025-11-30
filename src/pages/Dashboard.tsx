@@ -176,7 +176,7 @@ export function Dashboard() {
                         accessibilityLayer
                         data={dailyCumulativeExpenses}
                         margin={{
-                          left: 0,
+                          left: 12,
                           right: 12,
                           top: 12,
                           bottom: 12,

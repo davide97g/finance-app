@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
+import { useSync } from "@/hooks/useSync";
 
 /**
  * Non-invasive banner showing offline status.
@@ -10,7 +11,8 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
  */
 export function OfflineIndicator() {
   const { t } = useTranslation();
-  const { isOnline, isSyncing } = useOnlineSync();
+  const { isOnline } = useOnlineSync();
+  const { isSyncing } = useSync();
 
   // Don't show anything when online and not syncing
   if (isOnline && !isSyncing) {

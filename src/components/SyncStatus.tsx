@@ -1,4 +1,4 @@
-import { Cloud, CloudOff, Loader2, Zap, ZapOff } from "lucide-react";
+import { Cloud, CloudOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface SyncStatusBadgeProps {
@@ -26,14 +26,12 @@ interface SyncIndicatorProps {
   isSyncing: boolean;
   isOnline: boolean;
   lastSyncTime?: Date;
-  isRealtimeConnected?: boolean;
 }
 
 export function SyncIndicator({
   isSyncing,
   isOnline,
   lastSyncTime,
-  isRealtimeConnected,
 }: SyncIndicatorProps) {
   if (isSyncing) {
     return (
@@ -54,30 +52,13 @@ export function SyncIndicator({
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Cloud className="h-4 w-4 text-green-500" />
-        <span>
-          {lastSyncTime
-            ? `Last sync: ${formatRelativeTime(lastSyncTime)}`
-            : "Online"}
-        </span>
-      </div>
-      {isRealtimeConnected !== undefined && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {isRealtimeConnected ? (
-            <>
-              <Zap className="h-3 w-3 text-yellow-500" />
-              <span>Realtime connected</span>
-            </>
-          ) : (
-            <>
-              <ZapOff className="h-3 w-3 text-gray-400" />
-              <span>Realtime disconnected</span>
-            </>
-          )}
-        </div>
-      )}
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Cloud className="h-4 w-4 text-green-500" />
+      <span>
+        {lastSyncTime
+          ? `Last sync: ${formatRelativeTime(lastSyncTime)}`
+          : "Online"}
+      </span>
     </div>
   );
 }
