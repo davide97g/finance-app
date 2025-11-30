@@ -8,12 +8,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -441,8 +441,8 @@ export function CategorySelector({
 
   if (isMobile) {
     return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
@@ -462,14 +462,16 @@ export function CategorySelector({
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[80vh] p-0">
-          <SheetHeader className="p-4 border-b">
-            <SheetTitle>{t("select_category")}</SheetTitle>
-          </SheetHeader>
-          {MobileContent}
-        </SheetContent>
-      </Sheet>
+        </DrawerTrigger>
+        <DrawerContent className="h-[85vh] flex flex-col">
+          <DrawerHeader className="border-b px-4 py-3 shrink-0">
+            <DrawerTitle>{t("select_category")}</DrawerTitle>
+          </DrawerHeader>
+          <div className="flex-1 overflow-hidden">
+            {MobileContent}
+          </div>
+        </DrawerContent>
+      </Drawer>
     );
   }
 

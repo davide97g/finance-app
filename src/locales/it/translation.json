@@ -384,5 +384,9 @@
   "group_category_delete_warning": "Questa è una categoria di gruppo. Eliminarla influenzerà tutti i membri del gruppo.",
   "select_group_for_category": "Seleziona Gruppo (Facoltativo)",
   "personal_category": "Categoria Personale",
-  "no_parent": "Nessun Genitore"
+  "no_parent": "Nessun Genitore",
+  "filter_by": "Filtra per",
+  "select_icon": "Seleziona Icona",
+  "search_icons": "Cerca icone...",
+  "no_icons_found": "Nessuna icona trovata"
 }

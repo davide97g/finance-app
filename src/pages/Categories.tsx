@@ -46,10 +46,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, ChevronRight, ChevronDown, MoreVertical, EyeOff, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, X, ChevronRight, ChevronDown, MoreVertical, EyeOff, Eye, MoreHorizontal, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { CategoryDetailSheet } from "@/components/CategoryDetailSheet";
-import { AVAILABLE_ICONS, getIconComponent } from "@/lib/icons";
+import { getIconComponent } from "@/lib/icons";
 import { SyncStatusBadge } from "@/components/SyncStatus";
 import { CategorySelector } from "@/components/CategorySelector";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -57,6 +66,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Category } from "@/lib/db";
 import { MobileCategoryRow } from "@/components/MobileCategoryRow";
 import { motion, AnimatePresence } from "framer-motion";
+import { IconSelector } from "@/components/IconSelector";
 
 // Types for recursive components
 interface CategoryListProps {
@@ -229,7 +239,7 @@ export function CategoriesPage() {
   const { t } = useTranslation();
 
   // Filter State - must be defined before hook calls
-  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string | null | undefined>(undefined);
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string | null | undefined>(null);
 
   const {
     categories,
@@ -650,11 +660,15 @@ export function CategoriesPage() {
           <button
             onClick={() => setShowInactive(!showInactive)}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${showInactive
-              ? "bg-muted text-foreground"
+              ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-muted/50"
               }`}
           >
-            <EyeOff className="h-3.5 w-3.5" />
+            {showInactive ? (
+              <Eye className="h-3.5 w-3.5" />
+            ) : (
+              <EyeOff className="h-3.5 w-3.5" />
+            )}
             <span className="hidden sm:inline">
               {t("show_inactive") || "Inactive"}
             </span>
@@ -662,25 +676,55 @@ export function CategoriesPage() {
 
           {/* Group Filter Dropdown */}
           {groups.length > 0 && (
-            <Select
-              value={selectedGroupFilter === undefined ? "all" : selectedGroupFilter === null ? "personal" : selectedGroupFilter}
-              onValueChange={(value) =>
-                setSelectedGroupFilter(value === "all" ? undefined : value === "personal" ? null : value)
-              }
-            >
-              <SelectTrigger className="w-[180px] hidden md:flex">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("all_categories") || "All Categories"}</SelectItem>
-                <SelectItem value="personal">{t("personal_categories") || "Personal"}</SelectItem>
-                {groups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex gap-2 px-3">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden md:inline">
+                    {selectedGroupFilter === undefined
+                      ? t("all_categories") || "All Categories"
+                      : selectedGroupFilter === null
+                        ? t("personal_categories") || "Personal"
+                        : groups.find((g) => g.id === selectedGroupFilter)?.name ||
+                        t("group")}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuLabel>{t("filter_by") || "Filter by"}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup
+                  value={
+                    selectedGroupFilter === undefined
+                      ? "all"
+                      : selectedGroupFilter === null
+                        ? "personal"
+                        : selectedGroupFilter
+                  }
+                  onValueChange={(value) =>
+                    setSelectedGroupFilter(
+                      value === "all"
+                        ? undefined
+                        : value === "personal"
+                          ? null
+                          : value
+                    )
+                  }
+                >
+                  <DropdownMenuRadioItem value="all">
+                    {t("all_categories") || "All Categories"}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="personal">
+                    {t("personal_categories") || "Personal"}
+                  </DropdownMenuRadioItem>
+                  {groups.map((group) => (
+                    <DropdownMenuRadioItem key={group.id} value={group.id}>
+                      {group.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
@@ -774,45 +818,13 @@ export function CategoriesPage() {
                     </Button>
                   </div>
                 </div>
-                <Collapsible>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">{t("icon")}</label>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="p-0 h-auto flex items-center gap-2">
-                          {formData.icon && (() => {
-                            const SelectedIcon = getIconComponent(formData.icon);
-                            return SelectedIcon ? <SelectedIcon className="h-4 w-4" /> : null;
-                          })()}
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </CollapsibleTrigger>
-                    </div>
-                    <CollapsibleContent>
-                      <div className="grid grid-cols-6 gap-2 p-2 border rounded-md max-h-[200px] overflow-y-auto">
-                        {AVAILABLE_ICONS.map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <button
-                              key={item.name}
-                              type="button"
-                              className={`p-2 rounded-md flex items-center justify-center hover:bg-accent ${formData.icon === item.name
-                                ? "bg-accent ring-2 ring-primary"
-                                : ""
-                                }`}
-                              onClick={() =>
-                                setFormData({ ...formData, icon: item.name })
-                              }
-                              title={item.name}
-                            >
-                              <Icon className="h-5 w-5" />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </CollapsibleContent>
-                  </div>
-                </Collapsible>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("icon")}</label>
+                  <IconSelector
+                    value={formData.icon}
+                    onChange={(icon) => setFormData({ ...formData, icon })}
+                  />
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
                     {t("parent_category")}
@@ -829,33 +841,38 @@ export function CategoriesPage() {
                   />
                 </div>
 
-                {/* Group Selection - Collapsible */}
-                {groups.length > 0 && (
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full flex items-center justify-between p-2 h-auto"
-                      >
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="text-sm font-medium">
-                            {t("group") || "Group"}
+                {/* More Options - Collapsible */}
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full flex items-center justify-between p-2 h-auto"
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          {t("more_options") || "More"}
+                        </span>
+                        {(formData.group_id || (formData.budget && parseFloat(formData.budget) > 0) || !formData.active) && (
+                          <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                            {[
+                              formData.group_id ? 1 : 0,
+                              formData.budget && parseFloat(formData.budget) > 0 ? 1 : 0,
+                              !formData.active ? 1 : 0
+                            ].reduce((a, b) => a + b, 0)}
                           </span>
-                          {formData.group_id && (
-                            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                              1
-                            </span>
-                          )}
-                        </div>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-3 pt-2">
+                        )}
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-2">
+                    {/* Group Selection */}
+                    {groups.length > 0 && (
                       <div className="space-y-2">
                         <label className="text-sm font-medium">
-                          {t("select_group_for_category") || "Select Group (Optional)"}
+                          {t("group") || "Group"}
                         </label>
                         <Select
                           value={formData.group_id || "none"}
@@ -881,47 +898,47 @@ export function CategoriesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
+                    )}
 
-                {/* Budget and Active fields */}
-                <div className="flex items-end gap-4">
-                  {/* Budget field - only for expense categories */}
-                  {formData.type === "expense" && (
-                    <div className="flex-1 space-y-2">
-                      <label className="text-sm font-medium">
-                        {t("budget")}
-                      </label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.budget}
-                        onChange={(e) =>
-                          setFormData({ ...formData, budget: e.target.value })
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-                  )}
+                    {/* Budget and Active fields */}
+                    <div className="flex items-end gap-4">
+                      {/* Budget field - only for expense categories */}
+                      {formData.type === "expense" && (
+                        <div className="flex-1 space-y-2">
+                          <label className="text-sm font-medium">
+                            {t("budget")}
+                          </label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.budget}
+                            onChange={(e) =>
+                              setFormData({ ...formData, budget: e.target.value })
+                            }
+                            placeholder="0.00"
+                          />
+                        </div>
+                      )}
 
-                  {/* Active toggle */}
-                  <div className="space-y-2">
-                    <label htmlFor="active-mode" className="text-sm font-medium">
-                      {t("active") || "Active"}
-                    </label>
-                    <div className="flex items-center h-10">
-                      <Switch
-                        id="active-mode"
-                        checked={formData.active}
-                        onCheckedChange={(checked) =>
-                          setFormData({ ...formData, active: checked })
-                        }
-                      />
+                      {/* Active toggle */}
+                      <div className="space-y-2">
+                        <label htmlFor="active-mode" className="text-sm font-medium">
+                          {t("active") || "Active"}
+                        </label>
+                        <div className="flex items-center h-10">
+                          <Switch
+                            id="active-mode"
+                            checked={formData.active}
+                            onCheckedChange={(checked) =>
+                              setFormData({ ...formData, active: checked })
+                            }
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </CollapsibleContent>
+                </Collapsible>
                 <Button type="submit" className="w-full">
                   {t("save")}
                 </Button>

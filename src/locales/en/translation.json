@@ -384,5 +384,9 @@
   "group_category_delete_warning": "This is a group category. Deleting it will affect all group members.",
   "select_group_for_category": "Select Group (Optional)",
   "personal_category": "Personal Category",
-  "no_parent": "No Parent"
+  "no_parent": "No Parent",
+  "filter_by": "Filter by",
+  "select_icon": "Select Icon",
+  "search_icons": "Search icons...",
+  "no_icons_found": "No icons found"
 }
