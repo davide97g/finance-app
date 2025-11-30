@@ -44,16 +44,32 @@ export function useSync(): UseSyncResult {
 
     // Delay initial sync by 2 seconds to avoid blocking app startup
     // This allows the UI to render instantly with cached data
-    const initialSyncTimeout = setTimeout(() => {
+    let initialSyncTimeout: NodeJS.Timeout | null = setTimeout(() => {
       console.log("[useSync] Starting background sync after 2s delay");
+      initialSyncTimeout = null;
       sync();
     }, 2000);
+
+    // Listen for online event to cancel initial sync timeout
+    // This prevents race condition with useOnlineSync
+    const handleOnline = () => {
+      if (initialSyncTimeout) {
+        clearTimeout(initialSyncTimeout);
+        initialSyncTimeout = null;
+        console.log(
+          "[useSync] Cancelled initial sync - online event triggered sync"
+        );
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
 
     // Periodic sync every 5 minutes
     const interval = setInterval(sync, TIMING.SYNC_INTERVAL);
 
     return () => {
-      clearTimeout(initialSyncTimeout);
+      if (initialSyncTimeout) clearTimeout(initialSyncTimeout);
+      window.removeEventListener("online", handleOnline);
       unsubscribe();
       clearInterval(interval);
     };

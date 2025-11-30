@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { db, RecurringTransaction } from "../lib/db";
-import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
 import {
   addDays,
@@ -97,13 +96,17 @@ export function useAutoGenerate() {
               count: generatedCount,
               amount: `€${totalAmount.toFixed(2)}`,
             }) ||
-              `Generated ${generatedCount} recurring transaction(s) totaling €${totalAmount.toFixed(
-                2
-              )}`
+            `Generated ${generatedCount} recurring transaction(s) totaling €${totalAmount.toFixed(
+              2
+            )}`
           );
 
-          // Trigger sync
-          syncManager.sync();
+          // No need to trigger sync here - transactions have pendingSync=1
+          // useSync will sync them in the next scheduled sync (2s initial or 5min periodic)
+          // or useOnlineSync will sync when coming back online
+          console.log(
+            "[AutoGenerate] Generated transactions will be synced by next scheduled sync"
+          );
         }
       } catch (error) {
         handleError(

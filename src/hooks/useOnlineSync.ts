@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { syncManager } from "../lib/sync";
+import { safeSync } from "../lib/sync";
 import { toast } from "sonner";
 import i18n from "@/i18n";
 
@@ -8,42 +8,77 @@ let globalHandlersRegistered = false;
 const onlineListeners: Set<(isOnline: boolean) => void> = new Set();
 const syncingListeners: Set<(isSyncing: boolean) => void> = new Set();
 
+// Debounce timeouts for online/offline events
+let onlineDebounceTimeout: NodeJS.Timeout | null = null;
+let offlineDebounceTimeout: NodeJS.Timeout | null = null;
+
 /**
  * Register global event handlers once (singleton pattern).
  * This ensures toasts are shown only once regardless of how many
  * components use the useOnlineSync hook.
+ * Includes debouncing to prevent spam on unstable networks.
  */
 function ensureGlobalHandlers() {
   if (globalHandlersRegistered) return;
   globalHandlersRegistered = true;
 
-  const handleOnline = async () => {
-    // Notify all listeners
-    onlineListeners.forEach((cb) => cb(true));
+  const handleOnline = () => {
+    // Clear offline timeout if exists
+    if (offlineDebounceTimeout) {
+      clearTimeout(offlineDebounceTimeout);
+      offlineDebounceTimeout = null;
+    }
 
-    // Show toast only once (globally)
-    toast.success(i18n.t("back_online"), {
-      description: i18n.t("back_online_description"),
-      duration: 3000,
-    });
+    // Debounce online event (300ms) to filter rapid blips
+    if (onlineDebounceTimeout) {
+      clearTimeout(onlineDebounceTimeout);
+    }
 
-    console.log("[OnlineSync] Back online, syncing...");
-    syncingListeners.forEach((cb) => cb(true));
-    await syncManager.sync();
-    syncingListeners.forEach((cb) => cb(false));
+    onlineDebounceTimeout = setTimeout(async () => {
+      onlineDebounceTimeout = null;
+
+      // Now actually handle online
+      onlineListeners.forEach((cb) => cb(true));
+
+      // Show toast only once (globally)
+      toast.success(i18n.t("back_online"), {
+        description: i18n.t("back_online_description"),
+        duration: 3000,
+      });
+
+      console.log("[OnlineSync] Back online (debounced), syncing...");
+      syncingListeners.forEach((cb) => cb(true));
+      await safeSync("useOnlineSync");
+      syncingListeners.forEach((cb) => cb(false));
+    }, 300); // 300ms debounce - filters rapid connection changes
   };
 
   const handleOffline = () => {
-    // Notify all listeners
-    onlineListeners.forEach((cb) => cb(false));
+    // Clear online timeout if exists
+    if (onlineDebounceTimeout) {
+      clearTimeout(onlineDebounceTimeout);
+      onlineDebounceTimeout = null;
+    }
 
-    // Show toast only once (globally)
-    toast.warning(i18n.t("gone_offline"), {
-      description: i18n.t("gone_offline_description"),
-      duration: 5000,
-    });
+    // Debounce offline event (1s) - more conservative to avoid false alarms
+    if (offlineDebounceTimeout) {
+      clearTimeout(offlineDebounceTimeout);
+    }
 
-    console.log("[OnlineSync] Gone offline");
+    offlineDebounceTimeout = setTimeout(() => {
+      offlineDebounceTimeout = null;
+
+      // Now actually handle offline
+      onlineListeners.forEach((cb) => cb(false));
+
+      // Show toast only once (globally)
+      toast.warning(i18n.t("gone_offline"), {
+        description: i18n.t("gone_offline_description"),
+        duration: 5000,
+      });
+
+      console.log("[OnlineSync] Gone offline (debounced)");
+    }, 1000); // 1s debounce - more conservative for offline
   };
 
   window.addEventListener("online", handleOnline);
@@ -54,9 +89,10 @@ function ensureGlobalHandlers() {
  * Hook for managing online/offline state with automatic sync.
  *
  * Uses a singleton pattern to ensure:
- * - Toast notifications are shown only once (not per component)
+ * - Toast notifications are shown only once  (not per component)
  * - Sync is triggered only once when coming back online
  * - All components using this hook stay in sync
+ * - Debouncing prevents spam on unstable networks
  *
  * @returns Object containing:
  *   - `isOnline`: Whether the browser is currently online

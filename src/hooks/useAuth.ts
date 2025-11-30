@@ -46,9 +46,10 @@ function setCachedUser(user: User | null): void {
 }
 
 /**
- * Handle session expiration with elegant toast countdown
+ * Handle session expiration with elegant toast countdown.
+ * Returns cleanup function to prevent memory leaks.
  */
-function handleSessionExpired(signOutFn: () => Promise<any>): void {
+function handleSessionExpired(signOutFn: () => Promise<any>): () => void {
   const t = i18n.t;
   let countdown = 5;
   let dismissed = false;
@@ -95,7 +96,7 @@ function handleSessionExpired(signOutFn: () => Promise<any>): void {
   }, 1000);
 
   // Auto-logout after countdown
-  setTimeout(() => {
+  const logoutTimeout = setTimeout(() => {
     clearInterval(countdownInterval);
     if (!dismissed) {
       console.log("[Auth] Auto-logout after session expiration");
@@ -103,6 +104,15 @@ function handleSessionExpired(signOutFn: () => Promise<any>): void {
       signOutFn();
     }
   }, SESSION_EXPIRED_COUNTDOWN_MS);
+
+  // Return cleanup function to prevent memory leaks
+  return () => {
+    clearInterval(countdownInterval);
+    clearTimeout(logoutTimeout);
+    dismissed = true;
+    toast.dismiss(toastId);
+    console.log("[Auth] Session expiration timer cleaned up");
+  };
 }
 
 /**
@@ -148,8 +158,17 @@ export function useAuth() {
     setLoading(false);
   }, []);
 
+  const signOut = useCallback(async () => {
+    // Clear cached user
+    setCachedUser(null);
+    // Clear local cache before signing out
+    await db.clearLocalCache();
+    return supabase.auth.signOut();
+  }, []);
+
   useEffect(() => {
     let isSubscribed = true;
+    let cleanupSessionExpired: (() => void) | null = null;
 
     const initAuth = async () => {
       const cachedUser = getCachedUser();
@@ -185,7 +204,7 @@ export function useAuth() {
           console.warn("[Auth] Session validation error:", error.message);
           // If we had a cached user but session is invalid, handle expiration
           if (cachedUser) {
-            handleSessionExpired(signOut);
+            cleanupSessionExpired = handleSessionExpired(signOut);
           } else {
             updateUser(null, false);
           }
@@ -203,7 +222,7 @@ export function useAuth() {
           // No session but we had cached user - session expired
           if (cachedUser) {
             console.log("[Auth] Session expired");
-            handleSessionExpired(signOut);
+            cleanupSessionExpired = handleSessionExpired(signOut);
           } else {
             updateUser(null, false);
           }
@@ -263,16 +282,13 @@ export function useAuth() {
       subscription.unsubscribe();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-    };
-  }, [updateUser]);
 
-  const signOut = async () => {
-    // Clear cached user
-    setCachedUser(null);
-    // Clear local cache before signing out
-    await db.clearLocalCache();
-    return supabase.auth.signOut();
-  };
+      // Cleanup session expiration timer if exists
+      if (cleanupSessionExpired) {
+        cleanupSessionExpired();
+      }
+    };
+  }, [updateUser, signOut]);
 
   return { user, loading, isOffline, signOut };
 }

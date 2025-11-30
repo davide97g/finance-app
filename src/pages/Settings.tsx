@@ -4,6 +4,7 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import { db, Transaction, Category } from "@/lib/db";
+import { safeSync, syncManager } from "@/lib/sync";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,7 @@ import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { syncManager } from "@/lib/sync";
+
 import { v4 as uuidv4 } from "uuid";
 
 export function SettingsPage() {
@@ -79,7 +80,7 @@ export function SettingsPage() {
 
   const handleManualSync = async () => {
     setManualSyncing(true);
-    await syncManager.sync();
+    await safeSync("handleManualSync");
     setLastSyncTime(new Date());
     setManualSyncing(false);
   };
@@ -103,7 +104,7 @@ export function SettingsPage() {
       await db.clearLocalCache();
       toast.success(t("cache_cleared"));
       // Trigger a sync to repopulate from server
-      await syncManager.sync();
+      await safeSync("handleClearCache");
     } catch (error) {
       toast.error(t("cache_clear_error") || "Failed to clear cache");
     } finally {
@@ -186,7 +187,7 @@ export function SettingsPage() {
       );
 
       // Sync to server
-      await syncManager.sync();
+      await safeSync("handleImportData");
     } catch (error: any) {
       toast.error(t("import_error") || `Import failed: ${error.message}`);
     } finally {

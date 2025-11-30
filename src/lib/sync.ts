@@ -337,8 +337,7 @@ export class SyncManager {
       } catch (error) {
         lastError = error as Error;
         console.warn(
-          `[Sync] Attempt ${attempt + 1}/${
-            SYNC_CONFIG.maxRetries
+          `[Sync] Attempt ${attempt + 1}/${SYNC_CONFIG.maxRetries
           } failed for ${tableName}:`,
           error
         );
@@ -673,3 +672,30 @@ export class SyncManager {
 }
 
 export const syncManager = new SyncManager();
+
+/**
+ * Safe wrapper for syncManager.sync() that prevents concurrent sync calls.
+ * Use this instead of calling syncManager.sync() directly to avoid race conditions.
+ *
+ * @param source - Optional source identifier for logging
+ * @returns Promise that resolves when sync completes or is skipped
+ *
+ * @example
+ * ```typescript
+ * await safeSync("handleManualSync");
+ * await safeSync("handleOnline");
+ * ```
+ */
+export async function safeSync(source?: string): Promise<void> {
+  const status = syncManager.getStatus();
+
+  if (status.isSyncing) {
+    console.log(
+      `[Sync] Already syncing, skipping${source ? ` (source: ${source})` : ""}`
+    );
+    return;
+  }
+
+  console.log(`[Sync] Starting sync${source ? ` (source: ${source})` : ""}`);
+  await syncManager.sync();
+}
