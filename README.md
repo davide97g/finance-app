@@ -2,24 +2,45 @@
 
 A modern, offline-first Progressive Web App for managing personal finances. Track your income, expenses, and investments with a beautiful, responsive interface that works seamlessly online and offline.
 
-![Version](https://img.shields.io/badge/version-0.5.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)
 ![React](https://img.shields.io/badge/React-19.2-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6.svg)
 
 ## ✨ Key Features
 
-- 🔄 **Offline-First** - Full functionality without internet connection
-- ⚡ **Cache-First Auth** - Instant app startup with cached credentials
-- 💰 **Financial Management** - Track income, expenses, and investments
-- 📊 **Analytics** - Detailed charts and statistics
-- 💵 **Monthly Budget** - Set limits with progress tracking and notifications
-- 👥 **Group Expenses** - Share expenses with others
-- 🔁 **Recurring Transactions** - Auto-generated on app load
-- 🔄 **Smart Sync** - Background sync with debouncing and race condition prevention
-- 🎨 **Modern UI** - Responsive design with dark/light themes
-- 🌍 **Multi-language** - English and Italian support
-- 📱 **PWA** - Installable on mobile and desktop
-- 💾 **Export/Import** - Backup your data as JSON
+### 💰 Financial Management
+- **Income/Expense/Investment Tracking** - Complete transaction management
+- **Hierarchical Categories** - Multi-level category organization
+- **Category Budgets** - Set monthly limits per category
+- **Monthly Budget** - Global budget with progress tracking
+- **Recurring Transactions** - Auto-generate periodic transactions
+- **Context Tagging** - Organize expenses by context (Work, Vacation, etc.)
+
+### 👥 Collaboration
+- **Group Expenses** - Share expenses with multiple users
+- **Split Tracking** - Track who paid and split amounts
+- **User Profiles** - Display names and avatars instead of UUIDs
+- **Member Management** - Add/remove group members with validation
+
+### 🔄 Sync & Offline
+- **Minimalist Sync Strategy** - Push-only sync, manual refresh
+- **Offline-First** - Full functionality without internet
+- **Cache-First Auth** - Instant startup with cached credentials
+- **Pending Changes Indicator** - Visual feedback for unsynced data
+- **Conflict Resolution** - Last-Write-Wins (LWW) strategy
+
+### 📊 Analytics & UI
+- **Detailed Statistics** - Monthly and yearly trends
+- **Interactive Charts** - Recharts with gradients and animations
+- **Collapsible Sidebar** - Modern desktop navigation (shadcn/ui)
+- **Responsive Design** - Mobile-first with flip cards and carousels
+- **Dark/Light Themes** - Customizable accent colors
+- **iOS Safe Area** - Perfect PWA support for iPhone (notch/Dynamic Island)
+
+### 🌍 Other Features
+- **Multi-language** - English and Italian (i18next)
+- **PWA Installable** - Works offline on mobile and desktop
+- **Export/Import** - Backup data as JSON
 
 ## 🚀 Quick Start
 
@@ -48,10 +69,14 @@ Complete documentation is available in the [`docs/`](./docs) folder:
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **Data**: Dexie (IndexedDB), Supabase (PostgreSQL + Auth)
-- **PWA**: vite-plugin-pwa, Workbox
+- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS 4, shadcn/ui
+- **Data**: Dexie.js (IndexedDB), Supabase (PostgreSQL + Auth + RLS)
+- **Charts**: Recharts with custom gradients and animations
+- **PWA**: vite-plugin-pwa, Workbox 7
 - **i18n**: i18next, react-i18next
+- **Animations**: Framer Motion, tw-animate-css
+- **Routing**: React Router DOM 7
+- **State**: Dexie React Hooks, Custom hooks
 
 ## 📜 Available Scripts
 

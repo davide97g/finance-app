@@ -2,6 +2,55 @@
 
 This document provides a detailed technical overview of the Personal Expense Tracker PWA architecture, design patterns, and implementation details.
 
+## 🎉 What's New in v0.6.1
+
+### User Identity System (Public Profiles)
+- **`public.profiles` table** with automatic user creation trigger
+- Display **names and avatars** instead of raw UUIDs in group members
+- Row Level Security (RLS): SELECT for all, INSERT/UPDATE only for owner
+- Synchronized across devices with `profiles` table in IndexedDB
+- **Hooks**: `useProfiles(userIds)` and `useProfile(userId)`
+- **Component**: `<UserAvatar>` for consistent user display
+
+### Minimalist Sync Strategy
+- **Removed Supabase Realtime** - No more WebSocket connections
+- **Push-only sync** when device comes online
+- **Manual refresh buttons** on all data pages (Groups, etc.)
+- **Pending Changes Indicator** with badge in header
+- **Visual feedback** for unsynced changes
+- **Debounced online events** (300ms) to prevent spam
+
+### Collapsible Sidebar (Desktop)
+- **shadcn/ui Sidebar component** with icon-only collapsed state
+- **Persistent state** (stored in cookie)
+- **Keyboard shortcut**: <kbd>Cmd/Ctrl</kbd> + <kbd>B</kbd>
+- **Mobile**: Sheet overlay (unchanged)
+- **Desktop**: Smooth collapse animation
+
+### iOS Safe Area Support
+- **viewport-fit=cover** for full-screen PWA
+- **`env(safe-area-inset-*)` CSS variables** for notch/Dynamic Island
+- Safe area padding on `SidebarInset` root container
+- Perfect support for all iPhone models (including Pro Max)
+
+### Database Schema Updates
+- **`profiles` table** (id, email, full_name, avatar_url)
+- Consolidated SQL: all new migrations in `supabase_schema.sql`
+- Dexie schema v4 with `profiles` table
+- `check_user_exists(uuid)` RPC function for member validation
+
+### UI Improvements
+- Fixed chart Y-axis legend spacing (Dashboard, Statistics)
+- Better mobile layout with flip cards
+- Improved category budgets integration
+- Context tagging in transaction forms
+
+### Bug Fixes
+- **Monthly budget sync** now works correctly (epoch 0 default settings)
+- **iOS content overlap** resolved with safe area
+- **Group member list** updates reactively after adding members
+- **Async status methods** in SyncManager (no more race conditions)
+
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
@@ -302,6 +351,23 @@ interface GroupMember {
 // Indexes: id, group_id, user_id
 ```
 
+#### Profiles Table (v0.6.1)
+
+```typescript
+interface Profile {
+  id: string; // UUID (FK to auth.users)
+  email: string; // User email
+  full_name?: string; // Display name
+  avatar_url?: string; // Avatar image URL
+  updated_at?: string; // Last update timestamp
+  sync_token?: number; // Server sync token
+}
+
+// Indexes: id
+// Note: This table is public and readable by all authenticated users
+// Users can only INSERT/UPDATE their own profile
+```
+
 ### Supabase Schema (PostgreSQL)
 
 The Supabase schema mirrors the IndexedDB schema with additional features:
@@ -398,33 +464,51 @@ class SyncManager {
 - **Rationale**: Single-user app, conflicts are rare
 - **Future**: Could implement CRDTs for multi-device scenarios
 
-### Realtime Sync
+### Minimalist Sync Strategy (v0.6.1)
 
-The app subscribes to Supabase Realtime for instant cross-device updates:
+The app uses a **minimalist, local-first sync strategy** optimized for simplicity and reliability:
 
-```typescript
-// useRealtimeSync hook
-function useRealtimeSync(): { isConnected: boolean };
-```
+**Core Principles**:
+1. **Push-only when online** - No automatic background polling
+2. **Manual refresh** - User explicitly pulls latest data
+3. **No Realtime WebSockets** - Removed Supabase Realtime for simplicity
+4. **Pending changes indicator** - Visual feedback for unsynced data
 
 **How It Works**:
 
-1. **Connection**: Establishes WebSocket connection to Supabase Realtime
-2. **Subscriptions**: Listens to all user data tables (transactions, categories, etc.)
-3. **Updates**: When remote change detected, updates local IndexedDB
-4. **UI Refresh**: Dexie's `useLiveQuery` automatically re-renders components
-5. **Error Handling**: Gracefully handles WebSocket disconnections during HMR/unmount
+```typescript
+// 1. User makes changes → Write to IndexedDB + mark pendingSync
+await db.transactions.add({ ...data, pendingSync: 1 });
 
-**Tables Subscribed**:
+// 2. When online → Auto-push pending changes
+window.addEventListener('online', () => {
+  syncManager.sync(); // Pushes pendingSync items
+});
 
-- `transactions`
-- `categories`
-- `contexts`
-- `recurring_transactions`
-- `user_settings`
-- `groups`
-- `group_members`
-- `category_budgets`
+// 3. Manual refresh → Pull latest from server
+<Button onClick={() => syncManager.sync()}>Refresh</Button>
+```
+
+**Benefits**:
+- ✅ Simpler architecture (no WebSocket management)
+- ✅ Better battery life (no persistent connections)
+- ✅ More predictable behavior (user-controlled sync)
+- ✅ Easier to debug (explicit sync triggers)
+
+**Visual Feedback**:
+- `<PendingChangesIndicator>` shows badge with pending count
+- Manual refresh buttons on all data pages (Groups, etc.)
+- Debounced online events (300ms) prevent spam
+
+**Removed**:
+- `useRealtimeSync` hook deleted
+- Supabase Realtime subscriptions removed
+- Automatic channel management eliminated
+
+**Migration from Realtime** (v0.5.3 → v0.6.1):
+- Users who prefer instant cross-device sync can manually refresh
+- Offline-first guarantees no data loss
+- Simpler mental model: "pull when you need fresh data"
 
 ### Sync Triggers
 
