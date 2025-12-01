@@ -21,50 +21,47 @@ export function useTransactions(
   groupId?: string | null
 ) {
   // Single unified query that handles all filtering in one operation
-  // This eliminates the race condition from the previous nested useLiveQuery pattern
   const transactions = useLiveQuery(async () => {
-    let results: Transaction[];
+    let collection: any;
 
     if (yearMonth) {
-      // If yearMonth is just a year (e.g. "2024"), filter by date range
+      // 1. Filter by Year/Month (Most selective)
       if (yearMonth.length === 4) {
-        results = await db.transactions
-          .where("date")
-          .between(`${yearMonth}-01-01`, `${yearMonth}-12-31\uffff`)
-          .toArray();
+        collection = db.transactions.where("date").between(`${yearMonth}-01-01`, `${yearMonth}-12-31\uffff`);
       } else {
-        // Filter by specific month
-        results = await db.transactions
-          .where("year_month")
-          .equals(yearMonth)
-          .toArray();
+        collection = db.transactions.where("year_month").equals(yearMonth);
       }
-    } else if (limit) {
-      // Get limited results without month filter
-      results = await db.transactions
-        .orderBy("date")
-        .reverse()
-        .limit(limit)
-        .toArray();
+    } else if (groupId && typeof groupId === "string") {
+      // 2. Filter by Group ID (if no date filter) - Uses Index!
+      collection = db.transactions.where("group_id").equals(groupId);
     } else {
-      // Get all transactions
-      results = await db.transactions.toArray();
+      // 3. No filters or Personal only (fallback to date sort)
+      collection = db.transactions.orderBy("date");
     }
 
-    // Apply group filter inline to avoid separate query
+    // Apply remaining filters
+    let results: Transaction[] = await collection.reverse().toArray();
+
+    // Apply group filter if not already applied via index
+    // (e.g. if we queried by yearMonth, or if we want personal only)
     if (groupId !== undefined) {
       if (groupId === null) {
         // Return only personal transactions
         results = results.filter((t) => !t.group_id);
-      } else {
-        // Return only transactions for specific group
+      } else if (yearMonth) {
+        // If we queried by yearMonth, we still need to filter by group
         results = results.filter((t) => t.group_id === groupId);
       }
     }
 
+    // Apply limit if needed (and not already applied effectively)
+    if (limit && results.length > limit) {
+      results = results.slice(0, limit);
+    }
+
     // Sort by date descending (most recent first)
     // We sort here because some query paths don't guarantee order
-    results.sort((a, b) => b.date.localeCompare(a.date));
+    results.sort((a: Transaction, b: Transaction) => b.date.localeCompare(a.date));
 
     return results;
   }, [limit, yearMonth, groupId]);

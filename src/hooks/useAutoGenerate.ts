@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { db, RecurringTransaction } from "../lib/db";
+import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
 import {
   addDays,
@@ -101,12 +102,11 @@ export function useAutoGenerate() {
             )}`
           );
 
-          // No need to trigger sync here - transactions have pendingSync=1
-          // useSync will sync them in the next scheduled sync (2s initial or 5min periodic)
-          // or useOnlineSync will sync when coming back online
+          // Trigger sync to push generated transactions
           console.log(
-            "[AutoGenerate] Generated transactions will be synced by next scheduled sync"
+            "[AutoGenerate] Generated transactions, triggering sync..."
           );
+          syncManager.sync();
         }
       } catch (error) {
         handleError(

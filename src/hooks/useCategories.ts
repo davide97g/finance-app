@@ -115,11 +115,37 @@ export function useCategories(groupId?: string | null) {
     syncManager.sync();
   };
 
+  const migrateTransactions = async (
+    oldCategoryId: string,
+    newCategoryId: string
+  ) => {
+    // Find all transactions with the old category
+    await db.transactions
+      .where("category_id")
+      .equals(oldCategoryId)
+      .modify({
+        category_id: newCategoryId,
+        pendingSync: 1,
+      });
+
+    // Also migrate recurring transactions
+    await db.recurring_transactions
+      .where("category_id")
+      .equals(oldCategoryId)
+      .modify({
+        category_id: newCategoryId,
+        pendingSync: 1,
+      });
+
+    syncManager.sync();
+  };
+
   return {
     categories: filteredCategories,
     addCategory,
     updateCategory,
     deleteCategory,
     reparentChildren,
+    migrateTransactions,
   };
 }

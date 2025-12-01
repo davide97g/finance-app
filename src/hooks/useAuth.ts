@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { db } from "../lib/db";
+import { syncManager } from "../lib/sync";
+import { cleanupSoftDeletedRecords } from "../lib/cleanup";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import i18n from "@/i18n";
@@ -191,6 +193,11 @@ export function useAuth() {
         updateUser(cachedUser, false);
       }
 
+      // Run cleanup in background with a delay to not impact startup performance
+      const cleanupTimer = setTimeout(() => {
+        cleanupSoftDeletedRecords().catch(e => console.error("Cleanup failed", e));
+      }, 10000);
+
       // 2. Validate session in BACKGROUND (non-blocking)
       try {
         const {
@@ -249,6 +256,15 @@ export function useAuth() {
       // Clear local cache on sign out
       if (event === "SIGNED_OUT") {
         await db.clearLocalCache();
+      }
+
+      // Trigger full sync on sign in to ensure fresh data
+      if (event === "SIGNED_IN") {
+        console.log("[Auth] User signed in, triggering full sync...");
+        // Small delay to ensure session is fully established
+        setTimeout(() => {
+          syncManager.fullSync();
+        }, 1000);
       }
     });
 

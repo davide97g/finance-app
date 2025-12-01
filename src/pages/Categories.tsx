@@ -248,6 +248,7 @@ export function CategoriesPage() {
     updateCategory,
     deleteCategory,
     reparentChildren,
+    migrateTransactions,
   } = useCategories(selectedGroupFilter);
 
   const { groups } = useGroups();
@@ -259,10 +260,15 @@ export function CategoriesPage() {
   } = useCategoryBudgets();
   const { user } = useAuth();
 
-  // Fetch all transactions to check for associations
+  // Fetch all transactions and recurring transactions to check for associations
   const transactions = useLiveQuery(async () => {
     const { db } = await import("@/lib/db");
     return db.transactions.toArray();
+  });
+
+  const recurringTransactions = useLiveQuery(async () => {
+    const { db } = await import("@/lib/db");
+    return db.recurring_transactions.toArray();
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -458,12 +464,20 @@ export function CategoriesPage() {
     const category = categories?.find((c) => c.id === id);
     const isGroupCategory = !!category?.group_id;
 
-    if (transactionCount > 0) {
-      // Show warning about transactions
-      alert(
-        t("category_has_transactions_warning", { count: transactionCount }) ||
-        `Warning: This category has ${transactionCount} associated transaction(s). Deleting it will leave these transactions without a category.`
-      );
+    // Check for associated recurring transactions
+    const associatedRecurring = recurringTransactions?.filter(
+      (r) => r.category_id === id && !r.deleted_at
+    );
+    const recurringCount = associatedRecurring?.length || 0;
+
+    if (transactionCount > 0 || recurringCount > 0) {
+      setMigrationData({
+        oldCategoryId: id,
+        transactionCount,
+        recurringCount,
+      });
+      setMigrationDialogOpen(true);
+      return;
     }
 
     if (isGroupCategory) {
@@ -542,6 +556,29 @@ export function CategoriesPage() {
 
     setConflictDialogOpen(false);
     setConflictData(null);
+  };
+
+  // Migration State
+  const [migrationDialogOpen, setMigrationDialogOpen] = useState(false);
+  const [migrationData, setMigrationData] = useState<{
+    oldCategoryId: string;
+    transactionCount: number;
+    recurringCount: number;
+  } | null>(null);
+  const [migrationTargetId, setMigrationTargetId] = useState<string>("");
+
+  const handleMigrationResolve = async () => {
+    if (!migrationData || !migrationTargetId) return;
+
+    // 1. Migrate transactions
+    await migrateTransactions(migrationData.oldCategoryId, migrationTargetId);
+
+    // 2. Delete the category
+    await deleteCategory(migrationData.oldCategoryId);
+
+    setMigrationDialogOpen(false);
+    setMigrationData(null);
+    setMigrationTargetId("");
   };
 
   // Budget handlers
@@ -1270,6 +1307,50 @@ export function CategoriesPage() {
           selectedCategory && handleOpenBudgetDialog(selectedCategory.id)
         }
       />
+      {/* Migration Dialog */}
+      <Dialog open={migrationDialogOpen} onOpenChange={setMigrationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("delete_category_with_data") || "Delete Category with Data"}</DialogTitle>
+            <DialogDescription>
+              {t("category_has_data_warning", {
+                transactions: migrationData?.transactionCount || 0,
+                recurring: migrationData?.recurringCount || 0
+              }) || `This category is used by ${migrationData?.transactionCount || 0} transactions and ${migrationData?.recurringCount || 0} recurring templates. Please select a new category to move them to.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">
+              {t("select_new_category") || "Select New Category"}
+            </label>
+            <CategorySelector
+              value={migrationTargetId}
+              onChange={setMigrationTargetId}
+              excludeId={migrationData?.oldCategoryId}
+              type={categories?.find(c => c.id === migrationData?.oldCategoryId)?.type}
+              groupId={categories?.find(c => c.id === migrationData?.oldCategoryId)?.group_id}
+              modal
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setMigrationDialogOpen(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleMigrationResolve}
+              disabled={!migrationTargetId}
+            >
+              {t("migrate_and_delete") || "Migrate & Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

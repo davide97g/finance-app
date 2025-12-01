@@ -9,6 +9,7 @@ import {
   addYears,
   isBefore,
   parseISO,
+  format,
 } from "date-fns";
 import {
   RecurringTransactionInputSchema,
@@ -132,7 +133,8 @@ export function useRecurringTransactions(groupId?: string | null) {
 
         // Create transaction
         const transactionId = uuidv4();
-        const dateStr = nextDate.toISOString().split("T")[0];
+        // Use format to get local date string YYYY-MM-DD
+        const dateStr = format(nextDate, "yyyy-MM-dd");
 
         await db.transactions.add({
           id: transactionId,
@@ -150,9 +152,9 @@ export function useRecurringTransactions(groupId?: string | null) {
           deleted_at: null,
         });
 
-        // Update last_generated
+        // Update last_generated with the date string we just generated for
         await db.recurring_transactions.update(rt.id, {
-          last_generated: nextDate.toISOString(),
+          last_generated: dateStr,
           pendingSync: 1,
         });
 

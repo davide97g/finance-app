@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { useAuth } from "@/hooks/useAuth";
-import { db, Transaction, Category } from "@/lib/db";
+import { db, Transaction, Category, RecurringTransaction, CategoryBudget } from "@/lib/db";
 import { safeSync, syncManager } from "@/lib/sync";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -46,13 +46,30 @@ import {
   Download,
   FileJson,
   X,
+  CheckCircle2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { v4 as uuidv4 } from "uuid";
+
+interface ImportStats {
+  categories: number;
+  transactions: number;
+  recurring: number;
+  budgets: number;
+  isVueMigration: boolean;
+}
 
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
@@ -67,6 +84,8 @@ export function SettingsPage() {
   const [clearingCache, setClearingCache] = useState(false);
   const [importingData, setImportingData] = useState(false);
   const [exportingData, setExportingData] = useState(false);
+  const [showImportSuccess, setShowImportSuccess] = useState(false);
+  const [importStats, setImportStats] = useState<ImportStats | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Avoid hydration mismatch
@@ -121,72 +140,200 @@ export function SettingsPage() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      // Validate structure
-      if (!data.transactions && !data.categories) {
-        throw new Error(
-          "Invalid format: must contain transactions and/or categories"
-        );
-      }
+      // Check if this is a Vue export
+      const isVueExport = data.source === 'vue-firebase-expense-tracker';
 
-      let importedTransactions = 0;
-      let importedCategories = 0;
+      if (isVueExport) {
+        // VUE MIGRATION LOGIC
+        console.log("Starting migration from Vue export...");
+        let importedTransactions = 0;
+        let importedCategories = 0;
+        let importedRecurring = 0;
+        let importedBudgets = 0;
 
-      // Import categories first (transactions may depend on them)
-      if (data.categories && Array.isArray(data.categories)) {
-        for (const cat of data.categories) {
-          const category: Category = {
-            id: cat.id || uuidv4(),
-            user_id: user.id,
-            name: cat.name,
-            icon: cat.icon || "CircleDollarSign",
-            color: cat.color || "#6366f1",
-            type: cat.type || "expense",
-            parent_id: cat.parent_id,
-            active: 1,
-            deleted_at: null,
-            pendingSync: 1,
-          };
-          await db.categories.put(category);
-          importedCategories++;
+        // 1. Import Categories
+        const categoryMap = new Map<string, string>(); // Old ID -> New ID (though we try to keep IDs)
+
+        if (data.data.categories && Array.isArray(data.data.categories)) {
+          for (const vueCat of data.data.categories) {
+            // Map type: 1=expense, 2=income, 3=investment
+            let type: "expense" | "income" | "investment" = "expense";
+            if (vueCat.type === 2) type = "income";
+            if (vueCat.type === 3) type = "investment";
+
+            const category: Category = {
+              id: vueCat.id, // Try to preserve ID
+              user_id: user.id,
+              name: vueCat.title,
+              icon: vueCat.icon || "CircleDollarSign",
+              color: vueCat.color || "#6366f1",
+              type: type,
+              parent_id: vueCat.parentCategoryId || undefined,
+              active: vueCat.active ? 1 : 0,
+              deleted_at: null,
+              pendingSync: 1,
+            };
+
+            await db.categories.put(category);
+            categoryMap.set(vueCat.id, vueCat.id);
+            importedCategories++;
+
+            // Handle Budget (move to category_budgets table)
+            if (vueCat.budget && vueCat.budget > 0) {
+              const budget: CategoryBudget = {
+                id: uuidv4(),
+                user_id: user.id,
+                category_id: vueCat.id,
+                amount: vueCat.budget,
+                period: "monthly",
+                deleted_at: null,
+                pendingSync: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              await db.category_budgets.put(budget);
+              importedBudgets++;
+            }
+          }
         }
-      }
 
-      // Import transactions
-      if (data.transactions && Array.isArray(data.transactions)) {
-        for (const tx of data.transactions) {
-          const transaction: Transaction = {
-            id: tx.id || uuidv4(),
-            user_id: user.id,
-            category_id: tx.category_id || "",
-            type: tx.type || "expense",
-            amount: parseFloat(tx.amount) || 0,
-            date: tx.date || new Date().toISOString().split("T")[0],
-            year_month:
-              tx.date?.substring(0, 7) ||
-              new Date().toISOString().substring(0, 7),
-            description: tx.description || "",
-            context_id: tx.context_id,
-            group_id: tx.group_id,
-            paid_by_user_id: tx.paid_by_user_id,
-            deleted_at: null,
-            pendingSync: 1,
-          };
-          await db.transactions.put(transaction);
-          importedTransactions++;
+        // 2. Import Transactions
+        if (data.data.transactions && Array.isArray(data.data.transactions)) {
+          for (const vueTx of data.data.transactions) {
+            // Infer type from category if possible, otherwise default to expense
+            // We need to look up the category to get the type
+            const category = await db.categories.get(vueTx.categoryId);
+            const type = category?.type || "expense";
+
+            const transaction: Transaction = {
+              id: vueTx.id, // Try to preserve ID
+              user_id: user.id,
+              category_id: vueTx.categoryId,
+              type: type,
+              amount: parseFloat(vueTx.amount),
+              date: vueTx.timestamp.split("T")[0],
+              year_month: vueTx.timestamp.substring(0, 7),
+              description: vueTx.description || "",
+              deleted_at: null,
+              pendingSync: 1,
+            };
+
+            await db.transactions.put(transaction);
+            importedTransactions++;
+          }
         }
-      }
 
-      toast.success(
-        t("import_success", {
-          transactions: importedTransactions,
+        // 3. Import Recurring Expenses
+        if (data.data.recurringExpenses && Array.isArray(data.data.recurringExpenses)) {
+          for (const vueRec of data.data.recurringExpenses) {
+            // Map frequency
+            let frequency: "daily" | "weekly" | "monthly" | "yearly" = "monthly";
+            if (vueRec.frequency === "WEEKLY") frequency = "weekly";
+            if (vueRec.frequency === "YEARLY") frequency = "yearly";
+
+            // Look up category for type
+            const category = await db.categories.get(vueRec.categoryId);
+            const type = category?.type || "expense";
+
+            const recurring: RecurringTransaction = {
+              id: vueRec.id,
+              user_id: user.id,
+              category_id: vueRec.categoryId,
+              type: type,
+              amount: parseFloat(vueRec.amount),
+              description: vueRec.description || "",
+              frequency: frequency,
+              start_date: vueRec.startDate.split("T")[0],
+              active: vueRec.isActive ? 1 : 0,
+              deleted_at: null,
+              pendingSync: 1,
+            };
+
+            await db.recurring_transactions.put(recurring);
+            importedRecurring++;
+          }
+        }
+
+        setImportStats({
           categories: importedCategories,
-        }) ||
-        `Imported ${importedTransactions} transactions and ${importedCategories} categories`
-      );
+          transactions: importedTransactions,
+          recurring: importedRecurring,
+          budgets: importedBudgets,
+          isVueMigration: true
+        });
+        setShowImportSuccess(true);
+
+      } else {
+        // EXISTING IMPORT LOGIC
+        // Validate structure
+        if (!data.transactions && !data.categories) {
+          throw new Error(
+            "Invalid format: must contain transactions and/or categories"
+          );
+        }
+
+        let importedTransactions = 0;
+        let importedCategories = 0;
+
+        // Import categories first (transactions may depend on them)
+        if (data.categories && Array.isArray(data.categories)) {
+          for (const cat of data.categories) {
+            const category: Category = {
+              id: cat.id || uuidv4(),
+              user_id: user.id,
+              name: cat.name,
+              icon: cat.icon || "CircleDollarSign",
+              color: cat.color || "#6366f1",
+              type: cat.type || "expense",
+              parent_id: cat.parent_id,
+              active: 1,
+              deleted_at: null,
+              pendingSync: 1,
+            };
+            await db.categories.put(category);
+            importedCategories++;
+          }
+        }
+
+        // Import transactions
+        if (data.transactions && Array.isArray(data.transactions)) {
+          for (const tx of data.transactions) {
+            const transaction: Transaction = {
+              id: tx.id || uuidv4(),
+              user_id: user.id,
+              category_id: tx.category_id || "",
+              type: tx.type || "expense",
+              amount: parseFloat(tx.amount) || 0,
+              date: tx.date || new Date().toISOString().split("T")[0],
+              year_month:
+                tx.date?.substring(0, 7) ||
+                new Date().toISOString().substring(0, 7),
+              description: tx.description || "",
+              context_id: tx.context_id,
+              group_id: tx.group_id,
+              paid_by_user_id: tx.paid_by_user_id,
+              deleted_at: null,
+              pendingSync: 1,
+            };
+            await db.transactions.put(transaction);
+            importedTransactions++;
+          }
+        }
+
+        setImportStats({
+          categories: importedCategories,
+          transactions: importedTransactions,
+          recurring: 0,
+          budgets: 0,
+          isVueMigration: false
+        });
+        setShowImportSuccess(true);
+      }
 
       // Sync to server
       await safeSync("handleImportData");
     } catch (error: any) {
+      console.error("Import error:", error);
       toast.error(t("import_error") || `Import failed: ${error.message}`);
     } finally {
       setImportingData(false);
@@ -617,6 +764,51 @@ export function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showImportSuccess} onOpenChange={setShowImportSuccess}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-6 w-6" />
+              {t("import_success_title") || "Import Successful"}
+            </DialogTitle>
+            <DialogDescription>
+              {t("import_success_desc") || "Your data has been successfully imported into the application."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {importStats && (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="flex flex-col items-center p-3 bg-secondary/20 rounded-lg">
+                <span className="text-2xl font-bold">{importStats.categories}</span>
+                <span className="text-xs text-muted-foreground uppercase">{t("categories") || "Categories"}</span>
+              </div>
+              <div className="flex flex-col items-center p-3 bg-secondary/20 rounded-lg">
+                <span className="text-2xl font-bold">{importStats.transactions}</span>
+                <span className="text-xs text-muted-foreground uppercase">{t("transactions") || "Transactions"}</span>
+              </div>
+              {importStats.isVueMigration && (
+                <>
+                  <div className="flex flex-col items-center p-3 bg-secondary/20 rounded-lg">
+                    <span className="text-2xl font-bold">{importStats.recurring}</span>
+                    <span className="text-xs text-muted-foreground uppercase">{t("recurring") || "Recurring"}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 bg-secondary/20 rounded-lg">
+                    <span className="text-2xl font-bold">{importStats.budgets}</span>
+                    <span className="text-xs text-muted-foreground uppercase">{t("budgets") || "Budgets"}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setShowImportSuccess(false)}>
+              {t("close") || "Close"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

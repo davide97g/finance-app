@@ -48,8 +48,8 @@ export function useSync(): UseSyncResult {
     // ✅ Sync all'avvio (dopo 2s delay)
     // Usa fullSync() per essere sicuri di avere tutti i dati
     const initialSyncTimeout = setTimeout(() => {
-      console.log("[useSync] Starting full sync after 2s delay");
-      syncManager.fullSync();
+      console.log("[useSync] Starting sync after 2s delay");
+      syncManager.sync();
     }, 2000);
 
     return () => {
