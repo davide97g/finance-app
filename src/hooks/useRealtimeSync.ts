@@ -8,6 +8,8 @@ import { db } from "../lib/db";
 import { useAuth } from "./useAuth";
 import { handleError } from "@/lib/error-handler";
 import { REALTIME_CONFIG, TIMING } from "@/lib/constants";
+import { toast } from "sonner";
+import i18n from "@/i18n";
 
 // Tables we want to subscribe to
 const REALTIME_TABLES = REALTIME_CONFIG.TABLES;
@@ -116,6 +118,51 @@ export function useRealtimeSync(enabled: boolean = true) {
 
             await dexieTable.put(recordToSave);
             console.log(`[Realtime] Saved ${table} ${newRecord.id}`);
+
+            // Show toast for new group transactions not created by me
+            if (
+              table === "transactions" &&
+              eventType === "INSERT" &&
+              newRecord.group_id &&
+              newRecord.user_id !== user?.id
+            ) {
+              // Check if I am a member of this group
+              const membership = await db.group_members
+                .where("group_id")
+                .equals(newRecord.group_id)
+                .and((m) => m.user_id === user?.id && !m.removed_at)
+                .first();
+
+              if (membership) {
+                // Get group name for toast
+                const group = await db.groups.get(newRecord.group_id);
+                const groupName = group?.name || "Unknown Group";
+
+                // Get payer name
+                let payerName = "Someone";
+                if (newRecord.paid_by_user_id) {
+                  const payerProfile = await db.profiles.get(
+                    newRecord.paid_by_user_id
+                  );
+                  payerName =
+                    payerProfile?.full_name ||
+                    payerProfile?.email ||
+                    "Someone";
+                }
+
+                toast.info(
+                  i18n.t("new_group_transaction", {
+                    defaultValue: "New transaction in {{group}}",
+                    group: groupName,
+                  }),
+                  {
+                    description: `${payerName}: ${newRecord.description} (€${newRecord.amount})`,
+                    duration: 5000,
+                  }
+                );
+              }
+            }
+
             break;
           }
 
