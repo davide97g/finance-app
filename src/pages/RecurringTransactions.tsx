@@ -304,132 +304,134 @@ export function RecurringTransactionsPage() {
                 <DialogDescription className="sr-only">
                   {editingId
                     ? t("edit_recurring_description") ||
-                      "Edit recurring transaction details"
+                    "Edit recurring transaction details"
                     : t("add_recurring_description") ||
-                      "Add a new recurring transaction"}
+                    "Add a new recurring transaction"}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("type")}</label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${
-                        formData.type === "expense"
-                          ? getTypeColor("expense")
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "expense" })
-                      }
-                    >
-                      {t("expense")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${
-                        formData.type === "income" ? getTypeColor("income") : ""
-                      }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "income" })
-                      }
-                    >
-                      {t("income")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${
-                        formData.type === "investment"
-                          ? getTypeColor("investment")
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "investment" })
-                      }
-                    >
-                      {t("investment")}
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("frequency")}
-                  </label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formData.frequency}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        frequency: e.target.value as any,
-                      })
-                    }
-                  >
-                    <option value="daily">{t("daily")}</option>
-                    <option value="weekly">{t("weekly")}</option>
-                    <option value="monthly">{t("monthly")}</option>
-                    <option value="yearly">{t("yearly")}</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("amount")}</label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Limit to 2 decimal places
-                      const match = value.match(/^-?\d*\.?\d{0,2}$/);
-                      if (match || value === "") {
-                        setFormData({ ...formData, amount: value });
-                      }
-                    }}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("start_date")}
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, start_date: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("category")}</label>
-                  <CategorySelector
-                    value={formData.category_id}
-                    onChange={(value) =>
-                      setFormData({ ...formData, category_id: value })
-                    }
-                    type={formData.type}
-                    groupId={formData.group_id || null}
-                    modal
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("description")}
-                  </label>
-                  <Input
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    required
-                  />
-                </div>
+                {/* Base Fields - Collapse when More is opened */}
+                <Collapsible open={!moreSectionOpen}>
+                  <CollapsibleContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("type")}</label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`w-full ${formData.type === "expense"
+                            ? getTypeColor("expense")
+                            : ""
+                            }`}
+                          onClick={() =>
+                            setFormData({ ...formData, type: "expense" })
+                          }
+                        >
+                          {t("expense")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`w-full ${formData.type === "income" ? getTypeColor("income") : ""
+                            }`}
+                          onClick={() =>
+                            setFormData({ ...formData, type: "income" })
+                          }
+                        >
+                          {t("income")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`w-full ${formData.type === "investment"
+                            ? getTypeColor("investment")
+                            : ""
+                            }`}
+                          onClick={() =>
+                            setFormData({ ...formData, type: "investment" })
+                          }
+                        >
+                          {t("investment")}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t("frequency")}
+                      </label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={formData.frequency}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            frequency: e.target.value as any,
+                          })
+                        }
+                      >
+                        <option value="daily">{t("daily")}</option>
+                        <option value="weekly">{t("weekly")}</option>
+                        <option value="monthly">{t("monthly")}</option>
+                        <option value="yearly">{t("yearly")}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("amount")}</label>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        value={formData.amount}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Limit to 2 decimal places
+                          const match = value.match(/^-?\d*\.?\d{0,2}$/);
+                          if (match || value === "") {
+                            setFormData({ ...formData, amount: value });
+                          }
+                        }}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t("start_date")}
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.start_date}
+                        onChange={(e) =>
+                          setFormData({ ...formData, start_date: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("category")}</label>
+                      <CategorySelector
+                        value={formData.category_id}
+                        onChange={(value) =>
+                          setFormData({ ...formData, category_id: value })
+                        }
+                        type={formData.type}
+                        groupId={formData.group_id || null}
+                        modal
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t("description")}
+                      </label>
+                      <Input
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({ ...formData, description: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {/* Collapsible More Section - Group & Context */}
                 {(groups.length > 0 || (contexts && contexts.length > 0)) && (
@@ -459,9 +461,8 @@ export function RecurringTransactionsPage() {
                           )}
                         </div>
                         <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform ${
-                            moreSectionOpen ? "rotate-180" : ""
-                          }`}
+                          className={`h-4 w-4 text-muted-foreground transition-transform ${moreSectionOpen ? "rotate-180" : ""
+                            }`}
                         />
                       </Button>
                     </CollapsibleTrigger>
@@ -483,8 +484,8 @@ export function RecurringTransactionsPage() {
                                     value === "none"
                                       ? ""
                                       : formData.paid_by_user_id ||
-                                        user?.id ||
-                                        "",
+                                      user?.id ||
+                                      "",
                                 })
                               }
                             >
@@ -536,7 +537,7 @@ export function RecurringTransactionsPage() {
                                         {member.user_id === user?.id
                                           ? t("me")
                                           : member.user_id.substring(0, 8) +
-                                            "..."}
+                                          "..."}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>

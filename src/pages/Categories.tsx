@@ -123,23 +123,20 @@ function DesktopCategoryRows({
         return (
           <React.Fragment key={c.id}>
             <TableRow
-              className={`${
-                isRoot && index < 20
-                  ? "animate-slide-in-up opacity-0 fill-mode-forwards"
-                  : !isRoot
+              className={`${isRoot && index < 20
+                ? "animate-slide-in-up opacity-0 fill-mode-forwards"
+                : !isRoot
                   ? "animate-fade-in"
                   : ""
-              } ${
-                children.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""
-              } ${!isRoot ? "bg-muted/20" : ""} ${
-                isInactive ? "opacity-50" : ""
-              }`}
+                } ${children.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""
+                } ${!isRoot ? "bg-muted/20" : ""} ${isInactive ? "opacity-50" : ""
+                }`}
               style={
                 isRoot && index < 20
                   ? { animationDelay: `${index * 0.03}s` }
                   : !isRoot
-                  ? { animationDelay: `${index * 0.03}s` }
-                  : {}
+                    ? { animationDelay: `${index * 0.03}s` }
+                    : {}
               }
             >
               <TableCell className="w-8">
@@ -170,9 +167,8 @@ function DesktopCategoryRows({
                     <div className="w-4 h-4 border-l-2 border-b-2 border-muted-foreground/30 rounded-bl shrink-0" />
                   )}
                   <div
-                    className={`${
-                      isRoot ? "h-4 w-4" : "h-3 w-3"
-                    } rounded-full shrink-0 ${isInactive ? "grayscale" : ""}`}
+                    className={`${isRoot ? "h-4 w-4" : "h-3 w-3"
+                      } rounded-full shrink-0 ${isInactive ? "grayscale" : ""}`}
                     style={{ backgroundColor: c.color }}
                   />
                   {c.icon &&
@@ -214,9 +210,8 @@ function DesktopCategoryRows({
                 ) : (
                   <Badge
                     variant="outline"
-                    className={`text-green-600 border-green-600 ${
-                      isRoot ? "" : "text-xs"
-                    }`}
+                    className={`text-green-600 border-green-600 ${isRoot ? "" : "text-xs"
+                      }`}
                   >
                     {t("active") || "Active"}
                   </Badge>
@@ -324,6 +319,8 @@ export function CategoriesPage() {
     childrenCount: number;
     parentName?: string;
   } | null>(null);
+
+  const [moreSectionOpen, setMoreSectionOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -452,6 +449,11 @@ export function CategoriesPage() {
       budget: categoryBudget ? categoryBudget.amount.toString() : "",
       group_id: category.group_id || "",
     });
+    setMoreSectionOpen(
+      !!category.group_id ||
+      (categoryBudget && categoryBudget.amount > 0) ||
+      category.active === 0
+    );
     setIsOpen(true);
   };
 
@@ -467,6 +469,7 @@ export function CategoriesPage() {
       budget: "",
       group_id: "",
     });
+    setMoreSectionOpen(false);
     setIsOpen(true);
   };
 
@@ -506,7 +509,7 @@ export function CategoriesPage() {
       // Show warning about group category
       alert(
         t("group_category_delete_warning") ||
-          "This is a group category. Deleting it will affect all group members."
+        "This is a group category. Deleting it will affect all group members."
       );
     }
 
@@ -719,11 +722,10 @@ export function CategoriesPage() {
           {/* Show Inactive Toggle */}
           <button
             onClick={() => setShowInactive(!showInactive)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              showInactive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted/50"
-            }`}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${showInactive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted/50"
+              }`}
           >
             {showInactive ? (
               <Eye className="h-3.5 w-3.5" />
@@ -745,8 +747,8 @@ export function CategoriesPage() {
                     {selectedGroupFilter === undefined
                       ? t("all_categories") || "All Categories"
                       : selectedGroupFilter === null
-                      ? t("personal_categories") || "Personal"
-                      : groups.find((g) => g.id === selectedGroupFilter)
+                        ? t("personal_categories") || "Personal"
+                        : groups.find((g) => g.id === selectedGroupFilter)
                           ?.name || t("group")}
                   </span>
                 </Button>
@@ -761,16 +763,16 @@ export function CategoriesPage() {
                     selectedGroupFilter === undefined
                       ? "all"
                       : selectedGroupFilter === null
-                      ? "personal"
-                      : selectedGroupFilter
+                        ? "personal"
+                        : selectedGroupFilter
                   }
                   onValueChange={(value) =>
                     setSelectedGroupFilter(
                       value === "all"
                         ? undefined
                         : value === "personal"
-                        ? null
-                        : value
+                          ? null
+                          : value
                     )
                   }
                 >
@@ -812,108 +814,113 @@ export function CategoriesPage() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("name")}</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("color")}</label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="color"
-                      value={formData.color}
-                      onChange={(e) =>
-                        setFormData({ ...formData, color: e.target.value })
-                      }
-                      className="h-10 w-20 p-1"
-                    />
-                    <Input
-                      value={formData.color}
-                      onChange={(e) =>
-                        setFormData({ ...formData, color: e.target.value })
-                      }
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("type")}</label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${
-                        formData.type === "expense"
-                          ? "bg-red-500 hover:bg-red-600 text-white"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "expense" })
-                      }
-                    >
-                      {t("expense")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${
-                        formData.type === "income"
-                          ? "bg-green-500 hover:bg-green-600 text-white"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "income" })
-                      }
-                    >
-                      {t("income")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full ${
-                        formData.type === "investment"
-                          ? "bg-blue-500 hover:bg-blue-600 text-white"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setFormData({ ...formData, type: "investment" })
-                      }
-                    >
-                      {t("investment")}
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("icon")}</label>
-                  <IconSelector
-                    value={formData.icon}
-                    onChange={(icon) => setFormData({ ...formData, icon })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("parent_category")}
-                  </label>
-                  <CategorySelector
-                    value={formData.parent_id}
-                    onChange={(value) =>
-                      setFormData({ ...formData, parent_id: value })
-                    }
-                    type={formData.type}
-                    excludeId={editingId || undefined}
-                    groupId={formData.group_id || null}
-                    modal
-                  />
-                </div>
+                {/* Base Fields - Collapse when More is opened */}
+                <Collapsible open={!moreSectionOpen}>
+                  <CollapsibleContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("name")}</label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("color")}</label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={formData.color}
+                          onChange={(e) =>
+                            setFormData({ ...formData, color: e.target.value })
+                          }
+                          className="h-10 w-20 p-1"
+                        />
+                        <Input
+                          value={formData.color}
+                          onChange={(e) =>
+                            setFormData({ ...formData, color: e.target.value })
+                          }
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("type")}</label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`w-full ${formData.type === "expense"
+                            ? "bg-red-500 hover:bg-red-600 text-white"
+                            : ""
+                            }`}
+                          onClick={() =>
+                            setFormData({ ...formData, type: "expense" })
+                          }
+                        >
+                          {t("expense")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`w-full ${formData.type === "income"
+                            ? "bg-green-500 hover:bg-green-600 text-white"
+                            : ""
+                            }`}
+                          onClick={() =>
+                            setFormData({ ...formData, type: "income" })
+                          }
+                        >
+                          {t("income")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`w-full ${formData.type === "investment"
+                            ? "bg-blue-500 hover:bg-blue-600 text-white"
+                            : ""
+                            }`}
+                          onClick={() =>
+                            setFormData({ ...formData, type: "investment" })
+                          }
+                        >
+                          {t("investment")}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">{t("icon")}</label>
+                      <IconSelector
+                        value={formData.icon}
+                        onChange={(icon) => setFormData({ ...formData, icon })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t("parent_category")}
+                      </label>
+                      <CategorySelector
+                        value={formData.parent_id}
+                        onChange={(value) =>
+                          setFormData({ ...formData, parent_id: value })
+                        }
+                        type={formData.type}
+                        excludeId={editingId || undefined}
+                        groupId={formData.group_id || null}
+                        modal
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {/* More Options - Collapsible */}
-                <Collapsible>
+                <Collapsible
+                  open={moreSectionOpen}
+                  onOpenChange={setMoreSectionOpen}
+                >
                   <CollapsibleTrigger asChild>
                     <Button
                       type="button"
@@ -929,18 +936,21 @@ export function CategoriesPage() {
                           (formData.budget &&
                             parseFloat(formData.budget) > 0) ||
                           !formData.active) && (
-                          <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                            {[
-                              formData.group_id ? 1 : 0,
-                              formData.budget && parseFloat(formData.budget) > 0
-                                ? 1
-                                : 0,
-                              !formData.active ? 1 : 0,
-                            ].reduce((a, b) => a + b, 0)}
-                          </span>
-                        )}
+                            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                              {[
+                                formData.group_id ? 1 : 0,
+                                formData.budget && parseFloat(formData.budget) > 0
+                                  ? 1
+                                  : 0,
+                                !formData.active ? 1 : 0,
+                              ].reduce((a, b) => a + b, 0)}
+                            </span>
+                          )}
                       </div>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform ${moreSectionOpen ? "rotate-180" : ""
+                          }`}
+                      />
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-4 pt-2">
@@ -979,10 +989,10 @@ export function CategoriesPage() {
                     )}
 
                     {/* Budget and Active fields */}
-                    <div className="flex items-end gap-4">
+                    <div className="space-y-4">
                       {/* Budget field - only for expense categories */}
                       {formData.type === "expense" && (
-                        <div className="flex-1 space-y-2">
+                        <div className="space-y-2">
                           <label className="text-sm font-medium">
                             {t("budget")}
                           </label>
@@ -1003,22 +1013,25 @@ export function CategoriesPage() {
                       )}
 
                       {/* Active toggle */}
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="active-mode"
-                          className="text-sm font-medium"
-                        >
-                          {t("active") || "Active"}
-                        </label>
-                        <div className="flex items-center h-10">
-                          <Switch
-                            id="active-mode"
-                            checked={formData.active}
-                            onCheckedChange={(checked) =>
-                              setFormData({ ...formData, active: checked })
-                            }
-                          />
+                      <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <label
+                            htmlFor="active-mode"
+                            className="text-sm font-medium"
+                          >
+                            {t("active") || "Active"}
+                          </label>
+                          <div className="text-[0.8rem] text-muted-foreground">
+                            {t("active_description") || "Enable or disable this category"}
+                          </div>
                         </div>
+                        <Switch
+                          id="active-mode"
+                          checked={formData.active}
+                          onCheckedChange={(checked) =>
+                            setFormData({ ...formData, active: checked })
+                          }
+                        />
                       </div>
                     </div>
                   </CollapsibleContent>
@@ -1126,7 +1139,7 @@ export function CategoriesPage() {
                         groupName={
                           category.group_id
                             ? groups?.find((g) => g.id === category.group_id)
-                                ?.name
+                              ?.name
                             : undefined
                         }
                         onToggleExpand={
@@ -1266,14 +1279,11 @@ export function CategoriesPage() {
                 parentName:
                   conflictData?.parentName || t("root_category") || "Root",
               }) ||
-                `This category has ${
-                  conflictData?.childrenCount
-                } subcategories. ${
-                  conflictData?.action === "delete"
-                    ? "Deleting"
-                    : "Deactivating"
-                } it will make them inaccessible. Do you want to move them to the parent category (${
-                  conflictData?.parentName || "Root"
+                `This category has ${conflictData?.childrenCount
+                } subcategories. ${conflictData?.action === "delete"
+                  ? "Deleting"
+                  : "Deactivating"
+                } it will make them inaccessible. Do you want to move them to the parent category (${conflictData?.parentName || "Root"
                 })?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1372,10 +1382,8 @@ export function CategoriesPage() {
                 transactions: migrationData?.transactionCount || 0,
                 recurring: migrationData?.recurringCount || 0,
               }) ||
-                `This category is used by ${
-                  migrationData?.transactionCount || 0
-                } transactions and ${
-                  migrationData?.recurringCount || 0
+                `This category is used by ${migrationData?.transactionCount || 0
+                } transactions and ${migrationData?.recurringCount || 0
                 } recurring templates. Please select a new category to move them to.`}
             </DialogDescription>
           </DialogHeader>
