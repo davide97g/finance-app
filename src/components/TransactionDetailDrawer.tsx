@@ -122,8 +122,13 @@ export function TransactionDetailDrawer({
                   : transaction.type === "investment"
                     ? ""
                     : "+"}
-                €{transaction.amount.toFixed(2)}
+                €{isGroupTransaction && myShareAmount > 0 ? myShareAmount.toFixed(2) : transaction.amount.toFixed(2)}
               </span>
+              {isGroupTransaction && myShareAmount > 0 && (
+                <span className="text-xs text-muted-foreground mt-1 block">
+                  {t("your_share")} • {t("total")}: €{transaction.amount.toFixed(2)}
+                </span>
+              )}
             </DrawerDescription>
           </DrawerHeader>
 

@@ -166,99 +166,104 @@ export function TransactionDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t("type")}</label>
-                        <div className="flex gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className={`w-full ${formData.type === "expense" ? getTypeColor("expense") : ""
-                                    }`}
-                                onClick={() =>
-                                    setFormData({ ...formData, type: "expense" })
-                                }
-                            >
-                                {t("expense")}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className={`w-full ${formData.type === "income" ? getTypeColor("income") : ""
-                                    }`}
-                                onClick={() => setFormData({ ...formData, type: "income" })}
-                            >
-                                {t("income")}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className={`w-full ${formData.type === "investment"
-                                    ? getTypeColor("investment")
-                                    : ""
-                                    }`}
-                                onClick={() =>
-                                    setFormData({ ...formData, type: "investment" })
-                                }
-                            >
-                                {t("investment")}
-                            </Button>
-                        </div>
-                    </div>
+                    {/* Base Fields - Collapse when More is opened */}
+                    <Collapsible open={!moreSectionOpen}>
+                        <CollapsibleContent className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">{t("type")}</label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className={`w-full ${formData.type === "expense" ? getTypeColor("expense") : ""
+                                            }`}
+                                        onClick={() =>
+                                            setFormData({ ...formData, type: "expense" })
+                                        }
+                                    >
+                                        {t("expense")}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className={`w-full ${formData.type === "income" ? getTypeColor("income") : ""
+                                            }`}
+                                        onClick={() => setFormData({ ...formData, type: "income" })}
+                                    >
+                                        {t("income")}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className={`w-full ${formData.type === "investment"
+                                            ? getTypeColor("investment")
+                                            : ""
+                                            }`}
+                                        onClick={() =>
+                                            setFormData({ ...formData, type: "investment" })
+                                        }
+                                    >
+                                        {t("investment")}
+                                    </Button>
+                                </div>
+                            </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t("amount")}</label>
-                        <Input
-                            type="number"
-                            inputMode="decimal"
-                            step="0.01"
-                            value={formData.amount}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                // Limit to 2 decimal places
-                                const match = value.match(/^-?\d*\.?\d{0,2}$/);
-                                if (match || value === "") {
-                                    setFormData({ ...formData, amount: value });
-                                }
-                            }}
-                            required
-                        />
-                    </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">{t("amount")}</label>
+                                <Input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.01"
+                                    value={formData.amount}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Limit to 2 decimal places
+                                        const match = value.match(/^-?\d*\.?\d{0,2}$/);
+                                        if (match || value === "") {
+                                            setFormData({ ...formData, amount: value });
+                                        }
+                                    }}
+                                    required
+                                />
+                            </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t("category")}</label>
-                        <CategorySelector
-                            value={formData.category_id}
-                            onChange={(value) =>
-                                setFormData({ ...formData, category_id: value })
-                            }
-                            type={formData.type}
-                            groupId={formData.group_id}
-                            modal
-                        />
-                    </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">{t("category")}</label>
+                                <CategorySelector
+                                    value={formData.category_id}
+                                    onChange={(value) =>
+                                        setFormData({ ...formData, category_id: value })
+                                    }
+                                    type={formData.type}
+                                    groupId={formData.group_id}
+                                    modal
+                                />
+                            </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t("date")}</label>
-                        <Input
-                            type="date"
-                            value={formData.date}
-                            onChange={(e) =>
-                                setFormData({ ...formData, date: e.target.value })
-                            }
-                            required
-                        />
-                    </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">{t("date")}</label>
+                                <Input
+                                    type="date"
+                                    value={formData.date}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, date: e.target.value })
+                                    }
+                                    required
+                                />
+                            </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t("description")}</label>
-                        <Input
-                            value={formData.description}
-                            onChange={(e) =>
-                                setFormData({ ...formData, description: e.target.value })
-                            }
-                            required
-                        />
-                    </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">{t("description")}</label>
+                                <Input
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, description: e.target.value })
+                                    }
+                                    required
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
                     {/* Collapsible More Section - Group & Context */}
                     {((groups && groups.length > 0) || (contexts && contexts.length > 0)) && (
@@ -357,7 +362,7 @@ export function TransactionDialog({
                                                                 >
                                                                     {member.user_id === user?.id
                                                                         ? t("me")
-                                                                        : member.user_id.substring(0, 8) + "..."}
+                                                                        : member.displayName || member.user_id.substring(0, 8)}
                                                                 </SelectItem>
                                                             ))}
                                                     </SelectContent>
@@ -407,6 +412,6 @@ export function TransactionDialog({
                     </Button>
                 </form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

@@ -324,7 +324,7 @@ export function TransactionList({
           <div
             ref={parentRef}
             className="overflow-auto"
-            style={{ height: height ?? 400 }}
+            style={{ height: height ?? 'calc(100vh - 280px)', minHeight: '450px' }}
           >
             <div
               style={{
@@ -468,7 +468,7 @@ export function TransactionList({
         <div
           ref={parentRef}
           className="overflow-auto"
-          style={{ height: height ?? 400 }}
+          style={{ height: height ?? 'calc(100vh - 280px)', minHeight: '400px' }}
         >
           <Table>
             <TableBody>

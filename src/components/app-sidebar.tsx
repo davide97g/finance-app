@@ -82,7 +82,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
-            <SidebarContent>
+            <SidebarContent className="pl-2">
                 <SidebarMenu>
                     {navigation.map((item) => {
                         const isActive = location.pathname === item.href

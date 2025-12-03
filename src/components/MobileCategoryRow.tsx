@@ -140,28 +140,39 @@ export function MobileCategoryRow({
             )}
             {childCount !== undefined && childCount > 0 && (
               <>
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-4 shrink-0"
-                >
-                  {childCount}
-                </Badge>
-                {onToggleExpand && (
+                {onToggleExpand ? (
                   <motion.div
-                    animate={{ rotate: isExpanded ? 90 : 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 20,
-                    }}
-                    className="shrink-0"
+                    className="flex items-center gap-0.5 shrink-0 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleExpand();
                     }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] px-1.5 py-0 h-4"
+                    >
+                      {childCount}
+                    </Badge>
+                    <motion.div
+                      animate={{ rotate: isExpanded ? 90 : 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 20,
+                      }}
+                    >
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    </motion.div>
                   </motion.div>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                  >
+                    {childCount}
+                  </Badge>
                 )}
               </>
             )}

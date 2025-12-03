@@ -188,18 +188,22 @@ export function MobileRecurringTransactionRow({
           </div>
 
           {/* Badges */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+          <div className="flex flex-col gap-1 text-xs text-muted-foreground mt-0.5">
             <span className="truncate">{category?.name || "-"}</span>
-            {group && (
-              <div className="flex items-center gap-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[10px]">
-                <Users className="h-3 w-3" />
-                <span className="truncate max-w-[60px]">{group.name}</span>
-              </div>
-            )}
-            {context && (
-              <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]">
-                <Tag className="h-3 w-3" />
-                <span className="truncate max-w-[60px]">{context.name}</span>
+            {(group || context) && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {group && (
+                  <div className="flex items-center gap-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[10px]">
+                    <Users className="h-3 w-3" />
+                    <span className="truncate max-w-[80px]">{group.name}</span>
+                  </div>
+                )}
+                {context && (
+                  <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]">
+                    <Tag className="h-3 w-3" />
+                    <span className="truncate max-w-[80px]">{context.name}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -215,8 +219,8 @@ export function MobileRecurringTransactionRow({
             {transaction.type === "expense"
               ? "-"
               : transaction.type === "investment"
-              ? ""
-              : "+"}
+                ? ""
+                : "+"}
             €{transaction.amount.toFixed(2)}
           </div>
           <div className="mt-1">
