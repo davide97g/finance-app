@@ -65,6 +65,7 @@ export function Dashboard() {
   // Get current month statistics
   const { monthlyStats, dailyCumulativeExpenses } = useStatistics({
     selectedMonth: currentMonth,
+    userId: user?.id,
   });
 
   // Memoize expensive calculations
@@ -169,7 +170,7 @@ export function Dashboard() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col min-h-0">
                 {dailyCumulativeExpenses.length > 0 ? (
-                  <div className="flex-1 w-full min-h-0">
+                  <div className="flex-1 w-full min-h-0 h-[220px] md:h-full">
                     <ChartContainer
                       config={chartConfig}
                       className="h-full w-full"

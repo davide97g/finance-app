@@ -197,7 +197,7 @@ export function GroupCard({
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   <span className="hidden md:inline">{t("statistics")}</span>
-                  <span className="md:hidden">Stats</span>
+                  <span className="md:hidden">{t("stats_short")}</span>
                 </Button>
               )}
             </div>

@@ -420,6 +420,10 @@
   "new_group_transaction": "New transaction in {{group}}",
   "new_group_transactions": "{{count}} new group transactions",
   "new_group_transactions_desc": "Synced from your groups",
+  "new_group_transaction_from": "{{payer}} added a transaction in {{group}}",
+  "modified_group_transaction_from": "{{payer}} modified a transaction in {{group}}",
+  "modified_group_transactions": "{{count}} modified group transactions",
+  "total_amount": "Total",
   "edit_profile": "Edit Profile",
   "edit_profile_desc": "Update your profile information",
   "full_name": "Full Name",
@@ -436,5 +440,16 @@
   "account_actions": "Account Actions",
   "account_actions_desc": "Manage your account and session",
   "confirm_logout": "Confirm Logout",
-  "confirm_logout_desc": "Are you sure you want to logout? Any pending changes will be synced when you login again."
+  "confirm_logout_desc": "Are you sure you want to logout? Any pending changes will be synced when you login again.",
+  "error_loading_section": "Error loading {{section}}",
+  "error_occurred": "An error occurred",
+  "retry": "Retry",
+  "oops_something_wrong": "Oops! Something went wrong",
+  "unexpected_error_section": "An unexpected error occurred in {{section}}.",
+  "unexpected_error": "An unexpected error occurred.",
+  "go_home": "Go Home",
+  "if_problem_persists": "If the problem persists, try reloading the page or",
+  "refresh_manually": "refresh manually",
+  "to_sync": "to sync",
+  "stats_short": "Stats"
 }

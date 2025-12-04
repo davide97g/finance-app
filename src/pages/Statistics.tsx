@@ -58,9 +58,11 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { it, enUS } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export function StatisticsPage() {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const dateLocale = i18n.language === "it" ? it : enUS;
   const now = new Date();
   const location = useLocation();
@@ -137,6 +139,7 @@ export function StatisticsPage() {
     comparisonYear,
     mode: activeTab,
     groupId: selectedGroupId || undefined,  // Filter by group if selected
+    userId: user?.id,  // Pass userId for share calculation
   });
 
 

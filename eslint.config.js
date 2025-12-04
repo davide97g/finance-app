@@ -23,7 +23,14 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      'i18next/no-literal-string': ['warn', { markupOnly: true }],
+      'i18next/no-literal-string': [
+        'warn',
+        {
+          markupOnly: true,
+          ignoreAttribute: ['data-testid', 'className', 'aria-label'],
+          ignoreCallee: ['t', 'console.*'],
+        },
+      ],
     },
   },
 ])

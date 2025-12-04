@@ -420,6 +420,10 @@
   "new_group_transaction": "Nuova transazione in {{group}}",
   "new_group_transactions": "{{count}} nuove transazioni di gruppo",
   "new_group_transactions_desc": "Sincronizzate dai tuoi gruppi",
+  "new_group_transaction_from": "{{payer}} ha aggiunto una transazione in {{group}}",
+  "modified_group_transaction_from": "{{payer}} ha modificato una transazione in {{group}}",
+  "modified_group_transactions": "{{count}} transazioni di gruppo modificate",
+  "total_amount": "Totale",
   "edit_profile": "Modifica Profilo",
   "edit_profile_desc": "Aggiorna le informazioni del tuo profilo",
   "full_name": "Nome Completo",
@@ -436,5 +440,16 @@
   "account_actions": "Azioni Account",
   "account_actions_desc": "Gestisci il tuo account e la sessione",
   "confirm_logout": "Conferma Logout",
-  "confirm_logout_desc": "Sei sicuro di voler uscire? Tutte le modifiche in sospeso saranno sincronizzate al prossimo accesso."
+  "confirm_logout_desc": "Sei sicuro di voler uscire? Tutte le modifiche in sospeso saranno sincronizzate al prossimo accesso.",
+  "error_loading_section": "Errore nel caricamento di {{section}}",
+  "error_occurred": "Si è verificato un errore",
+  "retry": "Riprova",
+  "oops_something_wrong": "Oops! Qualcosa è andato storto",
+  "unexpected_error_section": "Si è verificato un errore imprevisto in {{section}}.",
+  "unexpected_error": "Si è verificato un errore imprevisto.",
+  "go_home": "Vai alla Home",
+  "if_problem_persists": "Se il problema persiste, prova a ricaricare la pagina o",
+  "refresh_manually": "aggiorna manualmente",
+  "to_sync": "da sincronizzare",
+  "stats_short": "Stat."
 }

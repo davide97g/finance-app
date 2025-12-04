@@ -1,7 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, Category, Transaction } from "../lib/db";
+import { db, Category, Transaction, GroupMember } from "../lib/db";
 import { format, subMonths } from "date-fns";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 
 /**
  * Parameters for configuring the statistics hook.
@@ -19,6 +19,8 @@ interface UseStatisticsParams {
   mode?: "monthly" | "yearly";
   /** Filter by specific group ID - only includes transactions from that group */
   groupId?: string;
+  /** Current user ID for calculating group shares */
+  userId?: string;
 }
 
 /**
@@ -60,6 +62,7 @@ export function useStatistics(params?: UseStatisticsParams) {
   const currentMonth = params?.selectedMonth || format(now, "yyyy-MM");
   const currentYear = params?.selectedYear || format(now, "yyyy");
   const mode = params?.mode || "monthly"; // Default to monthly for backwards compatibility
+  const userId = params?.userId;
 
   // Calculate previous periods for comparison
   const defaultPreviousMonth = format(
@@ -128,6 +131,33 @@ export function useStatistics(params?: UseStatisticsParams) {
   const categories = useLiveQuery(() => db.categories.toArray());
   const contexts = useLiveQuery(() => db.contexts.toArray());
 
+  // Fetch group memberships to calculate shares
+  const groupMemberships = useLiveQuery(
+    () => userId ? db.group_members.where("user_id").equals(userId).toArray() : Promise.resolve([] as GroupMember[]),
+    [userId]
+  );
+
+  // Create a map of group_id -> share percentage
+  const groupShareMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (groupMemberships) {
+      groupMemberships.forEach(m => {
+        map.set(m.group_id, m.share);
+      });
+    }
+    return map;
+  }, [groupMemberships]);
+
+  // Helper to get effective amount (applying group share if applicable)
+  const getEffectiveAmount = useCallback((t: Transaction) => {
+    const amount = Number(t.amount);
+    if (t.group_id && groupShareMap.has(t.group_id)) {
+      const share = groupShareMap.get(t.group_id)!;
+      return (amount * share) / 100;
+    }
+    return amount;
+  }, [groupShareMap]);
+
   // Monthly statistics - #1 Lazy calculation: skip when in yearly mode
   const monthlyStats = useMemo(() => {
     const defaultStats = {
@@ -146,7 +176,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       transactions.forEach((t) => {
         if (t.deleted_at) return;
 
-        const amount = Number(t.amount);
+        const amount = getEffectiveAmount(t);
         if (t.type === "income") defaultStats.income += amount;
         else if (t.type === "expense") defaultStats.expense += amount;
         else if (t.type === "investment") defaultStats.investment += amount;
@@ -171,7 +201,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       });
     }
     return defaultStats;
-  }, [transactions, categories, mode]);
+  }, [transactions, categories, mode, getEffectiveAmount]);
 
   // Yearly statistics - #1 Lazy calculation: skip when in monthly mode
   const yearlyStats = useMemo(() => {
@@ -191,7 +221,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       yearlyTransactions.forEach((t) => {
         if (t.deleted_at) return;
 
-        const amount = Number(t.amount);
+        const amount = getEffectiveAmount(t);
         if (t.type === "income") stats.income += amount;
         else if (t.type === "expense") stats.expense += amount;
         else if (t.type === "investment") stats.investment += amount;
@@ -214,7 +244,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       });
     }
     return stats;
-  }, [yearlyTransactions, categories, mode]);
+  }, [yearlyTransactions, categories, mode, getEffectiveAmount]);
 
   // Helper function to get root category (traverses up the parent chain)
   const getRootCategory = (
@@ -255,7 +285,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       const rootCat = getRootCategory(t.category_id, categoryMap);
       if (!rootCat) return;
 
-      const amount = Number(t.amount);
+      const amount = getEffectiveAmount(t);
 
       if (!hierarchyMap.has(rootCat.id)) {
         hierarchyMap.set(rootCat.id, {
@@ -300,7 +330,7 @@ export function useStatistics(params?: UseStatisticsParams) {
         _children: Array.from(entry.children.values()),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [transactions, categories, mode]);
+  }, [transactions, categories, mode, getEffectiveAmount]);
 
   // Hierarchical expense data for stacked bar chart (yearly) - #1 Lazy calculation
   const yearlyExpensesByHierarchy = useMemo(() => {
@@ -329,7 +359,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       const rootCat = getRootCategory(t.category_id, categoryMap);
       if (!rootCat) return;
 
-      const amount = Number(t.amount);
+      const amount = getEffectiveAmount(t);
 
       if (!hierarchyMap.has(rootCat.id)) {
         hierarchyMap.set(rootCat.id, {
@@ -370,7 +400,7 @@ export function useStatistics(params?: UseStatisticsParams) {
         _children: Array.from(entry.children.values()),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [yearlyTransactions, categories, mode]);
+  }, [yearlyTransactions, categories, mode, getEffectiveAmount]);
 
   // Calculate net balances
   const monthlyNetBalance = useMemo(
@@ -394,7 +424,7 @@ export function useStatistics(params?: UseStatisticsParams) {
     // Aggregate expenses by category
     transactions.forEach((t) => {
       if (t.deleted_at || t.type !== "expense" || !t.category_id) return;
-      const amount = Number(t.amount);
+      const amount = getEffectiveAmount(t);
       expensesByCategory.set(
         t.category_id,
         (expensesByCategory.get(t.category_id) || 0) + amount
@@ -440,7 +470,7 @@ export function useStatistics(params?: UseStatisticsParams) {
           : 0,
       fill: `hsl(var(--chart-${(index % 5) + 1}))`,
     }));
-  }, [monthlyStats, categories, transactions, mode]);
+  }, [monthlyStats, categories, transactions, mode, getEffectiveAmount]);
 
   // Calculate category percentages for radial chart (yearly) - #1 Lazy calculation
   const yearlyCategoryPercentages = useMemo(() => {
@@ -454,7 +484,7 @@ export function useStatistics(params?: UseStatisticsParams) {
     // Aggregate expenses by category
     yearlyTransactions.forEach((t) => {
       if (t.deleted_at || t.type !== "expense" || !t.category_id) return;
-      const amount = Number(t.amount);
+      const amount = getEffectiveAmount(t);
       expensesByCategory.set(
         t.category_id,
         (expensesByCategory.get(t.category_id) || 0) + amount
@@ -500,7 +530,7 @@ export function useStatistics(params?: UseStatisticsParams) {
           : 0,
       fill: `hsl(var(--chart-${(index % 5) + 1}))`,
     }));
-  }, [yearlyStats, categories, yearlyTransactions, mode]);
+  }, [yearlyStats, categories, yearlyTransactions, mode, getEffectiveAmount]);
 
   // Prepare monthly data for radar charts (selected year, all 12 months) - #1 Lazy calculation
   const { monthlyExpenses, monthlyIncome, monthlyInvestments } = useMemo(() => {
@@ -544,7 +574,7 @@ export function useStatistics(params?: UseStatisticsParams) {
         if (t.deleted_at) return;
 
         const txMonth = new Date(t.date).getMonth(); // 0-11
-        const amount = Number(t.amount);
+        const amount = getEffectiveAmount(t);
 
         if (t.type === "expense") {
           expenses[txMonth].value += amount;
@@ -560,7 +590,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       monthlyIncome: income,
       monthlyInvestments: investments,
     };
-  }, [yearlyTransactions, mode]);
+  }, [yearlyTransactions, mode, getEffectiveAmount]);
 
   // Calculate daily cumulative expenses for current month - #1 Lazy calculation
   const dailyCumulativeExpenses = useMemo(() => {
@@ -589,7 +619,7 @@ export function useStatistics(params?: UseStatisticsParams) {
     transactions.forEach((t) => {
       if (t.deleted_at || t.type !== "expense") return;
       const day = new Date(t.date).getDate();
-      dailyTotals.set(day, (dailyTotals.get(day) || 0) + Number(t.amount));
+      dailyTotals.set(day, (dailyTotals.get(day) || 0) + getEffectiveAmount(t));
     });
 
     // Calculate cumulative totals
@@ -632,7 +662,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       });
     }
     return result;
-  }, [transactions, currentMonth, mode]);
+  }, [transactions, currentMonth, mode, getEffectiveAmount]);
 
   // ============================================
   // NEW CHART DATA CALCULATIONS
@@ -680,7 +710,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       if (t.deleted_at) return;
       const monthIdx = new Date(t.date).getMonth();
       if (monthIdx > maxMonth) return; // Skip future months
-      const amount = Number(t.amount);
+      const amount = getEffectiveAmount(t);
       const entry = monthlyMap.get(monthIdx);
       if (entry) {
         if (t.type === "income") entry.income += amount;
@@ -698,7 +728,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       });
     }
     return data;
-  }, [yearlyTransactions, mode, currentYear]);
+  }, [yearlyTransactions, mode, currentYear, getEffectiveAmount]);
 
   // 2. CASH FLOW DATA (Stacked Bar/Area Chart)
   // Monthly aggregation for yearly view - #1 Lazy calculation
@@ -736,13 +766,13 @@ export function useStatistics(params?: UseStatisticsParams) {
       if (t.deleted_at) return;
       const monthIdx = new Date(t.date).getMonth();
       if (monthIdx > maxMonth) return; // Skip future months
-      const amount = Number(t.amount);
+      const amount = getEffectiveAmount(t);
 
       if (t.type === "income") data[monthIdx].income += amount;
       else if (t.type === "expense") data[monthIdx].expense += amount;
     });
     return data;
-  }, [yearlyTransactions, mode, currentYear]);
+  }, [yearlyTransactions, mode, currentYear, getEffectiveAmount]);
 
   // 3. CONTEXT ANALYTICS - Enhanced with detailed stats
   const contextStats = useMemo(() => {
@@ -779,12 +809,15 @@ export function useStatistics(params?: UseStatisticsParams) {
       transactions.forEach((t) => {
         if (t.deleted_at || t.type !== "expense" || !t.context_id) return;
 
-        const amount = Number(t.amount);
-        const existing = contextData.get(t.context_id) || {
-          total: 0,
-          count: 0,
-          categories: new Map<string, number>(),
-        };
+        const amount = getEffectiveAmount(t);
+        let existing = contextData.get(t.context_id);
+        if (!existing) {
+          contextData.set(t.context_id, existing = {
+            total: 0,
+            count: 0,
+            categories: new Map<string, number>(),
+          });
+        }
 
         existing.total += amount;
         existing.count += 1;

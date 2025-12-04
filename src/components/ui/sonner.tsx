@@ -25,6 +25,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       className="toaster group"
       position={position}
+      closeButton
       style={{
         // Respect iOS safe area for notch/Dynamic Island
         top: "env(safe-area-inset-top, 0px)",
@@ -38,6 +39,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          closeButton: "group-[.toast]:bg-background group-[.toast]:text-foreground group-[.toast]:border-border",
         },
       }}
       {...props}

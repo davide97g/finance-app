@@ -557,8 +557,10 @@ export class SyncManager {
       await this.updateLastSyncToken(userId, maxToken, userSettings);
     }
 
-    // Show toast notification for new group transactions
-    await this.showGroupTransactionToast(newGroupTransactions);
+    // Show toast notification for new and modified group transactions  
+    await this.showGroupTransactionToast(newGroupTransactions, "new");
+    const modifiedGroupTransactions: any[] = []; // Track modified separately if needed
+    await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
   }
 
   /**
@@ -568,6 +570,7 @@ export class SyncManager {
   private async pullAll(userId: string): Promise<void> {
     let maxToken = 0;
     const newGroupTransactions: any[] = [];
+    const modifiedGroupTransactions: any[] = [];
 
     for (const tableName of TABLES) {
       try {
@@ -614,7 +617,13 @@ export class SyncManager {
                 .first();
 
               if (membership) {
-                newGroupTransactions.push(item);
+                // Check if this is a new or modified transaction
+                const existingTxn = await db.transactions.get(item.id);
+                if (existingTxn) {
+                  modifiedGroupTransactions.push(item);
+                } else {
+                  newGroupTransactions.push(item);
+                }
               }
             }
 
@@ -640,8 +649,9 @@ export class SyncManager {
       await this.updateLastSyncToken(userId, maxToken, userSettings);
     }
 
-    // Show toast notification for new group transactions
-    await this.showGroupTransactionToast(newGroupTransactions);
+    // Show toast notification for new and modified group transactions
+    await this.showGroupTransactionToast(newGroupTransactions, "new");
+    await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
   }
 
   /**
@@ -702,15 +712,34 @@ export class SyncManager {
    * If one transaction, show full details. If multiple, show summary.
    */
   private async showGroupTransactionToast(
-    transactions: any[]
+    transactions: any[],
+    action: "new" | "modified" = "new"
   ): Promise<void> {
     if (transactions.length === 0) return;
 
     if (transactions.length === 1) {
-      // Single transaction - show detailed toast
+      // Single transaction - show detailed toast with user's share
       const txn = transactions[0];
       const group = await db.groups.get(txn.group_id);
       const groupName = group?.name || "Unknown Group";
+
+      // Get current user's membership to calculate their share
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      let userShare = 100; // Default to 100% if we can't find membership
+      if (userId) {
+        const membership = await db.group_members
+          .where("group_id")
+          .equals(txn.group_id)
+          .and((m: any) => m.user_id === userId && !m.removed_at)
+          .first();
+        if (membership) {
+          userShare = membership.share;
+        }
+      }
+
+      // Calculate user's portion
+      const totalAmount = Number(txn.amount);
+      const userAmount = (totalAmount * userShare) / 100;
 
       // Get payer name
       let payerName = "Someone";
@@ -720,28 +749,81 @@ export class SyncManager {
           payerProfile?.full_name || payerProfile?.email || "Someone";
       }
 
+      // Get category name for context
+      let categoryName = "";
+      if (txn.category_id) {
+        const category = await db.categories.get(txn.category_id);
+        categoryName = category ? ` • ${category.name}` : "";
+      }
+
+      // Build description with richer formatting
+      const description = [
+        `💰 ${i18n.t("total_amount", { defaultValue: "Total" })}: €${totalAmount.toFixed(2)}`,
+        `👤 ${i18n.t("your_share", { defaultValue: "Your share" })}: €${userAmount.toFixed(2)} (${userShare}%)`,
+        `📝 ${txn.description}${categoryName}`,
+      ].join("\n");
+
+      // Different message based on action
+      const titleKey = action === "modified"
+        ? "modified_group_transaction_from"
+        : "new_group_transaction_from";
+      const defaultTitle = action === "modified"
+        ? "{{payer}} modified a transaction in {{group}}"
+        : "{{payer}} added a transaction in {{group}}";
+
       toast.info(
-        i18n.t("new_group_transaction", {
-          defaultValue: "New transaction in {{group}}",
+        `${i18n.t(titleKey, {
+          defaultValue: defaultTitle,
+          payer: payerName,
           group: groupName,
-        }),
+        })}`,
         {
-          description: `${payerName}: ${txn.description} (€${txn.amount})`,
-          duration: 5000,
+          description,
+          duration: 6000,
         }
       );
     } else {
-      // Multiple transactions - show summary
+      // Multiple transactions - show summary with total
+      const totalAmount = transactions.reduce(
+        (sum, txn) => sum + Number(txn.amount),
+        0
+      );
+
+      // Group transactions by group
+      const groupedByGroup = new Map<string, number>();
+      for (const txn of transactions) {
+        const count = groupedByGroup.get(txn.group_id) || 0;
+        groupedByGroup.set(txn.group_id, count + 1);
+      }
+
+      // Get group names
+      const groupSummaries: string[] = [];
+      for (const [groupId, count] of groupedByGroup.entries()) {
+        const group = await db.groups.get(groupId);
+        const groupName = group?.name || "Unknown";
+        groupSummaries.push(`• ${groupName}: ${count}`);
+      }
+
+      const description = [
+        `💰 ${i18n.t("total_amount", { defaultValue: "Total" })}: €${totalAmount.toFixed(2)}`,
+        ...groupSummaries,
+      ].join("\n");
+
+      const titleKey = action === "modified"
+        ? "modified_group_transactions"
+        : "new_group_transactions";
+      const defaultTitle = action === "modified"
+        ? "{{count}} modified group transactions"
+        : "{{count}} new group transactions";
+
       toast.info(
-        i18n.t("new_group_transactions", {
-          defaultValue: "{{count}} new group transactions",
+        i18n.t(titleKey, {
+          defaultValue: defaultTitle,
           count: transactions.length,
         }),
         {
-          description: i18n.t("new_group_transactions_desc", {
-            defaultValue: "Synced from your groups",
-          }),
-          duration: 5000,
+          description,
+          duration: 6000,
         }
       );
     }

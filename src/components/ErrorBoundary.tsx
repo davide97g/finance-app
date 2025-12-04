@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { withTranslation, WithTranslation } from "react-i18next";
 
 // Check if we're in development mode
 const isDev =
@@ -16,7 +17,7 @@ const isDev =
     ? (import.meta as any).env?.DEV
     : process.env.NODE_ENV === "development";
 
-interface ErrorBoundaryProps {
+interface ErrorBoundaryProps extends WithTranslation {
   children: ReactNode;
   /** Fallback UI to show when an error occurs */
   fallback?: ReactNode;
@@ -49,7 +50,7 @@ interface ErrorBoundaryState {
  *   <DashboardContent />
  * </ErrorBoundary>
  */
-export class ErrorBoundary extends Component<
+export class ErrorBoundaryClass extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
 > {
@@ -112,12 +113,12 @@ export class ErrorBoundary extends Component<
           <AlertTriangle className="h-8 w-8 text-destructive mb-2" />
           <p className="text-sm text-muted-foreground mb-3">
             {section
-              ? `Errore nel caricamento di ${section}`
-              : "Si è verificato un errore"}
+              ? this.props.t("error_loading_section", { section })
+              : this.props.t("error_occurred")}
           </p>
           <Button variant="outline" size="sm" onClick={this.handleRetry}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Riprova
+            {this.props.t("retry")}
           </Button>
         </div>
       );
@@ -134,12 +135,12 @@ export class ErrorBoundary extends Component<
               </div>
             </div>
             <CardTitle className="text-xl">
-              Oops! Qualcosa è andato storto
+              {this.props.t("oops_something_wrong")}
             </CardTitle>
             <CardDescription>
               {section
-                ? `Si è verificato un errore imprevisto in ${section}.`
-                : "Si è verificato un errore imprevisto."}
+                ? this.props.t("unexpected_error_section", { section })
+                : this.props.t("unexpected_error")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -165,7 +166,7 @@ export class ErrorBoundary extends Component<
             <div className="flex flex-col sm:flex-row gap-2">
               <Button onClick={this.handleRetry} className="flex-1">
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Riprova
+                {this.props.t("retry")}
               </Button>
               <Button
                 variant="outline"
@@ -173,17 +174,17 @@ export class ErrorBoundary extends Component<
                 className="flex-1"
               >
                 <Home className="h-4 w-4 mr-2" />
-                Vai alla Home
+                {this.props.t("go_home")}
               </Button>
             </div>
 
             <p className="text-xs text-center text-muted-foreground">
-              Se il problema persiste, prova a ricaricare la pagina o{" "}
+              {this.props.t("if_problem_persists")}{" "}
               <button
                 onClick={this.handleRefresh}
                 className="underline hover:text-foreground transition-colors"
               >
-                aggiorna manualmente
+                {this.props.t("refresh_manually")}
               </button>
               .
             </p>
@@ -194,6 +195,11 @@ export class ErrorBoundary extends Component<
   }
 }
 
+
+// Export both the wrapped and unwrapped component
+const ErrorBoundaryWithTranslation = withTranslation()(ErrorBoundaryClass as any);
+export { ErrorBoundaryWithTranslation as ErrorBoundary };
+
 /**
  * Higher-order component to wrap any component with an error boundary.
  *
@@ -202,15 +208,15 @@ export class ErrorBoundary extends Component<
  */
 export function withErrorBoundary<P extends object>(
   WrappedComponent: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<ErrorBoundaryProps, "children">
+  errorBoundaryProps?: Omit<ErrorBoundaryProps, "children" | "t" | "i18n" | "tReady">
 ): React.FC<P> {
   const displayName =
     WrappedComponent.displayName || WrappedComponent.name || "Component";
 
   const ComponentWithErrorBoundary: React.FC<P> = (props) => (
-    <ErrorBoundary {...errorBoundaryProps}>
+    <ErrorBoundaryWithTranslation {...errorBoundaryProps}>
       <WrappedComponent {...props} />
-    </ErrorBoundary>
+    </ErrorBoundaryWithTranslation>
   );
 
   ComponentWithErrorBoundary.displayName = `withErrorBoundary(${displayName})`;

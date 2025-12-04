@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { CloudOff, Loader2 } from "lucide-react";
 import { useSync } from "@/hooks/useSync";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 /**
  * Indicatore che mostra quante modifiche sono pending e non ancora sincronizzate.
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
  */
 export function PendingChangesIndicator() {
     const { pendingCount, isSyncing, sync } = useSync();
+    const { t } = useTranslation();
 
     // Non mostrare nulla se non ci sono pending e non sta sincronizzando
     if (pendingCount === 0 && !isSyncing) {
@@ -30,7 +32,7 @@ export function PendingChangesIndicator() {
             {isSyncing ? (
                 <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="hidden sm:inline">Sincronizzazione...</span>
+                    <span className="hidden sm:inline">{t("syncing")}</span>
                 </>
             ) : (
                 <>
@@ -38,7 +40,7 @@ export function PendingChangesIndicator() {
                     <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-100">
                         {pendingCount}
                     </Badge>
-                    <span className="hidden sm:inline">da sincronizzare</span>
+                    <span className="hidden sm:inline">{t("to_sync")}</span>
                 </>
             )}
         </Button>
