@@ -170,7 +170,7 @@ export function Dashboard() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col min-h-0">
                 {dailyCumulativeExpenses.length > 0 ? (
-                  <div className="flex-1 w-full min-h-0 h-[220px] md:h-full">
+                  <div className="flex-1 w-full min-h-0">
                     <ChartContainer
                       config={chartConfig}
                       className="h-full w-full"
@@ -298,8 +298,8 @@ export function Dashboard() {
                 </div>
                 {dotIndicators}
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col min-h-0">
-                <ScrollArea className="flex-1 -mr-4 pr-4">
+              <CardContent className="flex-1 overflow-hidden">
+                <div className="space-y-2">
                   <TransactionList
                     transactions={recentTransactions}
                     categories={categories}
@@ -307,8 +307,7 @@ export function Dashboard() {
                     isLoading={transactions === undefined}
                     hideContext={true}
                   />
-                </ScrollArea>
-                <div className="mt-2 flex justify-end pt-2"></div>
+                </div>
               </CardContent>
             </Card>
           );
@@ -694,7 +693,7 @@ export function Dashboard() {
       <div className="grid gap-4 md:grid-cols-[1fr_auto]">
         {/* Cumulative Expenses Chart - FlipCard with 3 states */}
         <FlipCard
-          className="h-[max(300px,calc(100vh-300px))] md:h-[55vh] md:min-h-[420px]"
+          className="h-[max(280px,55vh)] md:h-[50vh] md:min-h-[400px]"
           isFlipped={isChartFlipped}
           onFlip={handleChartFlip}
           direction="right"

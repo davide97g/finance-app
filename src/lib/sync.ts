@@ -175,6 +175,17 @@ export class SyncManager {
       console.log("[Sync] Sync completed successfully");
     } catch (error) {
       console.error("[Sync] Sync failed:", error);
+
+      // Show error toast to user
+      toast.error(
+        i18n.t("sync_error_title", { defaultValue: "Sync Failed" }),
+        {
+          description: i18n.t("sync_error_description", {
+            defaultValue: "Could not sync your data. Changes are saved locally and will sync when online.",
+          }),
+          duration: 6000,
+        }
+      );
     } finally {
       this.isSyncing = false;
       this.notifyListeners();

@@ -451,5 +451,7 @@
   "if_problem_persists": "If the problem persists, try reloading the page or",
   "refresh_manually": "refresh manually",
   "to_sync": "to sync",
-  "stats_short": "Stats"
+  "stats_short": "Stats",
+  "sync_error_title": "Sync Failed",
+  "sync_error_description": "Could not sync your data. Changes are saved locally and will sync when online."
 }

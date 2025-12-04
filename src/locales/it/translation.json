@@ -451,5 +451,7 @@
   "if_problem_persists": "Se il problema persiste, prova a ricaricare la pagina o",
   "refresh_manually": "aggiorna manualmente",
   "to_sync": "da sincronizzare",
-  "stats_short": "Stat."
+  "stats_short": "Stat.",
+  "sync_error_title": "Sincronizzazione Fallita",
+  "sync_error_description": "Impossibile sincronizzare i dati. Le modifiche sono salvate localmente e saranno sincronizzate quando tornerai online."
 }
