@@ -33,7 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SyncIndicator } from "@/components/SyncStatus";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentLoader } from "@/components/ui/content-loader";
 import { Separator } from "@/components/ui/separator";
 import {
   RefreshCw,
@@ -400,11 +400,7 @@ export function SettingsPage() {
   if (!settings) {
     return (
       <div className="space-y-6 pb-10">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <Skeleton className="h-[400px] w-full" />
+        <ContentLoader variant="card" count={1} />
       </div>
     );
   }

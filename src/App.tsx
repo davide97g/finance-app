@@ -16,7 +16,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentLoader } from "@/components/ui/content-loader";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { WifiOff, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -60,15 +60,8 @@ const ProfilePage = lazy(() =>
  */
 function PageLoadingFallback() {
   return (
-    <div className="p-6 space-y-6">
-      <Skeleton className="h-8 w-48" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Skeleton className="h-32" />
-        <Skeleton className="h-32" />
-        <Skeleton className="h-32" />
-        <Skeleton className="h-32" />
-      </div>
-      <Skeleton className="h-64" />
+    <div className="p-6">
+      <ContentLoader variant="card" count={2} />
     </div>
   );
 }

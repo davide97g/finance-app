@@ -13,7 +13,7 @@ import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Transaction, Category, Context, Group } from "@/lib/db";
 import { useMobile } from "@/hooks/useMobile";
 import { useMemo, useRef, useCallback } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentLoader } from "@/components/ui/content-loader";
 import { getIconComponent } from "@/lib/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { UI_DEFAULTS } from "@/lib/constants";
@@ -284,27 +284,7 @@ export function TransactionList({
   );
 
   if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-lg border bg-card p-3 shadow-sm flex items-center gap-3 h-[72px] animate-slide-in-up opacity-0 fill-mode-forwards"
-            style={{ animationDelay: `${i * 0.05}s` }}
-          >
-            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-            <div className="text-right space-y-2">
-              <Skeleton className="h-4 w-16 ml-auto" />
-              <Skeleton className="h-3 w-8 ml-auto" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <ContentLoader variant="transaction" count={5} />;
   }
 
   if (!transactions || transactions.length === 0) {

@@ -73,7 +73,7 @@ import { getIconComponent } from "@/lib/icons";
 import { SyncStatusBadge } from "@/components/SyncStatus";
 import { CategorySelector } from "@/components/CategorySelector";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentLoader } from "@/components/ui/content-loader";
 import type { Category } from "@/lib/db";
 import { MobileCategoryRow } from "@/components/MobileCategoryRow";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1048,25 +1048,7 @@ export function CategoriesPage() {
       {/* Mobile View: Grouped by Type */}
       <div className="space-y-3 md:hidden">
         {!categories ? (
-          // Skeleton loading state
-          Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-lg border bg-card p-4 shadow-sm animate-slide-in-up opacity-0 fill-mode-forwards"
-              style={{ animationDelay: `${i * 0.05}s` }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-                <Skeleton className="h-8 w-8 rounded-md" />
-              </div>
-            </div>
-          ))
+          <ContentLoader variant="category-mobile" count={5} />
         ) : categories.length === 0 ? (
           <div className="text-muted-foreground text-center py-8">
             {t("no_categories") || "No categories"}
@@ -1208,34 +1190,11 @@ export function CategoriesPage() {
           </TableHeader>
           <TableBody>
             {!categories ? (
-              // Skeleton loading state for desktop
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow
-                  key={i}
-                  className="animate-slide-in-up opacity-0 fill-mode-forwards"
-                  style={{ animationDelay: `${i * 0.03}s` }}
-                >
-                  <TableCell>
-                    <Skeleton className="h-4 w-4" />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4 rounded-full" />
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-4 w-24" />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                  </TableCell>
-                </TableRow>
-              ))
+              <tr>
+                <td colSpan={5}>
+                  <ContentLoader variant="category-desktop" count={5} />
+                </td>
+              </tr>
             ) : (
               <DesktopCategoryRows
                 categories={rootCategories}

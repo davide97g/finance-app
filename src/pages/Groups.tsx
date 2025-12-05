@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentLoader } from "@/components/ui/content-loader";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -264,15 +264,10 @@ export function GroupsPage() {
   if (!groups) {
     return (
       <div className="space-y-6 pb-10">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-10 w-32" />
+        <div className="flex items-center justify-between gap-4">
+          <ContentLoader variant="card" count={1} className="flex-1 max-w-xs" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-48" />
-          ))}
-        </div>
+        <ContentLoader variant="group-card" count={3} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" />
       </div>
     );
   }
@@ -738,11 +733,10 @@ export function GroupsPage() {
                                   {t("balance")}
                                 </p>
                                 <p
-                                  className={`font-bold flex items-center gap-1 ${
-                                    balance.balance >= 0
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }`}
+                                  className={`font-bold flex items-center gap-1 ${balance.balance >= 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                    }`}
                                 >
                                   {balance.balance >= 0 ? (
                                     <ArrowUpRight className="h-4 w-4" />
