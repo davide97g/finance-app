@@ -22,20 +22,32 @@ export function useBudgetNotifications() {
     [user]
   );
 
-  // Get current month expenses
+  // Get current month expenses with share calculation
   const monthlyExpenses = useLiveQuery(async () => {
     if (!user) return 0;
 
-    const transactions = await db.transactions
-      .where("year_month")
-      .equals(currentMonth)
-      .toArray();
+    const [transactions, memberships] = await Promise.all([
+      db.transactions.where("year_month").equals(currentMonth).toArray(),
+      db.group_members.where("user_id").equals(user.id).toArray(),
+    ]);
+
+    const groupShareMap = new Map<string, number>();
+    memberships.forEach((m) => {
+      groupShareMap.set(m.group_id, m.share);
+    });
 
     return transactions
       .filter(
         (t) => t.user_id === user.id && t.type === "expense" && !t.deleted_at
       )
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => {
+        let amount = t.amount;
+        if (t.group_id && groupShareMap.has(t.group_id)) {
+          const share = groupShareMap.get(t.group_id)!;
+          amount = (amount * share) / 100;
+        }
+        return sum + amount;
+      }, 0);
   }, [user, currentMonth]);
 
   useEffect(() => {
@@ -55,9 +67,9 @@ export function useBudgetNotifications() {
             percentage: percentage.toFixed(0),
             remaining: `€${(budget - monthlyExpenses).toFixed(2)}`,
           }) ||
-            `You've used ${percentage.toFixed(0)}% of your monthly budget. €${(
-              budget - monthlyExpenses
-            ).toFixed(2)} remaining.`,
+          `You've used ${percentage.toFixed(0)}% of your monthly budget. €${(
+            budget - monthlyExpenses
+          ).toFixed(2)} remaining.`,
           {
             duration: 4000,
           }
@@ -74,9 +86,9 @@ export function useBudgetNotifications() {
           t("budget_exceeded_notification", {
             amount: `€${(monthlyExpenses - budget).toFixed(2)}`,
           }) ||
-            `Budget exceeded! You're €${(monthlyExpenses - budget).toFixed(
-              2
-            )} over your monthly limit.`,
+          `Budget exceeded! You're €${(monthlyExpenses - budget).toFixed(
+            2
+          )} over your monthly limit.`,
           {
             duration: 4000,
           }

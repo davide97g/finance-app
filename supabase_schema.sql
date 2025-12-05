@@ -38,13 +38,21 @@ alter table public.groups enable row level security;
 create table public.group_members (
   id uuid primary key default uuid_generate_v4(),
   group_id uuid references public.groups(id) on delete cascade not null,
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references auth.users(id), -- Nullable for guests
+  guest_name text, -- Required if user_id is null
+  is_guest boolean default false,
   share numeric not null check (share >= 0 and share <= 100),
   joined_at timestamptz default now(),
   removed_at timestamptz,
   sync_token bigint default nextval('global_sync_token_seq'),
   updated_at timestamptz default now(),
-  unique(group_id, user_id)
+  -- Unique constraint: A real user can be in a group only once. 
+  -- We allow multiple guests in the same group (duplicates allowed by name? maybe strictly no, but for now ID based)
+  unique(group_id, user_id),
+  constraint guest_check check (
+    (is_guest = false and user_id is not null) or
+    (is_guest = true and user_id is null and guest_name is not null)
+  )
 );
 
 alter table public.group_members enable row level security;
@@ -206,12 +214,12 @@ create trigger update_contexts_sync_token
 
 -- 3. Transactions Table
 -- If group_id IS NULL -> personal transaction
--- If group_id IS NOT NULL -> group transaction (paid_by_user_id required)
+-- If group_id IS NOT NULL -> group transaction (paid_by_member_id required)
 create table public.transactions (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) not null,
   group_id uuid references public.groups(id),
-  paid_by_user_id uuid references auth.users(id),
+  paid_by_member_id uuid references public.group_members(id),
   category_id uuid references public.categories(id) not null,
   context_id uuid references public.contexts(id),
   type text check (type in ('income', 'expense', 'investment')) not null,
@@ -222,9 +230,10 @@ create table public.transactions (
   sync_token bigint default nextval('global_sync_token_seq'),
   updated_at timestamptz default now(),
   created_at timestamptz default now(),
-  -- Constraint: paid_by_user_id required for group transactions
-  constraint paid_by_required_for_group check (
-    (group_id is null) or (group_id is not null and paid_by_user_id is not null)
+  -- Constraint: Single Payer Source Truth
+  constraint paid_by_logic check (
+    (group_id is null and paid_by_member_id is null) or 
+    (group_id is not null and paid_by_member_id is not null)
   )
 );
 
@@ -262,7 +271,7 @@ create table public.recurring_transactions (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) not null,
   group_id uuid references public.groups(id),
-  paid_by_user_id uuid references auth.users(id),
+  paid_by_member_id uuid references public.group_members(id),
   type text check (type in ('income', 'expense', 'investment')) not null,
   category_id uuid references public.categories(id) not null,
   context_id uuid references public.contexts(id),
@@ -277,9 +286,10 @@ create table public.recurring_transactions (
   sync_token bigint default nextval('global_sync_token_seq'),
   updated_at timestamptz default now(),
   created_at timestamptz default now(),
-  -- Constraint: paid_by_user_id required for group recurring transactions
-  constraint recurring_paid_by_required_for_group check (
-    (group_id is null) or (group_id is not null and paid_by_user_id is not null)
+  -- Constraint: Single Payer Source Truth
+  constraint recurring_paid_by_logic check (
+    (group_id is null and paid_by_member_id is null) or 
+    (group_id is not null and paid_by_member_id is not null)
   )
 );
 
@@ -394,7 +404,7 @@ create index idx_categories_group_id on public.categories(group_id) where group_
 
 -- Transactions
 create index idx_transactions_group_id on public.transactions(group_id) where group_id is not null;
-create index idx_transactions_paid_by on public.transactions(paid_by_user_id) where paid_by_user_id is not null;
+create index idx_transactions_paid_by on public.transactions(paid_by_member_id) where paid_by_member_id is not null;
 
 -- Recurring Transactions
 create index idx_recurring_transactions_group_id on public.recurring_transactions(group_id) where group_id is not null;

@@ -311,7 +311,7 @@ export function SettingsPage() {
               description: tx.description || "",
               context_id: tx.context_id,
               group_id: tx.group_id,
-              paid_by_user_id: tx.paid_by_user_id,
+              paid_by_member_id: tx.paid_by_member_id,
               deleted_at: null,
               pendingSync: 1,
             };

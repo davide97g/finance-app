@@ -92,7 +92,7 @@ export function RecurringTransactionsPage() {
     category_id: "",
     context_id: "",
     group_id: "" as string | null,
-    paid_by_user_id: "" as string | null,
+    paid_by_member_id: "" as string | null,
   });
 
   // Reset category when type changes (only when creating new recurring transaction)
@@ -115,7 +115,14 @@ export function RecurringTransactionsPage() {
     if (!user) return;
 
     const groupId = formData.group_id || null;
-    const paidByUserId = groupId ? formData.paid_by_user_id || user.id : null;
+    let paidByMemberId = groupId ? formData.paid_by_member_id : null;
+
+    // Default to me if group selected but no payer selected
+    if (groupId && !paidByMemberId && groups) {
+      const group = groups.find(g => g.id === groupId);
+      const member = group?.members.find(m => m.user_id === user.id);
+      if (member) paidByMemberId = member.id;
+    }
 
     if (editingId) {
       await updateRecurringTransaction(editingId, {
@@ -127,7 +134,7 @@ export function RecurringTransactionsPage() {
         category_id: formData.category_id,
         context_id: formData.context_id || undefined,
         group_id: groupId,
-        paid_by_user_id: paidByUserId,
+        paid_by_member_id: paidByMemberId,
       });
     } else {
       await addRecurringTransaction({
@@ -140,7 +147,7 @@ export function RecurringTransactionsPage() {
         category_id: formData.category_id,
         context_id: formData.context_id || undefined,
         group_id: groupId,
-        paid_by_user_id: paidByUserId,
+        paid_by_member_id: paidByMemberId,
       });
     }
     setIsOpen(false);
@@ -155,7 +162,7 @@ export function RecurringTransactionsPage() {
       start_date: new Date().toISOString().split("T")[0],
       context_id: "",
       group_id: "",
-      paid_by_user_id: "",
+      paid_by_member_id: "",
     });
   };
 
@@ -170,7 +177,7 @@ export function RecurringTransactionsPage() {
       category_id: transaction.category_id || "",
       context_id: transaction.context_id || "",
       group_id: transaction.group_id || "",
-      paid_by_user_id: transaction.paid_by_user_id || "",
+      paid_by_member_id: transaction.paid_by_member_id || "",
     });
     setMoreSectionOpen(!!transaction.group_id || !!transaction.context_id);
     setIsOpen(true);
@@ -187,7 +194,7 @@ export function RecurringTransactionsPage() {
       start_date: new Date().toISOString().split("T")[0],
       context_id: "",
       group_id: "",
-      paid_by_user_id: "",
+      paid_by_member_id: "",
     });
     setMoreSectionOpen(false);
     setIsOpen(true);
@@ -480,12 +487,15 @@ export function RecurringTransactionsPage() {
                                 setFormData({
                                   ...formData,
                                   group_id: value === "none" ? "" : value,
-                                  paid_by_user_id:
+                                  paid_by_member_id:
                                     value === "none"
                                       ? ""
-                                      : formData.paid_by_user_id ||
-                                      user?.id ||
-                                      "",
+                                      : (() => {
+                                        // Default to me (my member ID)
+                                        const group = groups.find(g => g.id === value);
+                                        const member = group?.members.find(m => m.user_id === user?.id);
+                                        return member?.id || "";
+                                      })(),
                                 })
                               }
                             >
@@ -512,12 +522,12 @@ export function RecurringTransactionsPage() {
                               </label>
                               <Select
                                 value={
-                                  formData.paid_by_user_id || user?.id || ""
+                                  formData.paid_by_member_id || ""
                                 }
                                 onValueChange={(value) =>
                                   setFormData({
                                     ...formData,
-                                    paid_by_user_id: value,
+                                    paid_by_member_id: value,
                                   })
                                 }
                               >
@@ -532,12 +542,13 @@ export function RecurringTransactionsPage() {
                                     ?.members.map((member) => (
                                       <SelectItem
                                         key={member.id}
-                                        value={member.user_id}
+                                        value={member.id}
                                       >
-                                        {member.user_id === user?.id
-                                          ? t("me")
-                                          : member.user_id.substring(0, 8) +
-                                          "..."}
+                                        {member.is_guest
+                                          ? (member.guest_name || "Guest")
+                                          : (member.user_id === user?.id
+                                            ? t("me")
+                                            : member.displayName || member.user_id?.substring(0, 8))}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>

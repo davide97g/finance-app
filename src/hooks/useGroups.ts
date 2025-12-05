@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   GroupInputSchema,
   GroupUpdateSchema,
-  GroupMemberInputSchema,
+
   GroupMemberUpdateSchema,
   validate,
 } from "../lib/validation";
@@ -184,13 +184,14 @@ export function useGroups() {
       const groupMembers = allMembers
         .filter((m) => m.group_id === g.id && !m.removed_at)
         .map((m) => {
-          const profile = profileMap.get(m.user_id);
+          const profile = m.user_id ? profileMap.get(m.user_id) : undefined;
           // Determine display name: Profile name > Email > "User ..."
           let displayName = "Unknown User";
           if (profile?.full_name) displayName = profile.full_name;
           else if (profile?.email) displayName = profile.email.split("@")[0];
           else if (m.user_id === user.id) displayName = "You";
-          else displayName = `User ${m.user_id.slice(0, 4)}`;
+          else if (m.is_guest && m.guest_name) displayName = m.guest_name;
+          else if (m.user_id) displayName = `User ${m.user_id.slice(0, 4)}`;
 
           return {
             ...m,
@@ -319,7 +320,7 @@ export function useGroups() {
       for (const tx of groupTransactions) {
         await db.transactions.update(tx.id, {
           group_id: null,
-          paid_by_user_id: null,
+          paid_by_member_id: null,
           pendingSync: 1,
         });
       }
@@ -328,34 +329,46 @@ export function useGroups() {
     syncManager.schedulePush();
   };
 
-  const addMember = async (
+  const addGroupMember = async (
     groupId: string,
-    userId: string,
+    userIdOrName: string,
+    isGuest: boolean = false,
     share: number = 0
   ) => {
-    // Validate input data
-    const validatedData = validate(GroupMemberInputSchema, {
-      group_id: groupId,
-      user_id: userId,
-      share,
-    });
+    // For guests, we don't validate against GroupMemberInputSchema in the same way 
+    // because user_id is null. We need a custom validation or just simpler object.
+
+    // Basic validation
+    if (!userIdOrName) throw new Error("User ID or Guest Name is required");
 
     const memberId = uuidv4();
 
-    await db.group_members.add({
+    const newMember: any = {
       id: memberId,
-      ...validatedData,
+      group_id: groupId,
+      share,
       joined_at: new Date().toISOString(),
       removed_at: null,
       pendingSync: 1,
       updated_at: new Date().toISOString(),
-    });
+      is_guest: isGuest,
+    };
+
+    if (isGuest) {
+      newMember.user_id = null;
+      newMember.guest_name = userIdOrName;
+    } else {
+      newMember.user_id = userIdOrName;
+      newMember.guest_name = null;
+    }
+
+    await db.group_members.add(newMember);
 
     syncManager.schedulePush();
     return memberId;
   };
 
-  const removeMember = async (memberId: string) => {
+  const removeGroupMember = async (memberId: string) => {
     await db.group_members.update(memberId, {
       removed_at: new Date().toISOString(),
       pendingSync: 1,
@@ -364,6 +377,7 @@ export function useGroups() {
     syncManager.schedulePush();
   };
 
+  // ... existing updateMemberShare ...
   const updateMemberShare = async (memberId: string, share: number) => {
     // Validate share value
     const validatedData = validate(GroupMemberUpdateSchema, { share });
@@ -407,13 +421,19 @@ export function useGroups() {
     const balances: Record<
       string,
       {
-        userId: string;
+        userId: string; // This might be memberId for guests in a future refactor, but for now we need a unique key. 
+        // CAUTION: For guests user_id is null. We should use member.id as key for balances if possible, 
+        // but the UI currently expects userId.
+        // Let's rely on member.id as the key in the record, but we need to check how it's consumed.
+        // The consumption in GroupDetail uses member.user_id. This will break for guests.
+        // We need to return a key that is unique.
         share: number;
         shouldPay: number;
         hasPaid: number;
         balance: number;
         displayName: string;
         avatarUrl?: string;
+        isGuest: boolean;
       }
     > = {};
 
@@ -423,34 +443,56 @@ export function useGroups() {
     // Calculate what each member should pay based on share
     for (const member of members) {
       const shouldPay = (totalExpenses * member.share) / 100;
+
+      // Calculate what they have paid
+      // Logic update: check paid_by_member_id only
       const hasPaid = transactions
-        .filter(
-          (t) => t.paid_by_user_id === member.user_id && t.type === "expense"
-        )
+        .filter((t) => {
+          if (t.type !== "expense") return false;
+          return t.paid_by_member_id === member.id;
+        })
         .reduce((sum, t) => sum + t.amount, 0);
 
-      const profile = profileMap.get(member.user_id);
+      const profile = member.user_id ? profileMap.get(member.user_id) : undefined;
       let displayName = "Unknown User";
-      if (profile?.full_name) displayName = profile.full_name;
-      else if (profile?.email) displayName = profile.email.split("@")[0];
-      else if (member.user_id === user?.id) displayName = "You";
-      else displayName = `User ${member.user_id.slice(0, 4)}`;
 
-      balances[member.user_id] = {
-        userId: member.user_id,
+      if (member.is_guest && member.guest_name) {
+        displayName = member.guest_name;
+      } else if (profile?.full_name) {
+        displayName = profile.full_name;
+      } else if (profile?.email) {
+        displayName = profile.email.split("@")[0];
+      } else if (member.user_id === user?.id) {
+        displayName = "You";
+      } else if (member.user_id) {
+        displayName = `User ${member.user_id.slice(0, 4)}`;
+      }
+
+      // We use member.user_id as key if exists, else member.id (prefixed? no, just member.id)
+      // Ideally we should switch to using member.id everywhere as the primary key for members 
+      // but that refactor is large. 
+      // For now, if guest, use member.id. If user, use user.id (to match existing usages).
+      const key = member.user_id || member.id;
+
+      balances[key] = {
+        userId: key,
         share: member.share,
         shouldPay,
         hasPaid,
         balance: hasPaid - shouldPay, // Positive = owed money, Negative = owes money
         displayName,
         avatarUrl: profile?.avatar_url,
+        isGuest: !!member.is_guest,
       };
     }
 
     return {
       totalExpenses,
       balances,
-      members,
+      members: members.map(m => ({
+        ...m,
+        displayName: m.is_guest ? m.guest_name : (m.user_id ? "User" : "Unknown") // Simplified, expanded later or computed above
+      })),
     };
   };
 
@@ -459,8 +501,8 @@ export function useGroups() {
     createGroup,
     updateGroup,
     deleteGroup,
-    addMember,
-    removeMember,
+    addGroupMember,
+    removeGroupMember,
     updateMemberShare,
     updateAllShares,
     getGroupBalance,

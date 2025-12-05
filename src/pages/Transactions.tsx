@@ -122,7 +122,7 @@ export function TransactionsPage() {
       date: tx.date,
       context_id: tx.context_id,
       group_id: tx.group_id,
-      paid_by_user_id: tx.paid_by_user_id,
+      paid_by_member_id: tx.paid_by_member_id,
     };
   }, [editingId, transactions]);
 
@@ -130,9 +130,7 @@ export function TransactionsPage() {
     if (!user) return;
 
     const groupId = data.group_id || undefined;
-    const paidByUserId = groupId
-      ? data.paid_by_user_id || user.id
-      : undefined;
+    const paidByMemberId = groupId ? data.paid_by_member_id : undefined;
     const contextId = data.context_id || undefined;
 
     if (editingId) {
@@ -145,7 +143,7 @@ export function TransactionsPage() {
         year_month: data.date.substring(0, 7),
         context_id: contextId,
         group_id: groupId,
-        paid_by_user_id: paidByUserId,
+        paid_by_member_id: paidByMemberId,
       });
     } else {
       await addTransaction({
@@ -158,7 +156,7 @@ export function TransactionsPage() {
         year_month: data.date.substring(0, 7),
         context_id: contextId,
         group_id: groupId,
-        paid_by_user_id: paidByUserId,
+        paid_by_member_id: paidByMemberId,
       });
     }
     setIsOpen(false);

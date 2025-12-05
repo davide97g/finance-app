@@ -690,7 +690,6 @@ export function Dashboard() {
         year_month: data.date.substring(0, 7),
         context_id: data.context_id || undefined,
         group_id: data.group_id || undefined,
-        paid_by_user_id: data.paid_by_user_id || undefined,
       });
 
       setIsDialogOpen(false);

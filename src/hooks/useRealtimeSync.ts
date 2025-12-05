@@ -140,14 +140,21 @@ export function useRealtimeSync(enabled: boolean = true) {
 
                 // Get payer name
                 let payerName = "Someone";
-                if (newRecord.paid_by_user_id) {
-                  const payerProfile = await db.profiles.get(
-                    newRecord.paid_by_user_id
+                if (newRecord.paid_by_member_id) {
+                  const member = await db.group_members.get(
+                    newRecord.paid_by_member_id
                   );
-                  payerName =
-                    payerProfile?.full_name ||
-                    payerProfile?.email ||
-                    "Someone";
+                  if (member) {
+                    if (member.is_guest) {
+                      payerName = member.guest_name || "Guest";
+                    } else if (member.user_id) {
+                      const payerProfile = await db.profiles.get(member.user_id);
+                      payerName =
+                        payerProfile?.full_name ||
+                        payerProfile?.email ||
+                        "Someone";
+                    }
+                  }
                 }
 
                 toast.info(

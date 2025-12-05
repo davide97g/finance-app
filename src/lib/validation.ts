@@ -18,6 +18,10 @@ const yearMonthSchema = z
   .string()
   .regex(/^\d{4}-\d{2}$/, "Year-month must be in YYYY-MM format");
 
+const frequencySchema = z.enum(["daily", "weekly", "monthly", "yearly"], {
+  error: "Frequency must be 'daily', 'weekly', 'monthly', or 'yearly'",
+});
+
 // ============================================================================
 // TRANSACTION SCHEMA
 // ============================================================================
@@ -25,7 +29,7 @@ const yearMonthSchema = z
 export const TransactionInputSchema = z.object({
   user_id: uuidSchema,
   group_id: z.string().uuid().nullable().optional(),
-  paid_by_user_id: z.string().uuid().nullable().optional(),
+  paid_by_member_id: z.string().uuid().nullable().optional(),
   category_id: uuidSchema,
   context_id: z.string().uuid().optional(),
   type: transactionTypeSchema,
@@ -65,50 +69,12 @@ export const CategoryInputSchema = z.object({
   parent_id: z.string().uuid().optional(),
   active: z.number().int().min(0).max(1).default(1),
 });
-
-export const CategoryUpdateSchema = CategoryInputSchema.partial().omit({
-  user_id: true,
-});
-
-export type CategoryInput = z.infer<typeof CategoryInputSchema>;
-export type CategoryUpdate = z.infer<typeof CategoryUpdateSchema>;
-
-// ============================================================================
-// CONTEXT SCHEMA
-// ============================================================================
-
-export const ContextInputSchema = z.object({
-  user_id: uuidSchema,
-  name: z
-    .string()
-    .min(1, "Context name is required")
-    .max(100, "Context name must be less than 100 characters"),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional(),
-  active: z.number().int().min(0).max(1).default(1),
-});
-
-export const ContextUpdateSchema = ContextInputSchema.partial().omit({
-  user_id: true,
-});
-
-export type ContextInput = z.infer<typeof ContextInputSchema>;
-export type ContextUpdate = z.infer<typeof ContextUpdateSchema>;
-
-// ============================================================================
-// RECURRING TRANSACTION SCHEMA
-// ============================================================================
-
-const frequencySchema = z.enum(["daily", "weekly", "monthly", "yearly"], {
-  error: "Frequency must be 'daily', 'weekly', 'monthly', or 'yearly'",
-});
-
+//...
+//
 export const RecurringTransactionInputSchema = z.object({
   user_id: uuidSchema,
   group_id: z.string().uuid().nullable().optional(),
-  paid_by_user_id: z.string().uuid().nullable().optional(),
+  paid_by_member_id: z.string().uuid().nullable().optional(),
   type: transactionTypeSchema,
   category_id: uuidSchema,
   context_id: z.string().uuid().optional(),
@@ -240,6 +206,41 @@ export const UserSettingsUpdateSchema = UserSettingsSchema.partial().omit({
 
 export type UserSettingsInput = z.infer<typeof UserSettingsSchema>;
 export type UserSettingsUpdate = z.infer<typeof UserSettingsUpdateSchema>;
+
+// ============================================================================
+// CONTEXT SCHEMA
+// ============================================================================
+
+export const ContextInputSchema = z.object({
+  user_id: uuidSchema,
+  name: z
+    .string()
+    .min(1, "Context name is required")
+    .max(50, "Context name must be less than 50 characters"),
+  description: z
+    .string()
+    .max(200, "Description must be less than 200 characters")
+    .nullable()
+    .optional(),
+  active: z.boolean().default(true),
+});
+
+export const ContextUpdateSchema = ContextInputSchema.partial().omit({
+  user_id: true,
+});
+
+export type ContextInput = z.infer<typeof ContextInputSchema>;
+export type ContextUpdate = z.infer<typeof ContextUpdateSchema>;
+
+// ============================================================================
+// CATEGORY UPDATE SCHEMA (Re-exporting correctly)
+// ============================================================================
+
+export const CategoryUpdateSchema = CategoryInputSchema.partial().omit({
+  user_id: true,
+});
+
+export type CategoryUpdate = z.infer<typeof CategoryUpdateSchema>;
 
 // ============================================================================
 // VALIDATION HELPER

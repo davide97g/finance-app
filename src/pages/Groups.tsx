@@ -33,8 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -46,9 +44,6 @@ import {
 import {
   Plus,
   Users,
-  Crown,
-  UserPlus,
-  UserMinus,
   Check,
   AlertTriangle,
   ArrowUpRight,
@@ -62,18 +57,14 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { BalanceStatusCard } from "@/components/BalanceStatusCard";
 import { SettlementPlan } from "@/components/SettlementPlan";
 import { BalanceChart } from "@/components/BalanceChart";
-
-import { supabase } from "@/lib/supabase";
+import { ManageMembersDrawer } from "@/components/ManageMembersDrawer";
 
 interface GroupFormData {
   name: string;
   description: string;
 }
 
-interface MemberFormData {
-  userId: string;
-  share: number;
-}
+
 
 export function GroupsPage() {
   const { t } = useTranslation();
@@ -85,9 +76,6 @@ export function GroupsPage() {
     createGroup,
     updateGroup,
     deleteGroup,
-    addMember,
-    removeMember,
-    updateAllShares,
     getGroupBalance,
   } = useGroups();
 
@@ -113,23 +101,10 @@ export function GroupsPage() {
     name: "",
     description: "",
   });
-  const [newMemberData, setNewMemberData] = useState<MemberFormData>({
-    userId: "",
-    share: 0,
-  });
-  const [memberShares, setMemberShares] = useState<Record<string, number>>({});
-
   // Derive managingGroup from groups list to ensure reactivity
   const managingGroup = useMemo(() => {
     return groups?.find((g) => g.id === managingGroupId) || null;
   }, [groups, managingGroupId]);
-
-  // Calculate total share
-  const totalShare = useMemo(() => {
-    return Object.values(memberShares).reduce((sum, share) => sum + share, 0);
-  }, [memberShares]);
-
-  const isShareValid = Math.abs(totalShare - 100) < 0.01;
 
   const handleCreateGroup = async () => {
     if (!formData.name.trim()) {
@@ -164,71 +139,6 @@ export function GroupsPage() {
     toast.success(t("group_deleted"));
   };
 
-  const handleAddMember = async () => {
-    if (!managingGroup || !newMemberData.userId.trim()) {
-      toast.error(t("user_id_required"));
-      return;
-    }
-
-    // Check if user is already a member
-    if (
-      managingGroup.members.some(
-        (m) => m.user_id === newMemberData.userId.trim()
-      )
-    ) {
-      toast.error(t("user_already_member"));
-      return;
-    }
-
-    // Check if user exists
-    try {
-      const { data: exists, error } = await supabase.rpc("check_user_exists", {
-        user_id: newMemberData.userId.trim(),
-      });
-
-      if (error) {
-        console.error("Error checking user existence:", error);
-        toast.error(t("error_checking_user"));
-        return;
-      }
-
-      if (!exists) {
-        toast.error(t("user_not_found"));
-        return;
-      }
-    } catch (err) {
-      console.error("Unexpected error checking user:", err);
-      toast.error(t("error_checking_user"));
-      return;
-    }
-
-    await addMember(managingGroup.id, newMemberData.userId.trim(), 0);
-    setNewMemberData({ userId: "", share: 0 });
-    toast.success(t("member_added"));
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    await removeMember(memberId);
-    toast.success(t("member_removed"));
-  };
-
-  const handleSaveShares = async () => {
-    if (!managingGroup) return;
-    if (!isShareValid) {
-      toast.error(t("shares_must_equal_100"));
-      return;
-    }
-
-    const shares = Object.entries(memberShares).map(([memberId, share]) => ({
-      memberId,
-      share,
-    }));
-
-    await updateAllShares(managingGroup.id, shares);
-    setManagingGroupId(null);
-    toast.success(t("shares_updated"));
-  };
-
   const handleViewBalance = async (group: GroupWithMembers) => {
     setViewingBalance(group);
     const data = await getGroupBalance(group.id);
@@ -249,11 +159,6 @@ export function GroupsPage() {
   };
 
   const openManageMembers = (group: GroupWithMembers) => {
-    const shares: Record<string, number> = {};
-    group.members.forEach((m) => {
-      shares[m.user_id] = m.share;
-    });
-    setMemberShares(shares);
     setManagingGroupId(group.id);
   };
 
@@ -478,119 +383,11 @@ export function GroupsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Manage Members Dialog */}
-      <Dialog
-        open={!!managingGroup}
+      <ManageMembersDrawer
+        group={managingGroup}
+        open={!!managingGroupId}
         onOpenChange={(open) => !open && setManagingGroupId(null)}
-      >
-        <DialogContent
-          className="max-w-lg"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>{t("manage_members")}</DialogTitle>
-            <DialogDescription>{t("manage_members_desc")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Add Member */}
-            <div className="space-y-2">
-              <Label>{t("add_member")}</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder={t("enter_user_id")}
-                  value={newMemberData.userId}
-                  onChange={(e) =>
-                    setNewMemberData({
-                      ...newMemberData,
-                      userId: e.target.value,
-                    })
-                  }
-                  className="flex-1"
-                />
-                <Button onClick={handleAddMember} size="icon">
-                  <UserPlus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Members List with Shares */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{t("member_shares")}</Label>
-                <Badge variant={isShareValid ? "default" : "destructive"}>
-                  {t("total")}: {totalShare.toFixed(1)}%
-                </Badge>
-              </div>
-              <ScrollArea className="h-[200px]">
-                <div className="space-y-2">
-                  {managingGroup?.members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted"
-                    >
-                      <div className="flex-1 flex items-center gap-2 overflow-hidden">
-                        <UserAvatar
-                          userId={member.user_id}
-                          showName
-                          className="min-w-0"
-                        />
-                        {member.user_id === user?.id && (
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            ({t("you")})
-                          </span>
-                        )}
-                        {managingGroup.created_by === member.user_id && (
-                          <Crown className="h-3 w-3 text-yellow-500 shrink-0" />
-                        )}
-                      </div>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={memberShares[member.id] ?? member.share}
-                        onChange={(e) =>
-                          setMemberShares({
-                            ...memberShares,
-                            [member.id]: Number(e.target.value),
-                          })
-                        }
-                        className="w-20"
-                      />
-                      <span className="text-sm text-muted-foreground">%</span>
-                      {member.user_id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="text-destructive"
-                        >
-                          <UserMinus className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              {!isShareValid && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertTriangle className="h-4 w-4" />
-                  {t("shares_must_equal_100")}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManagingGroupId(null)}>
-              {t("cancel")}
-            </Button>
-            <Button onClick={handleSaveShares} disabled={!isShareValid}>
-              {t("save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
 
       {/* View Balance Dialog */}
       <Dialog

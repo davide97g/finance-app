@@ -71,7 +71,7 @@ export type DefaultView = "list" | "grid";
 export interface TransactionInput {
   user_id: string;
   group_id?: string | null;
-  paid_by_user_id?: string | null;
+  paid_by_member_id?: string | null;
   category_id: string;
   context_id?: string;
   type: TransactionType;
@@ -99,34 +99,15 @@ export interface CategoryInput {
   parent_id?: string;
   active?: number;
 }
-
-/**
- * Input for updating an existing category
- */
-export type CategoryUpdate = Partial<Omit<CategoryInput, "user_id">>;
-
-/**
- * Input for creating a new context
- */
-export interface ContextInput {
-  user_id: string;
-  name: string;
-  description?: string;
-  active?: number;
-}
-
-/**
- * Input for updating an existing context
- */
-export type ContextUpdate = Partial<Omit<ContextInput, "user_id">>;
-
+//...
+//
 /**
  * Input for creating a new recurring transaction
  */
 export interface RecurringTransactionInput {
   user_id: string;
   group_id?: string | null;
-  paid_by_user_id?: string | null;
+  paid_by_member_id?: string | null;
   type: TransactionType;
   category_id: string;
   context_id?: string;

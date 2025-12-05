@@ -43,15 +43,19 @@ export function useContexts() {
       "id" | "sync_token" | "pendingSync" | "deleted_at" | "active"
     >
   ) => {
-    // Validate input data
+    // Validate input data (schema expects boolean for active)
     const validatedData = validate(ContextInputSchema, {
       ...context,
-      active: 1,
+      active: true,
     });
+
+    const { active, ...rest } = validatedData;
 
     const id = uuidv4();
     await db.contexts.add({
-      ...validatedData,
+      ...rest,
+      description: rest.description === null ? undefined : rest.description,
+      active: active ? 1 : 0,
       id,
       pendingSync: 1,
       deleted_at: null,
@@ -66,8 +70,18 @@ export function useContexts() {
     // Validate update data
     const validatedUpdates = validate(ContextUpdateSchema, updates);
 
+    // Convert active boolean to number safely
+    const { active, description, ...rest } = validatedUpdates;
+    const finalUpdates: any = { ...rest };
+    if (active !== undefined) {
+      finalUpdates.active = active ? 1 : 0;
+    }
+    if (description !== undefined) {
+      finalUpdates.description = description === null ? undefined : description;
+    }
+
     await db.contexts.update(id, {
-      ...validatedUpdates,
+      ...finalUpdates,
       pendingSync: 1,
     });
     syncManager.schedulePush();

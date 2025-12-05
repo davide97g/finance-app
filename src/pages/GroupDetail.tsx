@@ -16,6 +16,16 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import {
   ArrowLeft,
@@ -31,6 +41,7 @@ import {
   TransactionDialog,
   TransactionFormData,
 } from "@/components/TransactionDialog";
+import { Transaction } from "@/lib/db";
 
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -39,11 +50,12 @@ export function GroupDetailPage() {
   const { user } = useAuth();
   const { sync, isSyncing } = useSync();
   const { groups, getGroupBalance } = useGroups();
-  const { transactions, addTransaction, deleteTransaction } = useTransactions(
-    undefined,
-    undefined,
-    groupId
-  );
+  const {
+    transactions,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+  } = useTransactions(undefined, undefined, groupId);
   const { categories } = useCategories(groupId);
 
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
@@ -62,7 +74,12 @@ export function GroupDetailPage() {
     members: any[];
   } | null>(null);
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isTxDialogOpen, setIsTxDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<
+    string | null
+  >(null);
 
   // Find the group
   useEffect(() => {
@@ -97,22 +114,41 @@ export function GroupDetailPage() {
     );
   }, [categories, groupId]);
 
-  const handleAddTransaction = async (data: TransactionFormData) => {
+  const handleSaveTransaction = async (data: TransactionFormData) => {
     if (!user || !groupId) return;
 
-    await addTransaction({
-      user_id: user.id,
-      amount: parseFloat(data.amount),
-      description: data.description,
-      type: data.type,
-      category_id: data.category_id,
-      date: data.date,
-      year_month: data.date.substring(0, 7),
-      group_id: groupId,
-      paid_by_user_id: data.paid_by_user_id || user.id,
-    });
+    if (editingTransaction) {
+      await updateTransaction(editingTransaction.id, {
+        amount: parseFloat(data.amount),
+        description: data.description,
+        type: data.type,
+        category_id: data.category_id,
+        date: data.date,
+        year_month: data.date.substring(0, 7),
+        group_id: groupId,
+      });
+    } else {
+      await addTransaction({
+        user_id: user.id,
+        amount: parseFloat(data.amount),
+        description: data.description,
+        type: data.type,
+        category_id: data.category_id,
+        date: data.date,
+        year_month: data.date.substring(0, 7),
+        group_id: groupId,
+      });
+    }
 
-    setIsAddDialogOpen(false);
+    setIsTxDialogOpen(false);
+    setEditingTransaction(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingTransactionId) {
+      await deleteTransaction(deletingTransactionId);
+      setDeletingTransactionId(null);
+    }
   };
 
   const myBalance = balance?.balances[user?.id || ""];
@@ -167,16 +203,25 @@ export function GroupDetailPage() {
         <Button
           size="icon"
           className="md:w-auto md:px-4 md:h-10"
-          onClick={() => setIsAddDialogOpen(true)}
+          onClick={() => {
+            setEditingTransaction(null);
+            setIsTxDialogOpen(true);
+          }}
         >
           <Plus className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">{t("add_transaction")}</span>
         </Button>
         <TransactionDialog
-          open={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
-          onSubmit={handleAddTransaction}
+          open={isTxDialogOpen}
+          onOpenChange={(open) => {
+            setIsTxDialogOpen(open);
+            if (!open) {
+              setEditingTransaction(null);
+            }
+          }}
+          onSubmit={handleSaveTransaction}
           defaultGroupId={groupId}
+          editingTransaction={editingTransaction}
         />
       </div>
 
@@ -223,11 +268,10 @@ export function GroupDetailPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                (myBalance?.balance || 0) >= 0
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
+              className={`text-2xl font-bold ${(myBalance?.balance || 0) >= 0
+                ? "text-green-600"
+                : "text-red-600"
+                }`}
             >
               {(myBalance?.balance || 0) >= 0 ? "+" : ""}€
               {(myBalance?.balance || 0).toFixed(2)}
@@ -252,12 +296,10 @@ export function GroupDetailPage() {
             transactions={groupTransactions}
             categories={categories}
             onEdit={(transaction) => {
-              // Navigate to transactions page with this transaction highlighted
-              navigate("/transactions", {
-                state: { editTransaction: transaction.id },
-              });
+              setEditingTransaction(transaction);
+              setIsTxDialogOpen(true);
             }}
-            onDelete={(id) => deleteTransaction(id)}
+            onDelete={(id) => setDeletingTransactionId(id)}
             isLoading={transactions === undefined}
           />
         </TabsContent>
@@ -270,7 +312,7 @@ export function GroupDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {group.members.map((member) => {
-                const memberBalance = balance?.balances[member.user_id];
+                const memberBalance = balance?.balances[member.user_id || member.id];
                 const isMe = member.user_id === user?.id;
                 return (
                   <div
@@ -281,7 +323,9 @@ export function GroupDetailPage() {
                       <div className="font-medium flex items-center gap-2">
                         {isMe
                           ? t("you")
-                          : member.user_id.substring(0, 8) + "..."}
+                          : member.user_id
+                            ? member.user_id.substring(0, 8) + "..."
+                            : t("guest")}
                         {isMe && <Badge variant="secondary">{t("you")}</Badge>}
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -295,11 +339,10 @@ export function GroupDetailPage() {
                         {(memberBalance?.hasPaid || 0).toFixed(2)}
                       </div>
                       <div
-                        className={`font-medium ${
-                          (memberBalance?.balance || 0) >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
+                        className={`font-medium ${(memberBalance?.balance || 0) >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                          }`}
                       >
                         {(memberBalance?.balance || 0) >= 0 ? "+" : ""}€
                         {(memberBalance?.balance || 0).toFixed(2)}
@@ -350,6 +393,29 @@ export function GroupDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog
+        open={!!deletingTransactionId}
+        onOpenChange={(open) => !open && setDeletingTransactionId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirm_delete_transaction")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("confirm_delete_transaction_description")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground"
+            >
+              {t("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

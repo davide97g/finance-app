@@ -61,7 +61,7 @@ export function useAutoGenerate() {
               id: transactionId,
               user_id: rt.user_id,
               group_id: rt.group_id || null,
-              paid_by_user_id: rt.paid_by_user_id || null,
+              paid_by_member_id: rt.paid_by_member_id || null,
               category_id: rt.category_id,
               context_id: rt.context_id,
               type: rt.type,

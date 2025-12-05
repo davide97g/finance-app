@@ -74,12 +74,13 @@ export function TransactionDetailDrawer({
   let mySharePercentage = 0;
 
   if (isGroupTransaction && user && "members" in group) {
-    const payerId = transaction.paid_by_user_id || transaction.user_id;
-    const payer = group.members.find((m) => m.user_id === payerId);
-
-    if (payerId === user.id) {
-      payerName = t("you");
+    if (transaction.paid_by_member_id) {
+      const payer = group.members.find((m) => m.id === transaction.paid_by_member_id);
+      payerName = payer?.displayName || t("unknown_user");
     } else {
+      // Fallback for old transactions or edge cases
+      const payerId = transaction.user_id;
+      const payer = group.members.find((m) => m.user_id === payerId);
       payerName = payer?.displayName || t("unknown_user");
     }
 

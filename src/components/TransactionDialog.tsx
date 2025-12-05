@@ -27,6 +27,8 @@ import {
 import { CategorySelector } from "@/components/CategorySelector";
 import { MoreHorizontal, ChevronDown } from "lucide-react";
 
+// ... (imports remain)
+
 interface TransactionDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -40,7 +42,8 @@ interface TransactionDialogProps {
         date: string;
         context_id?: string | null;
         group_id?: string | null;
-        paid_by_user_id?: string | null;
+        // paid_by_user_id removed
+        paid_by_member_id?: string | null;
     } | null;
     defaultGroupId?: string | null;
     defaultType?: "income" | "expense" | "investment";
@@ -54,7 +57,8 @@ export interface TransactionFormData {
     date: string;
     context_id: string | null;
     group_id: string | null;
-    paid_by_user_id: string | null;
+    // paid_by_user_id removed
+    paid_by_member_id: string | null;
 }
 
 export function TransactionDialog({
@@ -79,7 +83,7 @@ export function TransactionDialog({
         date: new Date().toISOString().split("T")[0],
         context_id: null,
         group_id: defaultGroupId,
-        paid_by_user_id: user?.id || null,
+        paid_by_member_id: null, // Initial value, computed if needed
     });
 
     // Reset form when dialog opens/closes or editing transaction changes
@@ -93,7 +97,7 @@ export function TransactionDialog({
                 date: editingTransaction.date,
                 context_id: editingTransaction.context_id || null,
                 group_id: editingTransaction.group_id || null,
-                paid_by_user_id: editingTransaction.paid_by_user_id || user?.id || null,
+                paid_by_member_id: editingTransaction.paid_by_member_id || null,
             });
             setMoreSectionOpen(
                 !!editingTransaction.group_id || !!editingTransaction.context_id
@@ -107,11 +111,22 @@ export function TransactionDialog({
                 date: new Date().toISOString().split("T")[0],
                 context_id: null,
                 group_id: defaultGroupId,
-                paid_by_user_id: user?.id || null,
+                paid_by_member_id: null,
             });
             setMoreSectionOpen(!!defaultGroupId);
         }
-    }, [open, editingTransaction, defaultGroupId, defaultType, user?.id]);
+    }, [open, editingTransaction, defaultGroupId, defaultType]); // removed user?.id dep
+
+    // Attempt to set default paid_by_member_id if group is selected but not set yet
+    useEffect(() => {
+        if (open && !editingTransaction && formData.group_id && !formData.paid_by_member_id && user?.id && groups) {
+            const group = groups.find(g => g.id === formData.group_id);
+            const myMember = group?.members.find(m => m.user_id === user.id);
+            if (myMember) {
+                setFormData(prev => ({ ...prev, paid_by_member_id: myMember.id }));
+            }
+        }
+    }, [open, editingTransaction, formData.group_id, groups, user?.id, formData.paid_by_member_id]);
 
     // Reset category when type changes (only when creating new transaction)
     useEffect(() => {
@@ -120,10 +135,14 @@ export function TransactionDialog({
         }
     }, [formData.type, editingTransaction]);
 
-    // Reset category when group changes (only for new transactions)
+    // Reset components when group changes
     useEffect(() => {
         if (editingTransaction === null || editingTransaction === undefined) {
-            setFormData((prev) => ({ ...prev, category_id: "" }));
+            // Logic kept simple
+            // If group changes to null, paid_by should reset to null
+            if (!formData.group_id) {
+                setFormData(prev => ({ ...prev, paid_by_member_id: null }));
+            }
         }
     }, [formData.group_id, editingTransaction]);
 
@@ -134,7 +153,18 @@ export function TransactionDialog({
             return;
         }
 
-        await onSubmit(formData);
+        // Ensure paid_by_member_id is set if group_id is set
+        // If not set via select (e.g. quick add), default to current user's member ID
+        let finalData = { ...formData };
+        if (finalData.group_id && !finalData.paid_by_member_id && groups && user?.id) {
+            const group = groups.find(g => g.id === finalData.group_id);
+            const member = group?.members.find(m => m.user_id === user.id);
+            if (member) {
+                finalData.paid_by_member_id = member.id;
+            }
+        }
+
+        await onSubmit(finalData);
         onOpenChange(false);
     };
 
@@ -149,6 +179,14 @@ export function TransactionDialog({
             default:
                 return "";
         }
+    };
+
+    // Helper to handle Payer Selection change
+    const handlePayerChange = (memberId: string) => {
+        setFormData({
+            ...formData,
+            paid_by_member_id: memberId,
+        });
     };
 
     return (
@@ -166,7 +204,7 @@ export function TransactionDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Base Fields - Collapse when More is opened */}
+                    {/* ... (Collapsible Base Fields remain same) ... */}
                     <Collapsible open={!moreSectionOpen}>
                         <CollapsibleContent className="space-y-4">
                             <div className="space-y-2">
@@ -308,16 +346,26 @@ export function TransactionDialog({
                                             </label>
                                             <Select
                                                 value={formData.group_id || "none"}
-                                                onValueChange={(value) =>
+                                                onValueChange={(value) => {
+                                                    const newGroupId = value === "none" ? null : value;
+                                                    // When group changes, reset payer to current user (as default Member) if in group
+                                                    // or null if none
+                                                    let newMemberId: string | null = null;
+
+                                                    if (newGroupId && user?.id && groups) {
+                                                        const group = groups.find(g => g.id === newGroupId);
+                                                        const member = group?.members.find(m => m.user_id === user.id);
+                                                        if (member) {
+                                                            newMemberId = member.id;
+                                                        }
+                                                    }
+
                                                     setFormData({
                                                         ...formData,
-                                                        group_id: value === "none" ? null : value,
-                                                        paid_by_user_id:
-                                                            value === "none"
-                                                                ? null
-                                                                : formData.paid_by_user_id || user?.id || null,
+                                                        group_id: newGroupId,
+                                                        paid_by_member_id: newMemberId,
                                                     })
-                                                }
+                                                }}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={t("select_group")} />
@@ -341,13 +389,8 @@ export function TransactionDialog({
                                                     {t("paid_by")}
                                                 </label>
                                                 <Select
-                                                    value={formData.paid_by_user_id || user?.id || ""}
-                                                    onValueChange={(value) =>
-                                                        setFormData({
-                                                            ...formData,
-                                                            paid_by_user_id: value,
-                                                        })
-                                                    }
+                                                    value={formData.paid_by_member_id || ""}
+                                                    onValueChange={handlePayerChange}
                                                 >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder={t("select_payer")} />
@@ -358,11 +401,13 @@ export function TransactionDialog({
                                                             ?.members.map((member) => (
                                                                 <SelectItem
                                                                     key={member.id}
-                                                                    value={member.user_id}
+                                                                    value={member.id}
                                                                 >
-                                                                    {member.user_id === user?.id
-                                                                        ? t("me")
-                                                                        : member.displayName || member.user_id.substring(0, 8)}
+                                                                    {member.is_guest
+                                                                        ? (member.guest_name || "Guest")
+                                                                        : (member.user_id === user?.id
+                                                                            ? t("me")
+                                                                            : member.displayName || member.user_id?.substring(0, 8))}
                                                                 </SelectItem>
                                                             ))}
                                                     </SelectContent>

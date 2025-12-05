@@ -192,7 +192,7 @@ describe("useGroups", () => {
     const { result } = renderHook(() => useGroups());
 
     await act(async () => {
-      await result.current.addMember("group-1", "new-user-id", 25);
+      await result.current.addGroupMember("group-1", "new-user-id", false, 25);
     });
 
     expect(db.group_members.add).toHaveBeenCalledWith(
@@ -212,7 +212,7 @@ describe("useGroups", () => {
     const { result } = renderHook(() => useGroups());
 
     await act(async () => {
-      await result.current.removeMember("member-1");
+      await result.current.removeGroupMember("member-1");
     });
 
     expect(db.group_members.update).toHaveBeenCalledWith(
@@ -291,7 +291,7 @@ describe("useGroups", () => {
         group_id: "group-1",
         type: "expense",
         amount: 100,
-        paid_by_user_id: "user-1",
+        paid_by_member_id: "member-1",
         deleted_at: null,
       },
       {
@@ -299,7 +299,7 @@ describe("useGroups", () => {
         group_id: "group-1",
         type: "expense",
         amount: 50,
-        paid_by_user_id: "user-2",
+        paid_by_member_id: "member-2",
         deleted_at: null,
       },
     ];

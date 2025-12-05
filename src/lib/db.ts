@@ -42,8 +42,12 @@ export interface GroupMember {
   id: string;
   /** Reference to parent group */
   group_id: string;
-  /** Reference to member user */
-  user_id: string;
+  /** Reference to member user (optional for guests) */
+  user_id?: string | null;
+  /** Name for guest users */
+  guest_name?: string | null;
+  /** Flag for guest users */
+  is_guest?: boolean;
   /** Expense share percentage (0-100) */
   share: number;
   /** When the user joined (ISO 8601) */
@@ -68,8 +72,8 @@ export interface Transaction {
   user_id: string;
   /** Group ID for shared expenses (null = personal) */
   group_id?: string | null;
-  /** Who paid in group context */
-  paid_by_user_id?: string | null;
+  /** Reference to group_members.id (precise payer) */
+  paid_by_member_id?: string | null;
   /** Reference to category */
   category_id: string;
   /** Optional context reference */
@@ -92,9 +96,6 @@ export interface Transaction {
   sync_token?: number;
 }
 
-/**
- * Transaction category with hierarchical support.
- */
 /**
  * Transaction category with hierarchical support.
  */
@@ -157,8 +158,8 @@ export interface RecurringTransaction {
   user_id: string;
   /** Group ID for shared recurring (null = personal) */
   group_id?: string | null;
-  /** Who pays in group context */
-  paid_by_user_id?: string | null;
+  /** Reference to group_members.id (precise payer) */
+  paid_by_member_id?: string | null;
   /** Transaction type */
   type: "income" | "expense" | "investment";
   /** Reference to category */
@@ -353,6 +354,23 @@ export class AppDatabase extends Dexie {
       contexts: "id, user_id, pendingSync, deleted_at",
       recurring_transactions:
         "id, user_id, group_id, type, frequency, pendingSync, deleted_at",
+      user_settings: "user_id",
+      category_budgets:
+        "id, user_id, category_id, period, pendingSync, deleted_at",
+      profiles: "id, pendingSync",
+    });
+
+    // Version 5: Add mock users (guests) support
+    this.version(5).stores({
+      groups: "id, created_by, pendingSync, deleted_at",
+      group_members:
+        "id, group_id, user_id, guest_name, is_guest, pendingSync, removed_at", // Added guest fields
+      transactions:
+        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at", // Added paid_by_member_id
+      categories: "id, user_id, group_id, type, pendingSync, deleted_at",
+      contexts: "id, user_id, pendingSync, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, paid_by_member_id, type, frequency, pendingSync, deleted_at", // Added paid_by_member_id
       user_settings: "user_id",
       category_budgets:
         "id, user_id, category_id, period, pendingSync, deleted_at",

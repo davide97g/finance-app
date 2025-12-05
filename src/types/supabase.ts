@@ -312,7 +312,7 @@ export interface Database {
                     group_id: string | null
                     id: string
                     last_generated: string | null
-                    paid_by_user_id: string | null
+                    paid_by_member_id: string | null
                     start_date: string
                     sync_token: number | null
                     type: "income" | "expense" | "investment"
@@ -332,7 +332,7 @@ export interface Database {
                     group_id?: string | null
                     id?: string
                     last_generated?: string | null
-                    paid_by_user_id?: string | null
+                    paid_by_member_id?: string | null
                     start_date: string
                     sync_token?: number | null
                     type: "income" | "expense" | "investment"
@@ -352,7 +352,7 @@ export interface Database {
                     group_id?: string | null
                     id?: string
                     last_generated?: string | null
-                    paid_by_user_id?: string | null
+                    paid_by_member_id?: string | null
                     start_date?: string
                     sync_token?: number | null
                     type?: "income" | "expense" | "investment"
@@ -382,10 +382,10 @@ export interface Database {
                         referencedColumns: ["id"]
                     },
                     {
-                        foreignKeyName: "recurring_transactions_paid_by_user_id_fkey"
-                        columns: ["paid_by_user_id"]
+                        foreignKeyName: "recurring_transactions_paid_by_member_id_fkey"
+                        columns: ["paid_by_member_id"]
                         isOneToOne: false
-                        referencedRelation: "users"
+                        referencedRelation: "group_members"
                         referencedColumns: ["id"]
                     },
                     {
@@ -408,7 +408,7 @@ export interface Database {
                     description: string
                     group_id: string | null
                     id: string
-                    paid_by_user_id: string | null
+                    paid_by_member_id: string | null
                     sync_token: number | null
                     type: "income" | "expense" | "investment"
                     updated_at: string | null
@@ -424,7 +424,7 @@ export interface Database {
                     description: string
                     group_id?: string | null
                     id?: string
-                    paid_by_user_id?: string | null
+                    paid_by_member_id?: string | null
                     sync_token?: number | null
                     type: "income" | "expense" | "investment"
                     updated_at?: string | null
@@ -440,7 +440,7 @@ export interface Database {
                     description?: string
                     group_id?: string | null
                     id?: string
-                    paid_by_user_id?: string | null
+                    paid_by_member_id?: string | null
                     sync_token?: number | null
                     type?: "income" | "expense" | "investment"
                     updated_at?: string | null
@@ -469,10 +469,10 @@ export interface Database {
                         referencedColumns: ["id"]
                     },
                     {
-                        foreignKeyName: "transactions_paid_by_user_id_fkey"
-                        columns: ["paid_by_user_id"]
+                        foreignKeyName: "transactions_paid_by_member_id_fkey"
+                        columns: ["paid_by_member_id"]
                         isOneToOne: false
-                        referencedRelation: "users"
+                        referencedRelation: "group_members"
                         referencedColumns: ["id"]
                     },
                     {
