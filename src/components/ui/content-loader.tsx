@@ -1,10 +1,23 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useMobile } from "@/hooks/useMobile";
 
 interface ContentLoaderProps {
     variant: "transaction" | "card" | "chart" | "table-row" | "category-mobile" | "category-desktop" | "group-card";
     count?: number;
     className?: string;
+    /** If true, automatically adjusts count based on screen size (mobile: 60% of count, desktop: full count) */
+    adaptive?: boolean;
+}
+
+/**
+ * Get adaptive skeleton count based on screen size
+ * Mobile shows fewer skeletons for faster perceived loading
+ */
+function getAdaptiveSkeletonCount(count: number, isMobile: boolean): number {
+    if (!isMobile) return count;
+    // Mobile: show 60% of desktop count (min 2, max 5)
+    return Math.max(2, Math.min(5, Math.ceil(count * 0.6)));
 }
 
 /**
@@ -18,11 +31,14 @@ interface ContentLoaderProps {
  * // Single skeleton
  * <ContentLoader variant="transaction" count={1} />
  * 
- * // Multiple skeletons
- * <ContentLoader variant="card" count={5} />
+ * // Multiple skeletons with adaptive count
+ * <ContentLoader variant="card" count={8} adaptive />
  * ```
  */
-export function ContentLoader({ variant, count = 5, className }: ContentLoaderProps) {
+export function ContentLoader({ variant, count = 5, className, adaptive = false }: ContentLoaderProps) {
+    const isMobile = useMobile();
+    const actualCount = adaptive ? getAdaptiveSkeletonCount(count, isMobile) : count;
+
     const renderSkeleton = () => {
         switch (variant) {
             case "transaction":
@@ -155,7 +171,7 @@ export function ContentLoader({ variant, count = 5, className }: ContentLoaderPr
 
     return (
         <div className={cn("space-y-3 pointer-events-none", className)}>
-            {Array.from({ length: count }).map((_, i) => (
+            {Array.from({ length: actualCount }).map((_, i) => (
                 <div
                     key={i}
                     className="animate-slide-in-up opacity-0 fill-mode-forwards"

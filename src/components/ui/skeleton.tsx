@@ -13,10 +13,13 @@ function Skeleton({
             className={cn(
                 // Base styles
                 "relative overflow-hidden rounded-md bg-muted",
-                // Shimmer effect
+                // Shimmer effect - optimized for both light and dark mode
                 "before:absolute before:inset-0",
                 "before:-translate-x-full before:animate-shimmer",
-                "before:bg-gradient-to-r before:from-transparent before:via-muted-foreground/10 before:to-transparent",
+                // Enhanced gradient for dark mode visibility
+                "before:bg-gradient-to-r before:from-transparent",
+                "before:via-muted-foreground/[0.08] dark:before:via-muted-foreground/[0.15]",
+                "before:to-transparent",
                 // Performance optimization
                 "will-change-transform",
                 className

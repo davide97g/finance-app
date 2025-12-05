@@ -448,6 +448,13 @@
   .animate-shimmer {
     animation: shimmer 2s cubic-bezier(0.4, 0.0, 0.6, 1) infinite;
   }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-shimmer {
+      animation: none;
+    }
+  }
 }
 
 :root {
