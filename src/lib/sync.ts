@@ -517,7 +517,12 @@ export class SyncManager {
 
         console.log(`[Sync] Pulled ${data.length} items from ${tableName}`);
 
-        await db.transaction("rw", db.table(tableName), async () => {
+        const tables = [db.table(tableName)];
+        if (tableName === "transactions") {
+          tables.push(db.group_members);
+        }
+
+        await db.transaction("rw", tables, async () => {
           for (const item of data) {
             const shouldUpdate = await this.shouldUpdateLocal(tableName, item);
 
@@ -601,7 +606,12 @@ export class SyncManager {
 
         console.log(`[Sync] Full pull: ${data.length} items from ${tableName}`);
 
-        await db.transaction("rw", db.table(tableName), async () => {
+        const tables = [db.table(tableName)];
+        if (tableName === "transactions") {
+          tables.push(db.group_members);
+        }
+
+        await db.transaction("rw", tables, async () => {
           for (const item of data) {
             const shouldUpdate = await this.shouldUpdateLocal(tableName, item);
 
