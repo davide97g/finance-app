@@ -727,22 +727,24 @@ export function CategoriesPage() {
         <h1 className="text-2xl font-bold">{t("categories")}</h1>
         <div className="flex items-center gap-2">
           {/* Show Inactive Toggle */}
-          <button
+          <Button
+            variant="outline"
+            size={showInactive ? undefined : "icon"}
             onClick={() => setShowInactive(!showInactive)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${showInactive
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted/50"
+            className={`transition-colors ${showInactive
+                ? "bg-primary/10 text-primary border-primary/20 px-3"
+                : "text-muted-foreground w-9 h-9 px-0"
               }`}
           >
             {showInactive ? (
-              <Eye className="h-3.5 w-3.5" />
+              <Eye className="h-4 w-4" />
             ) : (
-              <EyeOff className="h-3.5 w-3.5" />
+              <EyeOff className="h-4 w-4" />
             )}
-            <span className="hidden sm:inline">
+            <span className="sr-only sm:not-sr-only sm:ml-2">
               {t("show_inactive") || "Inactive"}
             </span>
-          </button>
+          </Button>
 
           {/* Group Filter Dropdown */}
           {groups.length > 0 && (
