@@ -2,7 +2,7 @@
 
 This document provides a detailed technical overview of the Personal Expense Tracker PWA architecture, design patterns, and implementation details.
 
-## 🎉 What's New in v0.7.0
+## 🎉 What's New in v0.7.4
 
 ### User Identity System (Public Profiles)
 - **`public.profiles` table** with automatic user creation trigger

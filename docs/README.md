@@ -2,7 +2,7 @@
 
 A modern, offline-first Progressive Web App for managing personal finances. Track your income, expenses, and investments with a beautiful, responsive interface that works seamlessly online and offline.
 
-![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.7.4-blue.svg)
 ![React](https://img.shields.io/badge/React-19.2-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)

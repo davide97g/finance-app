@@ -7,10 +7,12 @@ This document contains all remaining test file templates for the PWA Expense Tra
 - `src/lib/__tests__/utils.test.ts`
 - `src/lib/__tests__/icons.test.ts`
 - `src/lib/__tests__/theme-colors.test.ts`
+- `src/lib/__tests__/db.test.ts`
+- `src/lib/__tests__/validation.test.ts`
 - `src/hooks/__tests__/useMobile.test.ts`
 - `src/hooks/__tests__/useAuth.test.ts`
-- `src/components/__tests__/DeleteConfirmDialog.test.tsx`
-- `src/components/__tests__/SyncStatus.test.tsx`
+- `src/hooks/__tests__/useGroups.test.ts`
+- `src/hooks/__tests__/useSync.test.ts`
 
 ## Installation Required
 

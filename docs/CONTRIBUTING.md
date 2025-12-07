@@ -88,7 +88,7 @@ Install recommended extensions:
 - **ESLint** - Code linting
 - **Prettier** - Code formatting
 - **Tailwind CSS IntelliSense** - Tailwind autocomplete
-- **TypeScript Vue Plugin (Volar)** - Better TypeScript support
+
 
 ## Development Workflow
 
