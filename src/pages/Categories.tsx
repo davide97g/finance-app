@@ -732,8 +732,8 @@ export function CategoriesPage() {
             size={showInactive ? undefined : "icon"}
             onClick={() => setShowInactive(!showInactive)}
             className={`transition-colors ${showInactive
-                ? "bg-primary/10 text-primary border-primary/20 px-3"
-                : "text-muted-foreground w-9 h-9 px-0"
+              ? "bg-primary/10 text-primary border-primary/20 px-3"
+              : "text-muted-foreground w-9 h-9 px-0"
               }`}
           >
             {showInactive ? (
@@ -1008,12 +1008,15 @@ export function CategoriesPage() {
                               step="0.01"
                               min="0"
                               value={formData.budget}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  budget: e.target.value,
-                                })
-                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "" || parseFloat(value) >= 0) {
+                                  setFormData({
+                                    ...formData,
+                                    budget: value,
+                                  })
+                                }
+                              }}
                               placeholder="0.00"
                             />
                           </div>
@@ -1285,7 +1288,12 @@ export function CategoriesPage() {
               <Input
                 type="number"
                 value={budgetAmount}
-                onChange={(e) => setBudgetAmount(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || parseFloat(value) >= 0) {
+                    setBudgetAmount(e.target.value)
+                  }
+                }}
                 placeholder="0.00"
                 min="0"
                 step="0.01"

@@ -26,7 +26,9 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 import { CategorySelector } from "@/components/CategorySelector";
-import { ListFilter, SlidersHorizontal } from "lucide-react";
+import { ListFilter, SlidersHorizontal, Calculator as CalculatorIcon } from "lucide-react";
+import { Calculator } from "@/components/Calculator";
+import { useRef } from "react";
 
 // ... (imports remain)
 
@@ -86,6 +88,15 @@ export function TransactionDialog({
         group_id: defaultGroupId,
         paid_by_member_id: null, // Initial value, computed if needed
     });
+
+    // Calculator State
+    const [calcState, setCalcState] = useState<{
+        prevValue: number | null;
+        operation: string | null;
+    }>({ prevValue: null, operation: null });
+    const [showCalculator, setShowCalculator] = useState(false);
+    const amountInputRef = useRef<HTMLInputElement>(null);
+    const calculatorContainerRef = useRef<HTMLDivElement>(null);
 
     // Reset form when dialog opens/closes or editing transaction changes
     useEffect(() => {
@@ -197,6 +208,61 @@ export function TransactionDialog({
         });
     };
 
+    const performCalculation = (currentValue: number, prevValue: number, op: string) => {
+        switch (op) {
+            case "+": return prevValue + currentValue;
+            case "-": return prevValue - currentValue;
+            case "*": return prevValue * currentValue;
+            case "/": return prevValue / currentValue;
+            default: return currentValue;
+        }
+    };
+
+    const handleOperation = (op: string) => {
+        const currentVal = parseFloat(formData.amount);
+        if (isNaN(currentVal)) return;
+
+        if (calcState.prevValue !== null && calcState.operation) {
+            // Chain calculation: 10 + 5 (+) -> 15 stored, (+) active
+            const result = performCalculation(currentVal, calcState.prevValue, calcState.operation);
+            setCalcState({ prevValue: result, operation: op });
+            setFormData(prev => ({ ...prev, amount: "" })); // Clear for next input
+        } else {
+            // First operation: 10 (+) -> 10 stored, (+) active
+            setCalcState({ prevValue: currentVal, operation: op });
+            setFormData(prev => ({ ...prev, amount: "" }));
+        }
+
+        // Return focus to input
+        amountInputRef.current?.focus();
+    };
+
+    const handleEqual = () => {
+        const currentVal = parseFloat(formData.amount);
+        if (isNaN(currentVal) || calcState.prevValue === null || !calcState.operation) return;
+
+        const result = performCalculation(currentVal, calcState.prevValue, calcState.operation);
+
+        // Format result
+        const formatted = Math.round(result * 100) / 100;
+
+        setFormData(prev => ({ ...prev, amount: formatted.toString() }));
+        setCalcState({ prevValue: null, operation: null }); // Reset
+
+        // Return focus to input
+        amountInputRef.current?.focus();
+    };
+
+    const handleBlur = (e: React.FocusEvent) => {
+        // Check if the new focus is still within the container
+        if (
+            calculatorContainerRef.current &&
+            !calculatorContainerRef.current.contains(e.relatedTarget as Node)
+        ) {
+            setShowCalculator(false);
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px] w-[95vw] rounded-lg">
@@ -265,23 +331,69 @@ export function TransactionDialog({
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t("amount")}</label>
-                                    <Input
-                                        type="number"
-                                        inputMode="decimal"
-                                        step="0.01"
-                                        value={formData.amount}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            // Limit to 2 decimal places
-                                            const match = value.match(/^-?\d*\.?\d{0,2}$/);
-                                            if (match || value === "") {
-                                                setFormData({ ...formData, amount: value });
-                                            }
-                                        }}
-                                        required
-                                    />
+                                <div
+                                    className="space-y-2"
+                                    ref={calculatorContainerRef}
+                                    onBlur={handleBlur}
+                                >
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium">{t("amount")}</label>
+                                        {calcState.prevValue !== null && calcState.operation && (
+                                            <span className="text-xs text-muted-foreground animate-pulse">
+                                                {calcState.prevValue} {calcState.operation} ...
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            ref={amountInputRef}
+                                            type="number"
+                                            inputMode="decimal"
+                                            step="0.01"
+                                            value={formData.amount}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                // Allow empty string or positive decimal numbers
+                                                const match = value.match(/^\d*\.?\d{0,2}$/);
+                                                if (match) {
+                                                    setFormData({ ...formData, amount: value });
+                                                }
+                                            }}
+                                            required
+                                            placeholder={calcState.operation ? "..." : "0.00"}
+                                            onFocus={() => setShowCalculator(true)}
+                                            className="flex-1"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant={showCalculator ? "secondary" : "outline"}
+                                            size="icon"
+                                            className="shrink-0"
+                                            onClick={() => {
+                                                const newState = !showCalculator;
+                                                setShowCalculator(newState);
+                                                if (newState) {
+                                                    setTimeout(() => amountInputRef.current?.focus(), 0);
+                                                }
+                                            }}
+                                        >
+                                            <CalculatorIcon className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <div
+                                        className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${showCalculator ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                                            }`}
+                                    >
+                                        <div className="overflow-hidden">
+                                            <div className="pt-1">
+                                                <Calculator
+                                                    onOperation={handleOperation}
+                                                    onEqual={handleEqual}
+                                                    activeOperation={calcState.operation}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">

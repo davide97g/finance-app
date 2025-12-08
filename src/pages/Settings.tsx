@@ -48,7 +48,6 @@ import {
   FileJson,
   X,
   CheckCircle2,
-  User,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
@@ -97,7 +96,7 @@ interface ImportStats {
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
   const { isOnline } = useOnlineSync();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const [lastSyncTime, setLastSyncTime] = useState<Date | undefined>();
@@ -458,7 +457,7 @@ export function SettingsPage() {
               amount: parseFloat(vueRec.amount),
               description: vueRec.description || "",
               frequency: frequency,
-              start_date: vueRec.startDate.split("T")[0],
+              start_date: (vueRec.nextOccurrence || vueRec.startDate).split("T")[0],
               active: vueRec.isActive ? 1 : 0,
               deleted_at: null,
               pendingSync: 1,
@@ -860,15 +859,7 @@ export function SettingsPage() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success(t("logout_success"));
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast.error(t("logout_error"));
-    }
-  };
+
 
   if (!settings) {
     return (
@@ -1022,9 +1013,19 @@ export function SettingsPage() {
                   defaultValue={settings.monthly_budget ?? ""}
                   onBlur={(e) => {
                     const value = e.target.value;
+                    if (value && parseFloat(value) < 0) {
+                      e.target.value = "";
+                      updateSettings({ monthly_budget: null });
+                      return;
+                    }
                     updateSettings({
                       monthly_budget: value ? parseFloat(value) : null,
                     });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e") {
+                      e.preventDefault();
+                    }
                   }}
                   className="max-w-[200px]"
                 />
@@ -1233,38 +1234,7 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* 5. Account Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("account_actions")}</CardTitle>
-            <CardDescription>{t("account_actions_desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label className="text-base flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  {t("logout")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("logout_desc")}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (window.confirm(t("confirm_logout_desc"))) {
-                    handleSignOut();
-                  }
-                }}
-                className="w-full sm:w-auto"
-              >
-                {t("logout")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
 
       <Dialog open={showImportSuccess} onOpenChange={setShowImportSuccess}>

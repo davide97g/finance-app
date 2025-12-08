@@ -58,6 +58,8 @@ type LocalTableMap = {
 // CONFIGURATION
 // ============================================================================
 
+const SUPABASE_LIMIT = 1000;
+
 const SYNC_CONFIG = {
   /** Maximum retry attempts for a single item */
   maxRetries: 3,
@@ -599,96 +601,112 @@ export class SyncManager {
     const newGroupTransactions: any[] = [];
 
     for (const tableName of TABLES) {
-      try {
-        const { data, error } = await supabase
-          .from(tableName)
-          .select("*")
-          .gt("sync_token", lastSyncToken);
+      let page = 0;
+      let hasMore = true;
 
-        if (error) {
-          console.error(`[Sync] Failed to pull ${tableName}:`, error);
-          this.trackPullError(tableName, error.message);
-          continue;
-        }
+      while (hasMore) {
+        try {
+          const { data, error } = await supabase
+            .from(tableName)
+            .select("*")
+            .gt("sync_token", lastSyncToken)
+            .range(page * SUPABASE_LIMIT, (page + 1) * SUPABASE_LIMIT - 1);
 
-        if (!data || data.length === 0) continue;
-
-        console.log(`[Sync] Pulled ${data.length} items from ${tableName}`);
-
-        const tables = [db.table(tableName)];
-        if (tableName === "transactions") {
-          tables.push(db.group_members);
-        }
-
-        await db.transaction("rw", tables, async () => {
-          for (const item of data) {
-            const updateResult = await this.shouldUpdateLocal(tableName, item);
-
-            if (!updateResult.shouldUpdate) {
-              // Only log conflicts (pending changes), skip silent for already-synced items
-              if (updateResult.reason === 'pending') {
-                console.log(
-                  `[Sync] Conflict: ${tableName} ${item.id} has pending local changes`
-                );
-              }
-              // Don't log 'already_synced' - too noisy for normal operation
-              continue;
-            }
-
-            // Track new group transactions for toast notification
-            if (
-              tableName === "transactions" &&
-              "group_id" in item &&
-              item.group_id &&
-              "user_id" in item &&
-              item.user_id !== userId
-            ) {
-              // Check if I am a member of this group
-              const membership = await db.group_members
-                .where("group_id")
-                .equals(item.group_id as string)
-                .and((m: any) => m.user_id === userId && !m.removed_at)
-                .first();
-
-              if (membership) {
-                newGroupTransactions.push(item);
-              }
-            }
-
-            // Calculate year_month for transactions if missing
-            const localItem = this.prepareItemForLocal(item, tableName);
-            await db.table(tableName).put(localItem);
-
-            if ((item.sync_token || 0) > maxToken) {
-              maxToken = item.sync_token || 0;
-            }
+          if (error) {
+            console.error(`[Sync] Failed to pull ${tableName}:`, error);
+            this.trackPullError(tableName, error.message);
+            hasMore = false; // Stop on error
+            continue;
           }
-        });
-      } catch (error) {
-        console.error(`[Sync] Error pulling ${tableName}:`, error);
-        this.trackPullError(tableName, (error as Error).message);
+
+          if (!data || data.length === 0) continue;
+
+          console.log(`[Sync] Pulled ${data.length} items from ${tableName}`);
+
+          const tables = [db.table(tableName)];
+          if (tableName === "transactions") {
+            tables.push(db.group_members);
+          }
+
+          await db.transaction("rw", tables, async () => {
+            for (const item of data) {
+              const updateResult = await this.shouldUpdateLocal(tableName, item);
+
+              if (!updateResult.shouldUpdate) {
+                // Only log conflicts (pending changes), skip silent for already-synced items
+                if (updateResult.reason === 'pending') {
+                  console.log(
+                    `[Sync] Conflict: ${tableName} ${item.id} has pending local changes`
+                  );
+                }
+                // Don't log 'already_synced' - too noisy for normal operation
+                continue;
+              }
+
+              // Track new group transactions for toast notification
+              if (
+                tableName === "transactions" &&
+                "group_id" in item &&
+                item.group_id &&
+                "user_id" in item &&
+                item.user_id !== userId
+              ) {
+                // Check if I am a member of this group
+                const membership = await db.group_members
+                  .where("group_id")
+                  .equals(item.group_id as string)
+                  .and((m: any) => m.user_id === userId && !m.removed_at)
+                  .first();
+
+                if (membership) {
+                  newGroupTransactions.push(item);
+                }
+              }
+
+              // Calculate year_month for transactions if missing
+              const localItem = this.prepareItemForLocal(item, tableName);
+              await db.table(tableName).put(localItem);
+
+              if ((item.sync_token || 0) > maxToken) {
+                maxToken = item.sync_token || 0;
+              }
+            }
+          });
+
+          // Check if we need to fetch more pages
+          if (data.length < SUPABASE_LIMIT) {
+            hasMore = false;
+          } else {
+            page++;
+            console.log(`[Sync] Fetching next page for ${tableName} (page ${page})...`);
+          }
+        } catch (error) {
+          console.error(`[Sync] Error pulling ${tableName}:`, error);
+          this.trackPullError(tableName, (error as Error).message);
+          hasMore = false; // Stop on error
+        }
       }
-    }
 
-    // Update last sync token
-    if (maxToken > lastSyncToken) {
-      await this.updateLastSyncToken(userId, maxToken, userSettings);
-    }
+      // Update last sync token
+      if (maxToken > lastSyncToken) {
+        await this.updateLastSyncToken(userId, maxToken, userSettings);
+      }
 
-    // Show toast notification for new and modified group transactions  
-    await this.showGroupTransactionToast(newGroupTransactions, "new");
-    const modifiedGroupTransactions: any[] = []; // Track modified separately if needed
-    await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
+      // Show toast notification for new and modified group transactions  
+      await this.showGroupTransactionToast(newGroupTransactions, "new");
+      const modifiedGroupTransactions: any[] = []; // Track modified separately if needed
+      await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
 
-    // Process recurring transactions
-    const addedCount = await processRecurringTransactions();
-    if (addedCount > 0) {
-      toast.success(
-        i18n.t("recurring_expenses_added", {
-          count: addedCount,
-          defaultValue: "{{count}} recurring expenses added",
-        })
-      );
+      // Process recurring transactions
+      const addedCount = await processRecurringTransactions();
+      if (addedCount > 0) {
+        toast.success(
+          i18n.t("recurring_expenses_added", {
+            count: addedCount,
+            defaultValue: "{{count}} recurring expenses added",
+          })
+        );
+      }
     }
   }
 
@@ -702,103 +720,120 @@ export class SyncManager {
     const modifiedGroupTransactions: any[] = [];
 
     for (const tableName of TABLES) {
-      try {
-        // Query ALL data, no sync_token filter
-        const { data, error } = await supabase.from(tableName).select("*");
+      let page = 0;
+      let hasMore = true;
 
-        if (error) {
-          console.error(`[Sync] Failed to pull all ${tableName}:`, error);
-          this.trackPullError(tableName, error.message);
-          continue;
-        }
+      while (hasMore) {
+        try {
+          // Query ALL data, no sync_token filter
+          const { data, error } = await supabase
+            .from(tableName)
+            .select("*")
+            .range(page * SUPABASE_LIMIT, (page + 1) * SUPABASE_LIMIT - 1);
 
-        if (!data || data.length === 0) {
-          console.log(`[Sync] No data in ${tableName}`);
-          continue;
-        }
+          if (error) {
+            console.error(`[Sync] Failed to pull all ${tableName}:`, error);
+            this.trackPullError(tableName, error.message);
+            continue;
+          }
 
-        console.log(`[Sync] Full pull: ${data.length} items from ${tableName}`);
+          if (!data || data.length === 0) {
+            console.log(`[Sync] No data in ${tableName}`);
+            continue;
+          }
 
-        const tables = [db.table(tableName)];
-        if (tableName === "transactions") {
-          tables.push(db.group_members);
-        }
+          console.log(`[Sync] Full pull: ${data.length} items from ${tableName}`);
 
-        await db.transaction("rw", tables, async () => {
-          for (const item of data) {
-            const updateResult = await this.shouldUpdateLocal(tableName, item);
+          const tables = [db.table(tableName)];
+          if (tableName === "transactions") {
+            tables.push(db.group_members);
+          }
 
-            if (!updateResult.shouldUpdate) {
-              // Only log conflicts (pending changes), skip silent for already-synced items
-              if (updateResult.reason === 'pending') {
-                console.log(
-                  `[Sync] Conflict: ${tableName} ${item.id} has pending local changes`
-                );
+          await db.transaction("rw", tables, async () => {
+            for (const item of data) {
+              const updateResult = await this.shouldUpdateLocal(tableName, item);
+
+              if (!updateResult.shouldUpdate) {
+                // Only log conflicts (pending changes), skip silent for already-synced items
+                if (updateResult.reason === 'pending') {
+                  console.log(
+                    `[Sync] Conflict: ${tableName} ${item.id} has pending local changes`
+                  );
+                }
+                continue;
               }
-              continue;
-            }
 
-            // Track new group transactions for toast notification
-            if (
-              tableName === "transactions" &&
-              "group_id" in item &&
-              item.group_id &&
-              "user_id" in item &&
-              item.user_id !== userId
-            ) {
-              // Check if I am a member of this group
-              const membership = await db.group_members
-                .where("group_id")
-                .equals(item.group_id as string)
-                .and((m: any) => m.user_id === userId && !m.removed_at)
-                .first();
+              // Track new group transactions for toast notification
+              if (
+                tableName === "transactions" &&
+                "group_id" in item &&
+                item.group_id &&
+                "user_id" in item &&
+                item.user_id !== userId
+              ) {
+                // Check if I am a member of this group
+                const membership = await db.group_members
+                  .where("group_id")
+                  .equals(item.group_id as string)
+                  .and((m: any) => m.user_id === userId && !m.removed_at)
+                  .first();
 
-              if (membership) {
-                // Check if this is a new or modified transaction
-                const existingTxn = await db.transactions.get(item.id);
-                if (existingTxn) {
-                  modifiedGroupTransactions.push(item);
-                } else {
-                  newGroupTransactions.push(item);
+                if (membership) {
+                  // Check if this is a new or modified transaction
+                  const existingTxn = await db.transactions.get(item.id);
+                  if (existingTxn) {
+                    modifiedGroupTransactions.push(item);
+                  } else {
+                    newGroupTransactions.push(item);
+                  }
                 }
               }
-            }
 
-            // Calculate year_month for transactions if missing
-            const localItem = this.prepareItemForLocal(item, tableName);
-            await db.table(tableName).put(localItem);
+              // Calculate year_month for transactions if missing
+              const localItem = this.prepareItemForLocal(item, tableName);
+              await db.table(tableName).put(localItem);
 
-            // Track max sync_token for future delta syncs
-            if (item.sync_token && item.sync_token > maxToken) {
-              maxToken = item.sync_token;
+              // Track max sync_token for future delta syncs
+              if (item.sync_token && item.sync_token > maxToken) {
+                maxToken = item.sync_token;
+              }
             }
+          });
+
+          // Check if we need to fetch more pages
+          if (data.length < SUPABASE_LIMIT) {
+            hasMore = false;
+          } else {
+            page++;
+            console.log(`[Sync] Full sync: Fetching next page for ${tableName} (page ${page})...`);
           }
-        });
-      } catch (error) {
-        console.error(`[Sync] Error pulling all ${tableName}:`, error);
-        this.trackPullError(tableName, (error as Error).message);
+        } catch (error) {
+          console.error(`[Sync] Error pulling all ${tableName}:`, error);
+          this.trackPullError(tableName, (error as Error).message);
+          hasMore = false; // Stop on error
+        }
       }
-    }
 
-    // Update last sync token
-    if (maxToken > 0) {
-      const userSettings = await db.user_settings.get(userId);
-      await this.updateLastSyncToken(userId, maxToken, userSettings);
-    }
+      // Update last sync token
+      if (maxToken > 0) {
+        const userSettings = await db.user_settings.get(userId);
+        await this.updateLastSyncToken(userId, maxToken, userSettings);
+      }
 
-    // Show toast notification for new and modified group transactions
-    await this.showGroupTransactionToast(newGroupTransactions, "new");
-    await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
+      // Show toast notification for new and modified group transactions
+      await this.showGroupTransactionToast(newGroupTransactions, "new");
+      await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
 
-    // Process recurring transactions
-    const addedCount = await processRecurringTransactions();
-    if (addedCount > 0) {
-      toast.success(
-        i18n.t("recurring_expenses_added", {
-          count: addedCount,
-          defaultValue: "{{count}} recurring expenses added",
-        })
-      );
+      // Process recurring transactions
+      const addedCount = await processRecurringTransactions();
+      if (addedCount > 0) {
+        toast.success(
+          i18n.t("recurring_expenses_added", {
+            count: addedCount,
+            defaultValue: "{{count}} recurring expenses added",
+          })
+        );
+      }
     }
   }
 

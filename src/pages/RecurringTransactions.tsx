@@ -452,9 +452,9 @@ export function RecurringTransactionsPage() {
                           value={formData.amount}
                           onChange={(e) => {
                             const value = e.target.value;
-                            // Limit to 2 decimal places
-                            const match = value.match(/^-?\d*\.?\d{0,2}$/);
-                            if (match || value === "") {
+                            // Limit to 2 decimal places and positive numbers only
+                            const match = value.match(/^\d*\.?\d{0,2}$/);
+                            if (match) {
                               setFormData({ ...formData, amount: value });
                             }
                           }}
