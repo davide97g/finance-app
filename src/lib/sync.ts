@@ -411,9 +411,14 @@ export class SyncManager {
   private async pushPendingWithRetry(userId: string): Promise<void> {
     for (const tableName of TABLES) {
       const table = db.table(tableName);
-      const pendingItems = await table.where("pendingSync").equals(1).toArray();
+      let pendingItems = await table.where("pendingSync").equals(1).toArray();
 
       if (pendingItems.length === 0) continue;
+
+      // Special handling for categories: Ensure topological sort (Parents before Children)
+      if (tableName === "categories") {
+        pendingItems = this.sortCategoriesTopologically(pendingItems as Category[]);
+      }
 
       console.log(
         `[Sync] Pushing ${pendingItems.length} items to ${tableName}`
@@ -538,6 +543,50 @@ export class SyncManager {
     // Cast to unknown first to avoid type overlap issues, then to TablesInsert<T>
     // This is safe because we're constructing a valid insert object based on the schema
     return pushItem as unknown as TablesInsert<T>;
+  }
+
+  /**
+   * Sort categories topologically so that parents appear before children.
+   * This prevents foreign key violations during sync.
+   */
+  private sortCategoriesTopologically(categories: Category[]): Category[] {
+    const sorted: Category[] = [];
+    const visited = new Set<string>();
+    const processing = new Set<string>();
+    const categoryMap = new Map<string, Category>();
+
+    // Index by ID
+    categories.forEach(c => categoryMap.set(c.id, c));
+
+    const visit = (category: Category) => {
+      if (visited.has(category.id)) return;
+      if (processing.has(category.id)) {
+        // Cycle detected (should not happen in valid tree), just push to break
+        console.warn(`[Sync] Cycle detected for category ${category.name} (${category.id})`);
+        return;
+      }
+
+      processing.add(category.id);
+
+      // Visit parent first
+      if (category.parent_id) {
+        // If parent is in the CURRENT batch, visit it first
+        const parent = categoryMap.get(category.parent_id);
+        if (parent) {
+          visit(parent);
+        }
+        // If parent is not in this batch, we assume it's already synced or invalid.
+        // We proceed.
+      }
+
+      processing.delete(category.id);
+      visited.add(category.id);
+      sorted.push(category);
+    };
+
+    categories.forEach(category => visit(category));
+
+    return sorted;
   }
 
   /**

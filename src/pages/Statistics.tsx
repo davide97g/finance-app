@@ -67,7 +67,7 @@ export function StatisticsPage() {
   const now = new Date();
   const location = useLocation();
   const navigate = useNavigate();
-  const { groups } = useGroups();
+  const { groups, isLoading: isGroupsLoading } = useGroups();
 
   // State for filters
   const [selectedMonth, setSelectedMonth] = useState(format(now, "yyyy-MM"));
@@ -93,12 +93,12 @@ export function StatisticsPage() {
 
     if (groupIdFromUrl && groups?.some(g => g.id === groupIdFromUrl)) {
       setSelectedGroupId(groupIdFromUrl);
-    } else if (groupIdFromUrl) {
-      // Invalid group ID, clear it
+    } else if (groupIdFromUrl && !isGroupsLoading) {
+      // Invalid group ID, clear it only if groups are loaded
       setSelectedGroupId(null);
       navigate(location.pathname, { replace: true });
     }
-  }, [location.search, groups, navigate, location.pathname]);
+  }, [location.search, groups, navigate, location.pathname, isGroupsLoading]);
 
   const toggleCard = (cardId: string) => {
     setFlippedCards((prev) => ({ ...prev, [cardId]: !prev[cardId] }));

@@ -5,7 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "./useAuth";
 import { useMemo } from "react";
 import { format } from "date-fns";
-import { CategoryBudgetInputSchema, validate } from "../lib/validation";
+import { getCategoryBudgetInputSchema, validate } from "../lib/validation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Extended budget type with spending calculations and category info.
@@ -62,6 +63,7 @@ export function useCategoryBudgets(
   selectedYear?: string
 ) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const now = new Date();
   const currentMonth = selectedMonth || format(now, "yyyy-MM");
   const currentYear = selectedYear || format(now, "yyyy");
@@ -71,8 +73,8 @@ export function useCategoryBudgets(
     () =>
       user
         ? db.category_budgets
-            .filter((b) => b.user_id === user.id && !b.deleted_at)
-            .toArray()
+          .filter((b) => b.user_id === user.id && !b.deleted_at)
+          .toArray()
         : [],
     [user?.id]
   );
@@ -82,8 +84,8 @@ export function useCategoryBudgets(
     () =>
       user
         ? db.categories
-            .filter((c) => c.user_id === user.id && !c.deleted_at)
-            .toArray()
+          .filter((c) => c.user_id === user.id && !c.deleted_at)
+          .toArray()
         : [],
     [user?.id]
   );
@@ -171,7 +173,7 @@ export function useCategoryBudgets(
     if (!user) return;
 
     // Validate input data
-    const validatedData = validate(CategoryBudgetInputSchema, {
+    const validatedData = validate(getCategoryBudgetInputSchema(t), {
       user_id: user.id,
       category_id: categoryId,
       amount,

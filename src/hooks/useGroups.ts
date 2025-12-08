@@ -499,6 +499,7 @@ export function useGroups() {
 
   return {
     groups: groups || [],
+    isLoading: groups === undefined,
     createGroup,
     updateGroup,
     deleteGroup,
