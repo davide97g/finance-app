@@ -476,7 +476,8 @@
   "sync_in_progress": "Sincronizzazione col cloud... {{pending}} elementi rimanenti",
   "orphaned_warning": "Attenzione: {{count}} elemento/i avevano categorie mancanti e sono stati spostati in 'Non categorizzato'.",
   "no_recurring_transactions": "Nessuna transazione ricorrente trovata. Aggiungine una per automatizzare le tue spese.",
-  "no_contexts": "Nessun contesto, aggiungi uno per raggruppare le tue transazioni.",
+  "no_contexts": "Nessun contesto",
+  "no_contexts_desc": "Crea un contesto per organizzare le tue transazioni (es. 'Vacanza', 'Lavoro', 'Ristrutturazione')",
   "passwords_mismatch": "Le due password non coincidono",
   "confirm_password": "Conferma Password",
   "validation": {

@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { Context } from "@/lib/db";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Mobile swipeable row component for contexts
 function MobileContextRow({
@@ -220,61 +221,70 @@ export function ContextsPage() {
         </Dialog>
       </div>
 
-      {/* Mobile View: Swipeable Cards */}
-      <div className="space-y-1 md:hidden">
-        {contexts?.map((c) => (
-          <MobileContextRow
-            key={c.id}
-            context={c}
-            onEdit={handleEdit}
-            onDelete={handleDeleteClick}
-          />
-        ))}
-        {(!contexts || contexts.length === 0) && (
-          <div className="text-center text-muted-foreground py-8">
-            {t("no_contexts") || "No contexts"}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop View: Table */}
-      <div className="hidden md:block rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("name")}</TableHead>
-              <TableHead>{t("description")}</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {contexts?.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>{c.name}</TableCell>
-                <TableCell>{c.description}</TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(c)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(c.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+      {!contexts || contexts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Tag className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold">{t("no_contexts")}</h3>
+            <p className="text-muted-foreground text-sm">
+              {t("no_contexts_desc")}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Mobile View: Swipeable Cards */}
+          <div className="space-y-1 md:hidden">
+            {contexts.map((c) => (
+              <MobileContextRow
+                key={c.id}
+                context={c}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+              />
             ))}
-          </TableBody>
-        </Table>
-      </div>
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="hidden md:block rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("name")}</TableHead>
+                  <TableHead>{t("description")}</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contexts.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>{c.name}</TableCell>
+                    <TableCell>{c.description}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(c)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(c.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}

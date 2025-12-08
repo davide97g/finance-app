@@ -477,6 +477,8 @@
   "sync_in_progress": "Syncing with cloud... {{pending}} items remaining",
   "orphaned_warning": "Warning: {{count}} item(s) had missing categories and were moved to 'Uncategorized'.",
   "no_recurring_transactions": "No recurring transactions found. Add one to automate your expenses.",
+  "no_contexts": "No contexts yet",
+  "no_contexts_desc": "Create a context to organize your transactions (e.g. 'Holiday', 'Work', 'Renovation')",
   "passwords_mismatch": "Passwords do not match",
   "confirm_password": "Confirm Password",
   "validation": {
