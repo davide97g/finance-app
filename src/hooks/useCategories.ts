@@ -3,10 +3,11 @@ import { db, Category } from "../lib/db";
 import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
 import {
-  CategoryInputSchema,
-  CategoryUpdateSchema,
+  getCategoryInputSchema,
+  getCategoryUpdateSchema,
   validate,
 } from "../lib/validation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Hook for managing expense/income categories with hierarchical support.
@@ -41,6 +42,7 @@ import {
  * ```
  */
 export function useCategories(groupId?: string | null) {
+  const { t } = useTranslation();
   const categories = useLiveQuery(() => db.categories.toArray());
 
   // Filter out deleted items and optionally by group
@@ -49,7 +51,7 @@ export function useCategories(groupId?: string | null) {
       if (c.deleted_at) return false;
 
       if (groupId === undefined) {
-        // Return all categories (no group filter)
+        // Return all categories (no group_id filter)
         return true;
       } else if (groupId === null) {
         // Return only personal categories
@@ -64,7 +66,7 @@ export function useCategories(groupId?: string | null) {
     category: Omit<Category, "id" | "sync_token" | "pendingSync" | "deleted_at">
   ) => {
     // Validate input data
-    const validatedData = validate(CategoryInputSchema, {
+    const validatedData = validate(getCategoryInputSchema(t), {
       ...category,
       active: category.active ?? 1,
     });
@@ -84,7 +86,7 @@ export function useCategories(groupId?: string | null) {
     updates: Partial<Omit<Category, "id" | "sync_token" | "pendingSync">>
   ) => {
     // Validate update data
-    const validatedUpdates = validate(CategoryUpdateSchema, updates);
+    const validatedUpdates = validate(getCategoryUpdateSchema(t), updates);
 
     await db.categories.update(id, {
       ...validatedUpdates,

@@ -4,12 +4,12 @@ import { syncManager } from "../lib/sync";
 import { useAuth } from "./useAuth";
 import { v4 as uuidv4 } from "uuid";
 import {
-  GroupInputSchema,
-  GroupUpdateSchema,
-
-  GroupMemberUpdateSchema,
+  getGroupInputSchema,
+  getGroupUpdateSchema,
+  getGroupMemberUpdateSchema,
   validate,
 } from "../lib/validation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Represents a single settlement transaction between two users.
@@ -160,6 +160,7 @@ export function calculateSettlement(
  */
 export function useGroups() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   // Get all groups where user is a member or creator
   const groups = useLiveQuery(async () => {
@@ -214,7 +215,7 @@ export function useGroups() {
     if (!user) return null;
 
     // Validate input data
-    const validatedData = validate(GroupInputSchema, {
+    const validatedData = validate(getGroupInputSchema(t), {
       name,
       description,
       created_by: user.id,
@@ -254,7 +255,7 @@ export function useGroups() {
     updates: Partial<Pick<Group, "name" | "description">>
   ) => {
     // Validate update data
-    const validatedUpdates = validate(GroupUpdateSchema, updates);
+    const validatedUpdates = validate(getGroupUpdateSchema(t), updates);
 
     await db.groups.update(id, {
       ...validatedUpdates,
@@ -380,7 +381,7 @@ export function useGroups() {
   // ... existing updateMemberShare ...
   const updateMemberShare = async (memberId: string, share: number) => {
     // Validate share value
-    const validatedData = validate(GroupMemberUpdateSchema, { share });
+    const validatedData = validate(getGroupMemberUpdateSchema(t), { share });
 
     await db.group_members.update(memberId, {
       share: validatedData.share,

@@ -140,16 +140,16 @@ export function ManageMembersDrawer({
                             <AccordionContent className="px-4 pb-4">
                                 <Tabs defaultValue="invite" className="w-full">
                                     <TabsList className="grid w-full grid-cols-2 h-14">
-                                        <TabsTrigger value="invite" className="text-xs">{t("invite_user") || "Invite User"}</TabsTrigger>
-                                        <TabsTrigger value="guest" className="text-xs">{t("add_guest") || "Add Guest"}</TabsTrigger>
+                                        <TabsTrigger value="invite" className="text-xs">{t("invite_user")}</TabsTrigger>
+                                        <TabsTrigger value="guest" className="text-xs">{t("add_guest")}</TabsTrigger>
                                     </TabsList>
 
                                     <TabsContent value="invite" className="space-y-3 pt-3">
                                         <div className="bg-muted p-2.5 rounded-md text-xs text-muted-foreground flex items-center justify-between">
-                                            <span>{t("share_id_hint") || "Ask for their User ID"}</span>
+                                            <span>{t("share_id_hint")}</span>
                                             <Button variant="ghost" size="sm" onClick={copyMyId} className="h-5 gap-1 text-[10px] px-1.5 ml-1">
                                                 {copiedId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                                                {t("my_id") || "My ID"}
+                                                {t("my_id")}
                                             </Button>
                                         </div>
                                         <div className="flex gap-2">
@@ -167,11 +167,11 @@ export function ManageMembersDrawer({
 
                                     <TabsContent value="guest" className="space-y-3 pt-3">
                                         <div className="bg-muted p-2.5 rounded-md text-xs text-muted-foreground">
-                                            <p>{t("guest_hint") || "Guests don't need app account."}</p>
+                                            <p>{t("guest_hint")}</p>
                                         </div>
                                         <div className="flex gap-2">
                                             <Input
-                                                placeholder={t("guest_name") || "Guest Name"}
+                                                placeholder={t("guest_name")}
                                                 value={newGuestName}
                                                 onChange={(e) => setNewGuestName(e.target.value)}
                                                 className="flex-1 h-9 text-sm"
@@ -237,7 +237,7 @@ export function ManageMembersDrawer({
                                                 {/* Controls */}
                                                 <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-dashed sm:border-solid">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] text-muted-foreground sm:hidden tracking-tight">{t("your_share") || "Share"}:</span>
+                                                        <span className="text-[10px] text-muted-foreground sm:hidden tracking-tight">{t("your_share")}:</span>
                                                         <div className="relative">
                                                             <Input
                                                                 type="text"
@@ -290,7 +290,7 @@ export function ManageMembersDrawer({
 
                 <DrawerFooter className="pt-2 border-t">
                     <Button onClick={handleSaveShares} disabled={!isShareValid} className="w-full">
-                        {t("save_changes") || "Save Changes"}
+                        {t("save_changes")}
                     </Button>
                     <DrawerClose asChild>
                         <Button variant="outline" className="w-full">{t("close")}</Button>

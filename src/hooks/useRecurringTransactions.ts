@@ -4,13 +4,15 @@ import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
 
 import {
-  RecurringTransactionInputSchema,
-  RecurringTransactionUpdateSchema,
+  getRecurringTransactionInputSchema,
+  getRecurringTransactionUpdateSchema,
   validate,
 } from "../lib/validation";
 import { processRecurringTransactions } from "../lib/recurring";
+import { useTranslation } from "react-i18next";
 
 export function useRecurringTransactions(groupId?: string | null) {
+  const { t } = useTranslation();
   const recurringTransactions = useLiveQuery(() =>
     db.recurring_transactions.toArray()
   );
@@ -44,7 +46,7 @@ export function useRecurringTransactions(groupId?: string | null) {
     >
   ) => {
     // Validate input data
-    const validatedData = validate(RecurringTransactionInputSchema, {
+    const validatedData = validate(getRecurringTransactionInputSchema(t), {
       ...transaction,
       active: 1,
     });
@@ -68,7 +70,7 @@ export function useRecurringTransactions(groupId?: string | null) {
   ) => {
     // Validate update data
     const validatedUpdates = validate(
-      RecurringTransactionUpdateSchema,
+      getRecurringTransactionUpdateSchema(t),
       updates
     );
 

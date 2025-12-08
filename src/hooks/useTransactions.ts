@@ -3,10 +3,11 @@ import { db, Transaction } from "../lib/db";
 import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
 import {
-  TransactionInputSchema,
-  TransactionUpdateSchema,
+  getTransactionInputSchema,
+  getTransactionUpdateSchema,
   validate,
 } from "../lib/validation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Hook for managing transactions with optional filtering.
@@ -20,6 +21,8 @@ export function useTransactions(
   yearMonth?: string,
   groupId?: string | null
 ) {
+  const { t } = useTranslation();
+
   // Single unified query that handles all filtering in one operation
   const transactions = useLiveQuery(async () => {
     let collection: any;
@@ -49,10 +52,10 @@ export function useTransactions(
     if (groupId !== undefined) {
       if (groupId === null) {
         // Return only personal transactions
-        results = results.filter((t) => !t.group_id);
+        results = results.filter((tOrG) => !tOrG.group_id);
       } else if (yearMonth) {
         // If we queried by yearMonth, we still need to filter by group
-        results = results.filter((t) => t.group_id === groupId);
+        results = results.filter((tOrG) => tOrG.group_id === groupId);
       }
     }
 
@@ -77,7 +80,7 @@ export function useTransactions(
     >
   ) => {
     // Validate input data
-    const validatedData = validate(TransactionInputSchema, transaction);
+    const validatedData = validate(getTransactionInputSchema(t), transaction);
 
     const id = uuidv4();
     await db.transactions.add({
@@ -94,7 +97,7 @@ export function useTransactions(
     updates: Partial<Omit<Transaction, "id" | "sync_token" | "pendingSync">>
   ) => {
     // Validate update data (partial validation)
-    const validatedUpdates = validate(TransactionUpdateSchema, updates);
+    const validatedUpdates = validate(getTransactionUpdateSchema(t), updates);
 
     await db.transactions.update(id, {
       ...validatedUpdates,

@@ -1,93 +1,104 @@
 import { z } from "zod";
+import { TFunction } from "i18next";
 
 // ============================================================================
 // COMMON SCHEMAS
 // ============================================================================
 
-const uuidSchema = z.string().uuid("Invalid UUID format");
+export const getUuidSchema = (t: TFunction) => z.string().uuid(t("validation.invalid_uuid"));
 
-const transactionTypeSchema = z.enum(["income", "expense", "investment"], {
-  error: "Type must be 'income', 'expense', or 'investment'",
+export const getTransactionTypeSchema = (t: TFunction) => z.enum(["income", "expense", "investment"], {
+  message: t("validation.invalid_type"),
 });
 
-const dateStringSchema = z
+export const getDateStringSchema = (t: TFunction) => z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, t("validation.invalid_date"));
 
-const yearMonthSchema = z
+export const getYearMonthSchema = (t: TFunction) => z
   .string()
-  .regex(/^\d{4}-\d{2}$/, "Year-month must be in YYYY-MM format");
+  .regex(/^\d{4}-\d{2}$/, t("validation.invalid_year_month"));
 
-const frequencySchema = z.enum(["daily", "weekly", "monthly", "yearly"], {
-  error: "Frequency must be 'daily', 'weekly', 'monthly', or 'yearly'",
+export const getFrequencySchema = (t: TFunction) => z.enum(["daily", "weekly", "monthly", "yearly"], {
+  message: t("validation.invalid_frequency"),
 });
 
 // ============================================================================
 // TRANSACTION SCHEMA
 // ============================================================================
 
-export const TransactionInputSchema = z.object({
-  user_id: uuidSchema,
+export const getTransactionInputSchema = (t: TFunction) => z.object({
+  user_id: getUuidSchema(t),
   group_id: z.string().uuid().nullable().optional(),
   paid_by_member_id: z.string().uuid().nullable().optional(),
-  category_id: uuidSchema,
+  category_id: getUuidSchema(t),
   context_id: z.string().uuid().optional(),
-  type: transactionTypeSchema,
+  type: getTransactionTypeSchema(t),
   amount: z
     .number()
-    .positive("Amount must be greater than 0")
-    .finite("Amount must be a finite number"),
-  date: dateStringSchema,
-  year_month: yearMonthSchema,
+    .positive(t("validation.amount_positive"))
+    .finite(t("validation.amount_finite")),
+  date: getDateStringSchema(t),
+  year_month: getYearMonthSchema(t),
   description: z
     .string()
-    .min(1, "Description is required")
-    .max(500, "Description must be less than 500 characters"),
+    .min(1, t("validation.description_required"))
+    .max(500, t("validation.description_max")),
 });
 
-export const TransactionUpdateSchema = TransactionInputSchema.partial().omit({
+export const getTransactionUpdateSchema = (t: TFunction) => getTransactionInputSchema(t).partial().omit({
   user_id: true,
 });
 
-export type TransactionInput = z.infer<typeof TransactionInputSchema>;
-export type TransactionUpdate = z.infer<typeof TransactionUpdateSchema>;
+export type TransactionInput = z.infer<ReturnType<typeof getTransactionInputSchema>>;
+export type TransactionUpdate = z.infer<ReturnType<typeof getTransactionUpdateSchema>>;
 
 // ============================================================================
 // CATEGORY SCHEMA
 // ============================================================================
 
-export const CategoryInputSchema = z.object({
-  user_id: uuidSchema,
+export const getCategoryInputSchema = (t: TFunction) => z.object({
+  user_id: getUuidSchema(t),
   group_id: z.string().uuid().nullable().optional(),
   name: z
     .string()
-    .min(1, "Category name is required")
-    .max(100, "Category name must be less than 100 characters"),
-  icon: z.string().min(1, "Icon is required"),
-  color: z.string().min(1, "Color is required"),
-  type: transactionTypeSchema,
+    .min(1, t("validation.category_name_required"))
+    .max(100, t("validation.category_name_max")),
+  icon: z.string().min(1, t("validation.icon_required")),
+  color: z.string().min(1, t("validation.color_required")),
+  type: getTransactionTypeSchema(t),
   parent_id: z.string().uuid().optional(),
   active: z.number().int().min(0).max(1).default(1),
 });
-//...
-//
-export const RecurringTransactionInputSchema = z.object({
-  user_id: uuidSchema,
+
+export const getCategoryUpdateSchema = (t: TFunction) => getCategoryInputSchema(t).partial().omit({
+  user_id: true,
+});
+
+export type CategoryInput = z.infer<ReturnType<typeof getCategoryInputSchema>>;
+export type CategoryUpdate = z.infer<ReturnType<typeof getCategoryUpdateSchema>>;
+
+// ============================================================================
+// RECURRING TRANSACTION SCHEMA
+// ============================================================================
+
+export const getRecurringTransactionInputSchema = (t: TFunction) => z.object({
+  user_id: getUuidSchema(t),
   group_id: z.string().uuid().nullable().optional(),
   paid_by_member_id: z.string().uuid().nullable().optional(),
-  type: transactionTypeSchema,
-  category_id: uuidSchema,
+  type: getTransactionTypeSchema(t),
+  category_id: getUuidSchema(t),
   context_id: z.string().uuid().optional(),
   amount: z
     .number()
-    .positive("Amount must be greater than 0")
-    .finite("Amount must be a finite number"),
+    .positive(t("validation.amount_positive"))
+    .finite(t("validation.amount_finite")),
   description: z
     .string()
-    .min(1, "Description is required")
-    .max(500, "Description must be less than 500 characters"),
-  frequency: frequencySchema,
-  start_date: dateStringSchema,
+    .min(1, t("validation.description_required"))
+    .max(500, t("validation.description_max")),
+  frequency: getFrequencySchema(t),
+  start_date: getDateStringSchema(t),
   end_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -96,99 +107,95 @@ export const RecurringTransactionInputSchema = z.object({
   active: z.number().int().min(0).max(1).default(1),
 });
 
-export const RecurringTransactionUpdateSchema =
-  RecurringTransactionInputSchema.partial().omit({
+export const getRecurringTransactionUpdateSchema = (t: TFunction) =>
+  getRecurringTransactionInputSchema(t).partial().omit({
     user_id: true,
   });
 
-export type RecurringTransactionInput = z.infer<
-  typeof RecurringTransactionInputSchema
->;
-export type RecurringTransactionUpdate = z.infer<
-  typeof RecurringTransactionUpdateSchema
->;
+export type RecurringTransactionInput = z.infer<ReturnType<typeof getRecurringTransactionInputSchema>>;
+export type RecurringTransactionUpdate = z.infer<ReturnType<typeof getRecurringTransactionUpdateSchema>>;
 
 // ============================================================================
 // GROUP SCHEMA
 // ============================================================================
 
-export const GroupInputSchema = z.object({
+export const getGroupInputSchema = (t: TFunction) => z.object({
   name: z
     .string()
-    .min(1, "Group name is required")
-    .max(100, "Group name must be less than 100 characters"),
+    .min(1, t("validation.group_name_required"))
+    .max(100, t("validation.group_name_max")),
   description: z
     .string()
-    .max(500, "Description must be less than 500 characters")
+    .max(500, t("validation.group_description_max"))
     .optional(),
-  created_by: uuidSchema,
+  created_by: getUuidSchema(t),
 });
 
-export const GroupUpdateSchema = GroupInputSchema.partial().omit({
+export const getGroupUpdateSchema = (t: TFunction) => getGroupInputSchema(t).partial().omit({
   created_by: true,
 });
 
-export type GroupInput = z.infer<typeof GroupInputSchema>;
-export type GroupUpdate = z.infer<typeof GroupUpdateSchema>;
+export type GroupInput = z.infer<ReturnType<typeof getGroupInputSchema>>;
+export type GroupUpdate = z.infer<ReturnType<typeof getGroupUpdateSchema>>;
 
 // ============================================================================
 // GROUP MEMBER SCHEMA
 // ============================================================================
 
-export const GroupMemberInputSchema = z.object({
-  group_id: uuidSchema,
-  user_id: uuidSchema,
+export const getGroupMemberInputSchema = (t: TFunction) => z.object({
+  group_id: getUuidSchema(t),
+  user_id: getUuidSchema(t),
   share: z
     .number()
-    .min(0, "Share must be at least 0")
-    .max(100, "Share cannot exceed 100"),
+    .min(0, t("validation.share_min"))
+    .max(100, t("validation.share_max")),
 });
 
-export const GroupMemberUpdateSchema = z.object({
+export const getGroupMemberUpdateSchema = (t: TFunction) => z.object({
   share: z
     .number()
-    .min(0, "Share must be at least 0")
-    .max(100, "Share cannot exceed 100"),
+    .min(0, t("validation.share_min"))
+    .max(100, t("validation.share_max")),
 });
 
-export type GroupMemberInput = z.infer<typeof GroupMemberInputSchema>;
-export type GroupMemberUpdate = z.infer<typeof GroupMemberUpdateSchema>;
+export type GroupMemberInput = z.infer<ReturnType<typeof getGroupMemberInputSchema>>;
+export type GroupMemberUpdate = z.infer<ReturnType<typeof getGroupMemberUpdateSchema>>;
 
 // ============================================================================
 // CATEGORY BUDGET SCHEMA
 // ============================================================================
 
-const budgetPeriodSchema = z.enum(["monthly", "yearly"], {
-  error: "Period must be 'monthly' or 'yearly'",
+export const getBudgetPeriodSchema = (t: TFunction) => z.enum(["monthly", "yearly"], {
+  message: t("validation.invalid_period"),
 });
 
-export const CategoryBudgetInputSchema = z.object({
-  user_id: uuidSchema,
-  category_id: uuidSchema,
+export const getCategoryBudgetInputSchema = (t: TFunction) => z.object({
+  user_id: getUuidSchema(t),
+  category_id: getUuidSchema(t),
   amount: z
     .number()
-    .positive("Budget amount must be greater than 0")
-    .finite("Amount must be a finite number"),
-  period: budgetPeriodSchema,
+    .positive(t("validation.budget_positive"))
+    .finite(t("validation.amount_finite")),
+  period: getBudgetPeriodSchema(t),
 });
 
-export const CategoryBudgetUpdateSchema =
-  CategoryBudgetInputSchema.partial().omit({
+export const getCategoryBudgetUpdateSchema = (t: TFunction) =>
+  getCategoryBudgetInputSchema(t).partial().omit({
     user_id: true,
   });
 
-export type CategoryBudgetInput = z.infer<typeof CategoryBudgetInputSchema>;
-export type CategoryBudgetUpdate = z.infer<typeof CategoryBudgetUpdateSchema>;
+export type CategoryBudgetInput = z.infer<ReturnType<typeof getCategoryBudgetInputSchema>>;
+export type CategoryBudgetUpdate = z.infer<ReturnType<typeof getCategoryBudgetUpdateSchema>>;
 
 // ============================================================================
 // USER SETTINGS SCHEMA
 // ============================================================================
 
-export const UserSettingsSchema = z.object({
-  user_id: uuidSchema,
+export const getUserSettingsSchema = (t: TFunction) => z.object({
+  user_id: getUuidSchema(t),
   currency: z
     .string()
-    .length(3, "Currency must be a 3-letter code")
+    .length(3, t("validation.currency_length"))
     .default("EUR"),
   language: z.string().min(2).max(5).default("en"),
   theme: z.enum(["light", "dark", "system"]).default("light"),
@@ -200,47 +207,38 @@ export const UserSettingsSchema = z.object({
   monthly_budget: z.number().positive().nullable().optional(),
 });
 
-export const UserSettingsUpdateSchema = UserSettingsSchema.partial().omit({
+export const getUserSettingsUpdateSchema = (t: TFunction) => getUserSettingsSchema(t).partial().omit({
   user_id: true,
 });
 
-export type UserSettingsInput = z.infer<typeof UserSettingsSchema>;
-export type UserSettingsUpdate = z.infer<typeof UserSettingsUpdateSchema>;
+export type UserSettingsInput = z.infer<ReturnType<typeof getUserSettingsSchema>>;
+export type UserSettingsUpdate = z.infer<ReturnType<typeof getUserSettingsUpdateSchema>>;
 
 // ============================================================================
 // CONTEXT SCHEMA
 // ============================================================================
 
-export const ContextInputSchema = z.object({
-  user_id: uuidSchema,
+export const getContextInputSchema = (t: TFunction) => z.object({
+  user_id: getUuidSchema(t),
   name: z
     .string()
-    .min(1, "Context name is required")
-    .max(50, "Context name must be less than 50 characters"),
+    .min(1, t("validation.context_name_required"))
+    .max(50, t("validation.context_name_max")),
   description: z
     .string()
-    .max(200, "Description must be less than 200 characters")
+    .max(200, t("validation.description_max"))
     .nullable()
     .optional(),
-  active: z.boolean().default(true),
+  active: z.number().int().min(0).max(1).default(1),
 });
 
-export const ContextUpdateSchema = ContextInputSchema.partial().omit({
+export const getContextUpdateSchema = (t: TFunction) => getContextInputSchema(t).partial().omit({
   user_id: true,
 });
 
-export type ContextInput = z.infer<typeof ContextInputSchema>;
-export type ContextUpdate = z.infer<typeof ContextUpdateSchema>;
+export type ContextInput = z.infer<ReturnType<typeof getContextInputSchema>>;
+export type ContextUpdate = z.infer<ReturnType<typeof getContextUpdateSchema>>;
 
-// ============================================================================
-// CATEGORY UPDATE SCHEMA (Re-exporting correctly)
-// ============================================================================
-
-export const CategoryUpdateSchema = CategoryInputSchema.partial().omit({
-  user_id: true,
-});
-
-export type CategoryUpdate = z.infer<typeof CategoryUpdateSchema>;
 
 // ============================================================================
 // VALIDATION HELPER

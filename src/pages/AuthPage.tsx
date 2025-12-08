@@ -33,7 +33,7 @@ export function AuthPage() {
     try {
       if (isSignUp) {
         if (password !== confirmPassword) {
-          toast.error(t("passwords_mismatch") || "Passwords do not match");
+          toast.error(t("passwords_mismatch"));
           setLoading(false);
           return;
         }
@@ -52,8 +52,8 @@ export function AuthPage() {
         if (error) throw error;
 
         // Sync data from Supabase after successful login
-        toast.success(t("sign_in_success") || "Signed in successfully!");
-        toast.loading(t("syncing") || "Syncing data...");
+        toast.success(t("sign_in_success"));
+        toast.loading(t("syncing"));
         await syncManager.sync();
         toast.dismiss();
 
@@ -117,7 +117,7 @@ export function AuthPage() {
                     <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                   <span className="sr-only">
-                    {showPassword ? "Hide password" : "Show password"}
+                    {showPassword ? t("hide_password") : t("show_password")}
                   </span>
                 </Button>
               </div>
@@ -126,7 +126,7 @@ export function AuthPage() {
             {isSignUp && (
               <div className="space-y-2">
                 <label htmlFor="confirmPassword" className="text-sm font-medium">
-                  {t("confirm_password") || "Confirm Password"}
+                  {t("confirm_password")}
                 </label>
                 <div className="relative">
                   <Input
@@ -151,8 +151,8 @@ export function AuthPage() {
                     )}
                     <span className="sr-only">
                       {showConfirmPassword
-                        ? "Hide confirm password"
-                        : "Show confirm password"}
+                        ? t("hide_password")
+                        : t("show_password")}
                     </span>
                   </Button>
                 </div>
@@ -168,9 +168,8 @@ export function AuthPage() {
                 className="underline hover:text-primary"
               >
                 {isSignUp
-                  ? t("already_have_account") ||
-                  "Already have an account? Sign In"
-                  : t("need_account") || "Need an account? Sign Up"}
+                  ? t("already_have_account")
+                  : t("need_account")}
               </button>
             </div>
           </form>

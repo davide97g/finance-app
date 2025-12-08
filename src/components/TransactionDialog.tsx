@@ -206,9 +206,8 @@ export function TransactionDialog({
                     </DialogTitle>
                     <DialogDescription className="sr-only">
                         {editingTransaction
-                            ? t("edit_transaction_description") ||
-                            "Edit transaction details"
-                            : t("add_transaction_description") || "Add a new transaction"}
+                            ? t("edit_transaction_description")
+                            : t("add_transaction_description")}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -223,7 +222,7 @@ export function TransactionDialog({
                             <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium">
                                 <span className="flex items-center gap-2">
                                     <ListFilter className="h-4 w-4" />
-                                    {t("transaction_details") || "Details"}
+                                    {t("transaction_details")}
                                 </span>
                             </AccordionTrigger>
                             <AccordionContent className="space-y-4 pt-2 px-1">
@@ -328,7 +327,7 @@ export function TransactionDialog({
                             <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium">
                                 <span className="flex items-center gap-2">
                                     <SlidersHorizontal className="h-4 w-4" />
-                                    {t("more_options") || "More Options"}
+                                    {t("more_options")}
                                     {(formData.group_id || formData.context_id) && (
                                         <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-2">
                                             {
@@ -457,7 +456,7 @@ export function TransactionDialog({
                                     </>
                                 ) : (
                                     <div className="text-sm text-muted-foreground p-2 text-center">
-                                        {t("no_additional_options") || "No additional options available"}
+                                        {t("no_additional_options")}
                                     </div>
                                 )}
                             </AccordionContent>

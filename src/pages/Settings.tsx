@@ -48,6 +48,7 @@ import {
   FileJson,
   X,
   CheckCircle2,
+  User,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { THEME_COLORS } from "@/lib/theme-colors";
@@ -96,7 +97,7 @@ interface ImportStats {
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
   const { isOnline } = useOnlineSync();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const [lastSyncTime, setLastSyncTime] = useState<Date | undefined>();
@@ -158,16 +159,20 @@ export function SettingsPage() {
 
   const handleClearCache = async () => {
     setClearingCache(true);
-    try {
-      await db.clearLocalCache();
-      toast.success(t("cache_cleared"));
-      // Trigger a sync to repopulate from server
-      await safeSync("handleClearCache");
-    } catch (error) {
-      toast.error(t("cache_clear_error") || "Failed to clear cache");
-    } finally {
-      setClearingCache(false);
+    // Use window.confirm for now as per codebase pattern
+    if (window.confirm(t("clear_cache_confirm_desc"))) {
+      try {
+        await db.delete(); // Clears the entire IndexedDB database
+        await db.open(); // Re-opens the database, creating it if it doesn't exist
+        toast.success(t("cache_cleared"));
+        // Trigger a sync to repopulate from server
+        await safeSync("handleClearCache");
+      } catch (error) {
+        console.error("Failed to clear cache:", error);
+        toast.error(t("cache_clear_error"));
+      }
     }
+    setClearingCache(false);
   };
 
   const handleImportData = async (
@@ -228,7 +233,16 @@ export function SettingsPage() {
         // VUE MIGRATION LOGIC
         console.log("Starting migration from Vue export...");
 
-        // Calculate total items to import
+        // SPECIAL ROOT CATEGORIES FROM OLD APP
+        // These serve as type definitions and should not be imported as categories
+        const ROOT_CATEGORY_TYPES: Record<string, "expense" | "income" | "investment"> = {
+          "533d4482-df54-47e5-b8d8-000000000001": "expense",
+          "533d4482-df54-47e5-b8d8-000000000002": "income",
+          "533d4482-df54-47e5-b8d8-000000000003": "investment"
+        };
+        const ROOT_IDS = new Set(Object.keys(ROOT_CATEGORY_TYPES));
+
+        // Calculate total items to import (excluding root categories from count would be minor opt)
         const totalItems =
           (data.data.categories?.length || 0) +
           (data.data.transactions?.length || 0) +
@@ -246,22 +260,54 @@ export function SettingsPage() {
 
         // 1. Import Categories
         const categoryIdMap = new Map<string, string>(); // Old Firebase ID -> New UUID
+        // Map to store temporary lookup for type resolution
+        const vueCategoriesMap = new Map<string, any>();
 
         if (data.data.categories && Array.isArray(data.data.categories)) {
+          // Pre-indexing for fast lookup
+          for (const c of data.data.categories) {
+            vueCategoriesMap.set(c.id, c);
+          }
+
+          // Helper to resolve type by walking up ancestry
+          const resolveCategoryType = (catId: string): "expense" | "income" | "investment" => {
+            let currentId: string | undefined = catId;
+            let depth = 0;
+            const MAX_DEPTH = 10; // Prevent infinite loops
+
+            while (currentId && depth < MAX_DEPTH) {
+              // Check if current is a root definer
+              if (ROOT_CATEGORY_TYPES[currentId]) {
+                return ROOT_CATEGORY_TYPES[currentId];
+              }
+
+              const cat = vueCategoriesMap.get(currentId);
+              if (!cat) break; // Orphaned branch?
+
+              currentId = cat.parentCategoryId;
+              depth++;
+            }
+            return "expense"; // Default fallback
+          };
+
           for (const vueCat of data.data.categories) {
-            // Update progress occasionally
+            // Update progress
             processedItems++;
             if (processedItems % 5 === 0) {
               setImportProgress(prev => ({ ...prev, current: processedItems }));
-              await new Promise(r => setTimeout(r, 0)); // Yield to main thread
+              await new Promise(r => setTimeout(r, 0));
             }
 
-            // Map type: 1=expense, 2=income, 3=investment
-            let type: "expense" | "income" | "investment" = "expense";
-            if (vueCat.type === 2) type = "income";
-            if (vueCat.type === 3) type = "investment";
+            // SKIP if this is one of the root definers
+            if (ROOT_IDS.has(vueCat.id)) {
+              console.log(`Skipping root definer category: ${vueCat.title} (${vueCat.id})`);
+              continue;
+            }
 
-            // Validate icon - use fallback if not supported
+            // Deduce Type
+            const type = resolveCategoryType(vueCat.id);
+
+            // Validate icon
             const originalIcon = vueCat.icon;
             const validatedIcon = validateIcon(originalIcon);
             if (originalIcon && originalIcon !== validatedIcon) {
@@ -274,7 +320,17 @@ export function SettingsPage() {
             if (vueCat.id) categoryIdMap.set(vueCat.id, newId);
 
             // Resolve Parent
-            const newParentId = vueCat.parentCategoryId ? categoryIdMap.get(vueCat.parentCategoryId) : undefined;
+            let newParentId: string | undefined = undefined;
+            if (vueCat.parentCategoryId) {
+              // Check if parent is a root definer
+              if (ROOT_IDS.has(vueCat.parentCategoryId)) {
+                // If parent is a root definer, this becomes a top-level category
+                newParentId = undefined;
+              } else {
+                // Otherwise key to the new parent ID
+                newParentId = categoryIdMap.get(vueCat.parentCategoryId);
+              }
+            }
 
             const category: Category = {
               id: newId,
@@ -290,15 +346,15 @@ export function SettingsPage() {
             };
 
             await db.categories.put(category);
-            validCategoryIds.add(newId); // Track valid NEW ID
+            validCategoryIds.add(newId);
             importedCategories++;
 
-            // Handle Budget (move to category_budgets table)
+            // Handle Budget
             if (vueCat.budget && vueCat.budget > 0) {
               const budget: CategoryBudget = {
                 id: uuidv4(),
                 user_id: user.id,
-                category_id: newId, // Use new ID
+                category_id: newId,
                 amount: vueCat.budget,
                 period: "monthly",
                 deleted_at: null,
@@ -804,6 +860,16 @@ export function SettingsPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success(t("logout_success"));
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error(t("logout_error"));
+    }
+  };
+
   if (!settings) {
     return (
       <div className="space-y-6 pb-10">
@@ -1163,6 +1229,39 @@ export function SettingsPage() {
                   {t("import_json")}
                 </Button>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 5. Account Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("account_actions")}</CardTitle>
+            <CardDescription>{t("account_actions_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label className="text-base flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  {t("logout")}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("logout_desc")}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm(t("confirm_logout_desc"))) {
+                    handleSignOut();
+                  }
+                }}
+                className="w-full sm:w-auto"
+              >
+                {t("logout")}
+              </Button>
             </div>
           </CardContent>
         </Card>

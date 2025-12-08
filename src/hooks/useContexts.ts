@@ -3,10 +3,11 @@ import { db, Context } from "../lib/db";
 import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
 import {
-  ContextInputSchema,
-  ContextUpdateSchema,
+  getContextInputSchema,
+  getContextUpdateSchema,
   validate,
 } from "../lib/validation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Hook for managing transaction contexts (e.g., "Work", "Personal", "Vacation").
@@ -33,6 +34,7 @@ import {
  * ```
  */
 export function useContexts() {
+  const { t } = useTranslation();
   const contexts = useLiveQuery(() => db.contexts.toArray());
 
   const activeContexts = contexts?.filter((c) => !c.deleted_at) || [];
@@ -44,7 +46,7 @@ export function useContexts() {
     >
   ) => {
     // Validate input data (schema expects boolean for active)
-    const validatedData = validate(ContextInputSchema, {
+    const validatedData = validate(getContextInputSchema(t), {
       ...context,
       active: true,
     });
@@ -68,7 +70,7 @@ export function useContexts() {
     updates: Partial<Omit<Context, "id" | "sync_token" | "pendingSync">>
   ) => {
     // Validate update data
-    const validatedUpdates = validate(ContextUpdateSchema, updates);
+    const validatedUpdates = validate(getContextUpdateSchema(t), updates);
 
     // Convert active boolean to number safely
     const { active, description, ...rest } = validatedUpdates;

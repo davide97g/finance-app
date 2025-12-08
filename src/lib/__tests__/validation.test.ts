@@ -1,16 +1,19 @@
 import {
-  TransactionInputSchema,
-  TransactionUpdateSchema,
-  CategoryInputSchema,
-  ContextInputSchema,
-  RecurringTransactionInputSchema,
-  GroupInputSchema,
-  GroupMemberInputSchema,
-  CategoryBudgetInputSchema,
+  getTransactionInputSchema,
+  getTransactionUpdateSchema,
+  getCategoryInputSchema,
+  getContextInputSchema,
+  getRecurringTransactionInputSchema,
+  getGroupInputSchema,
+  getGroupMemberInputSchema,
+  getCategoryBudgetInputSchema,
   validate,
   safeValidate,
   ValidationError,
 } from "../validation";
+
+// Mock translation function
+const t = ((key: string) => key) as any;
 
 describe("Validation Schemas", () => {
   const validUUID = "123e4567-e89b-12d3-a456-426614174000";
@@ -27,23 +30,26 @@ describe("Validation Schemas", () => {
     };
 
     it("should accept valid transaction data", () => {
-      const result = safeValidate(TransactionInputSchema, validTransaction);
+      const result = safeValidate(
+        getTransactionInputSchema(t),
+        validTransaction
+      );
       expect(result.success).toBe(true);
     });
 
     it("should reject negative amount", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         amount: -50,
       });
       expect(result.success).toBe(false);
       if (result.success === false) {
-        expect(result.errors[0].message).toContain("greater than 0");
+        expect(result.errors[0].message).toContain("validation.amount_positive");
       }
     });
 
     it("should reject zero amount", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         amount: 0,
       });
@@ -51,7 +57,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject invalid date format", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         date: "15-01-2024",
       });
@@ -59,7 +65,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject empty description", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         description: "",
       });
@@ -67,7 +73,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject invalid type", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         type: "invalid",
       });
@@ -75,7 +81,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept optional group_id", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         group_id: validUUID,
       });
@@ -83,7 +89,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept null group_id", () => {
-      const result = safeValidate(TransactionInputSchema, {
+      const result = safeValidate(getTransactionInputSchema(t), {
         ...validTransaction,
         group_id: null,
       });
@@ -93,14 +99,14 @@ describe("Validation Schemas", () => {
 
   describe("TransactionUpdateSchema", () => {
     it("should accept partial updates", () => {
-      const result = safeValidate(TransactionUpdateSchema, {
+      const result = safeValidate(getTransactionUpdateSchema(t), {
         amount: 200,
       });
       expect(result.success).toBe(true);
     });
 
     it("should reject invalid partial updates", () => {
-      const result = safeValidate(TransactionUpdateSchema, {
+      const result = safeValidate(getTransactionUpdateSchema(t), {
         amount: -100,
       });
       expect(result.success).toBe(false);
@@ -118,12 +124,12 @@ describe("Validation Schemas", () => {
     };
 
     it("should accept valid category data", () => {
-      const result = safeValidate(CategoryInputSchema, validCategory);
+      const result = safeValidate(getCategoryInputSchema(t), validCategory);
       expect(result.success).toBe(true);
     });
 
     it("should reject empty name", () => {
-      const result = safeValidate(CategoryInputSchema, {
+      const result = safeValidate(getCategoryInputSchema(t), {
         ...validCategory,
         name: "",
       });
@@ -131,7 +137,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject too long name", () => {
-      const result = safeValidate(CategoryInputSchema, {
+      const result = safeValidate(getCategoryInputSchema(t), {
         ...validCategory,
         name: "a".repeat(101),
       });
@@ -139,7 +145,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept parent_id for subcategories", () => {
-      const result = safeValidate(CategoryInputSchema, {
+      const result = safeValidate(getCategoryInputSchema(t), {
         ...validCategory,
         parent_id: validUUID,
       });
@@ -155,12 +161,12 @@ describe("Validation Schemas", () => {
     };
 
     it("should accept valid context data", () => {
-      const result = safeValidate(ContextInputSchema, validContext);
+      const result = safeValidate(getContextInputSchema(t), validContext);
       expect(result.success).toBe(true);
     });
 
     it("should accept optional description", () => {
-      const result = safeValidate(ContextInputSchema, {
+      const result = safeValidate(getContextInputSchema(t), {
         ...validContext,
         description: "Work related expenses",
       });
@@ -168,7 +174,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject empty name", () => {
-      const result = safeValidate(ContextInputSchema, {
+      const result = safeValidate(getContextInputSchema(t), {
         ...validContext,
         name: "",
       });
@@ -190,14 +196,14 @@ describe("Validation Schemas", () => {
 
     it("should accept valid recurring transaction data", () => {
       const result = safeValidate(
-        RecurringTransactionInputSchema,
+        getRecurringTransactionInputSchema(t),
         validRecurring
       );
       expect(result.success).toBe(true);
     });
 
     it("should reject invalid frequency", () => {
-      const result = safeValidate(RecurringTransactionInputSchema, {
+      const result = safeValidate(getRecurringTransactionInputSchema(t), {
         ...validRecurring,
         frequency: "biweekly",
       });
@@ -205,7 +211,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept end_date", () => {
-      const result = safeValidate(RecurringTransactionInputSchema, {
+      const result = safeValidate(getRecurringTransactionInputSchema(t), {
         ...validRecurring,
         end_date: "2024-12-31",
       });
@@ -220,12 +226,12 @@ describe("Validation Schemas", () => {
     };
 
     it("should accept valid group data", () => {
-      const result = safeValidate(GroupInputSchema, validGroup);
+      const result = safeValidate(getGroupInputSchema(t), validGroup);
       expect(result.success).toBe(true);
     });
 
     it("should accept optional description", () => {
-      const result = safeValidate(GroupInputSchema, {
+      const result = safeValidate(getGroupInputSchema(t), {
         ...validGroup,
         description: "Shared family expenses",
       });
@@ -233,7 +239,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject empty name", () => {
-      const result = safeValidate(GroupInputSchema, {
+      const result = safeValidate(getGroupInputSchema(t), {
         ...validGroup,
         name: "",
       });
@@ -249,12 +255,12 @@ describe("Validation Schemas", () => {
     };
 
     it("should accept valid member data", () => {
-      const result = safeValidate(GroupMemberInputSchema, validMember);
+      const result = safeValidate(getGroupMemberInputSchema(t), validMember);
       expect(result.success).toBe(true);
     });
 
     it("should reject share over 100", () => {
-      const result = safeValidate(GroupMemberInputSchema, {
+      const result = safeValidate(getGroupMemberInputSchema(t), {
         ...validMember,
         share: 150,
       });
@@ -262,7 +268,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject negative share", () => {
-      const result = safeValidate(GroupMemberInputSchema, {
+      const result = safeValidate(getGroupMemberInputSchema(t), {
         ...validMember,
         share: -10,
       });
@@ -270,7 +276,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept 0 share", () => {
-      const result = safeValidate(GroupMemberInputSchema, {
+      const result = safeValidate(getGroupMemberInputSchema(t), {
         ...validMember,
         share: 0,
       });
@@ -278,7 +284,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept 100 share", () => {
-      const result = safeValidate(GroupMemberInputSchema, {
+      const result = safeValidate(getGroupMemberInputSchema(t), {
         ...validMember,
         share: 100,
       });
@@ -295,12 +301,15 @@ describe("Validation Schemas", () => {
     };
 
     it("should accept valid budget data", () => {
-      const result = safeValidate(CategoryBudgetInputSchema, validBudget);
+      const result = safeValidate(
+        getCategoryBudgetInputSchema(t),
+        validBudget
+      );
       expect(result.success).toBe(true);
     });
 
     it("should reject zero amount", () => {
-      const result = safeValidate(CategoryBudgetInputSchema, {
+      const result = safeValidate(getCategoryBudgetInputSchema(t), {
         ...validBudget,
         amount: 0,
       });
@@ -308,7 +317,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should accept yearly period", () => {
-      const result = safeValidate(CategoryBudgetInputSchema, {
+      const result = safeValidate(getCategoryBudgetInputSchema(t), {
         ...validBudget,
         period: "yearly",
       });
@@ -316,7 +325,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should reject invalid period", () => {
-      const result = safeValidate(CategoryBudgetInputSchema, {
+      const result = safeValidate(getCategoryBudgetInputSchema(t), {
         ...validBudget,
         period: "weekly",
       });
@@ -327,19 +336,22 @@ describe("Validation Schemas", () => {
   describe("validate helper", () => {
     it("should return data on success", () => {
       const data = { name: "Test", created_by: validUUID };
-      const result = validate(GroupInputSchema, data);
+      const result = validate(getGroupInputSchema(t), data);
       expect(result.name).toBe("Test");
     });
 
     it("should throw ValidationError on failure", () => {
-      expect(() => validate(GroupInputSchema, { name: "" })).toThrow(
-        ValidationError
-      );
+      expect(() =>
+        validate(getGroupInputSchema(t), { name: "" })
+      ).toThrow(ValidationError);
     });
 
     it("should include field path in error message", () => {
       try {
-        validate(GroupInputSchema, { name: "", created_by: "invalid-uuid" });
+        validate(getGroupInputSchema(t), {
+          name: "",
+          created_by: "invalid-uuid",
+        });
       } catch (error) {
         expect(error).toBeInstanceOf(ValidationError);
         expect((error as ValidationError).message).toContain("name");
@@ -350,7 +362,7 @@ describe("Validation Schemas", () => {
   describe("safeValidate helper", () => {
     it("should return success object on valid data", () => {
       const data = { name: "Test", created_by: validUUID };
-      const result = safeValidate(GroupInputSchema, data);
+      const result = safeValidate(getGroupInputSchema(t), data);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.name).toBe("Test");
@@ -358,7 +370,7 @@ describe("Validation Schemas", () => {
     });
 
     it("should return errors object on invalid data", () => {
-      const result = safeValidate(GroupInputSchema, { name: "" });
+      const result = safeValidate(getGroupInputSchema(t), { name: "" });
       expect(result.success).toBe(false);
       if (result.success === false) {
         expect(result.errors.length).toBeGreaterThan(0);
