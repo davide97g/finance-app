@@ -151,80 +151,82 @@ export function MobileRecurringTransactionRow({
           touchAction: "pan-y",
           cursor: onClick ? "pointer" : "default",
         }}
-        className="relative bg-card p-3 rounded-lg border shadow-sm flex items-center gap-3 h-[84px]"
+        className="relative bg-card p-3 rounded-lg border shadow-sm flex flex-col gap-2 min-h-[84px]"
       >
-        {/* Icon */}
-        <div
-          className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
-          style={{
-            backgroundColor: category?.color
-              ? `${category.color}20`
-              : "#f3f4f6",
-            color: category?.color || "#6b7280",
-          }}
-        >
-          {IconComp ? (
-            <IconComp className="h-5 w-5" />
-          ) : (
-            <div className="h-5 w-5 rounded-full bg-muted" />
-          )}
+        {/* Top: Description (Full Width) */}
+        <div className="font-medium text-sm w-full break-all">
+          {transaction.description || t("transaction")}
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-          <div className="font-medium text-sm truncate">
-            {transaction.description || t("transaction")}
-          </div>
-
-          {/* Recurrence Info */}
-          <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Repeat className="h-3 w-3" />
-              <span className="capitalize">{t(transaction.frequency)}</span>
-            </div>
-            <div>
-              {t("next")}:{" "}
-              {getNextOccurrence(transaction.start_date, transaction.frequency)}
-            </div>
-          </div>
-
-          {/* Badges */}
-          <div className="flex flex-col gap-1 text-xs text-muted-foreground mt-0.5">
-            <span className="truncate">{category?.name || "-"}</span>
-            {(group || context) && (
-              <div className="flex items-center gap-1 flex-wrap">
-                {group && (
-                  <div className="flex items-center gap-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[10px]">
-                    <Users className="h-3 w-3" />
-                    <span className="truncate max-w-[80px]">{group.name}</span>
-                  </div>
-                )}
-                {context && (
-                  <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]">
-                    <Tag className="h-3 w-3" />
-                    <span className="truncate max-w-[80px]">{context.name}</span>
-                  </div>
-                )}
-              </div>
+        {/* Bottom: Details Row */}
+        <div className="flex items-start gap-3 w-full">
+          {/* Icon */}
+          <div
+            className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
+            style={{
+              backgroundColor: category?.color
+                ? `${category.color}20`
+                : "#f3f4f6",
+              color: category?.color || "#6b7280",
+            }}
+          >
+            {IconComp ? (
+              <IconComp className="h-5 w-5" />
+            ) : (
+              <div className="h-5 w-5 rounded-full bg-muted" />
             )}
           </div>
-        </div>
 
-        {/* Amount & Status */}
-        <div className="text-right shrink-0 flex flex-col items-end justify-center">
-          <div
-            className={`font-bold text-sm ${getTypeTextColor(
-              transaction.type
-            )}`}
-          >
-            {transaction.type === "expense"
-              ? "-"
-              : transaction.type === "investment"
-                ? ""
-                : "+"}
-            €{transaction.amount.toFixed(2)}
+          {/* Middle: Recurrence & Badges */}
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+            {/* Recurrence Info */}
+            <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Repeat className="h-3 w-3" />
+                <span className="capitalize">{t(transaction.frequency)}</span>
+              </div>
+              <div>
+                {t("next")}:{" "}
+                {getNextOccurrence(transaction.start_date, transaction.frequency)}
+              </div>
+            </div>
+
+            {/* Badges */}
+            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+              <span className="truncate">{category?.name || "-"}</span>
+              {(group || context) && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {group && (
+                    <div className="flex items-center gap-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[10px]">
+                      <Users className="h-3 w-3" />
+                      <span className="truncate max-w-[80px]">{group.name}</span>
+                    </div>
+                  )}
+                  {context && (
+                    <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]">
+                      <Tag className="h-3 w-3" />
+                      <span className="truncate max-w-[80px]">{context.name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="mt-1">
+
+          {/* Right: Amount & Status */}
+          <div className="text-right shrink-0 flex flex-col items-end gap-1">
+            <div
+              className={`font-bold text-sm ${getTypeTextColor(
+                transaction.type
+              )}`}
+            >
+              {transaction.type === "expense"
+                ? "-"
+                : transaction.type === "investment"
+                  ? ""
+                  : "+"}
+              €{transaction.amount.toFixed(2)}
+            </div>
             <SyncStatusBadge isPending={transaction.pendingSync === 1} />
           </div>
         </div>

@@ -64,6 +64,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { RecurringTransactionDetailDrawer } from "@/components/RecurringTransactionDetailDrawer";
 import { RecurringTransaction } from "@/lib/db";
 import { MobileRecurringTransactionRow } from "@/components/MobileRecurringTransactionRow";
+import { ValidationError } from "@/lib/validation";
 
 export function RecurringTransactionsPage() {
   const {
@@ -117,6 +118,11 @@ export function RecurringTransactionsPage() {
     e.preventDefault();
     if (!user) return;
 
+    if (!formData.category_id) {
+      toast.warning(t("category_required") || "Category is required");
+      return;
+    }
+
     const groupId = formData.group_id || null;
     let paidByMemberId = groupId ? formData.paid_by_member_id : null;
 
@@ -127,31 +133,58 @@ export function RecurringTransactionsPage() {
       if (member) paidByMemberId = member.id;
     }
 
-    if (editingId) {
-      await updateRecurringTransaction(editingId, {
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        type: formData.type,
-        frequency: formData.frequency,
-        start_date: formData.start_date,
-        category_id: formData.category_id,
-        context_id: formData.context_id || undefined,
-        group_id: groupId,
-        paid_by_member_id: paidByMemberId,
+    try {
+      if (editingId) {
+        await updateRecurringTransaction(editingId, {
+          amount: parseFloat(formData.amount),
+          description: formData.description,
+          type: formData.type,
+          frequency: formData.frequency,
+          start_date: formData.start_date,
+          category_id: formData.category_id,
+          context_id: formData.context_id || undefined,
+          group_id: groupId,
+          paid_by_member_id: paidByMemberId,
+        });
+        toast.success(t("transaction_updated"));
+      } else {
+        await addRecurringTransaction({
+          user_id: user.id,
+          amount: parseFloat(formData.amount),
+          description: formData.description,
+          type: formData.type,
+          frequency: formData.frequency,
+          start_date: formData.start_date,
+          category_id: formData.category_id,
+          context_id: formData.context_id || undefined,
+          group_id: groupId,
+          paid_by_member_id: paidByMemberId,
+        });
+        toast.success(t("transaction_added"));
+      }
+      setIsOpen(false);
+      setEditingId(null);
+      setActiveSection("main");
+      setFormData({
+        amount: "",
+        description: "",
+        category_id: "",
+        type: "expense",
+        frequency: "monthly",
+        start_date: new Date().toISOString().split("T")[0],
+        context_id: "",
+        group_id: "",
+        paid_by_member_id: "",
       });
-    } else {
-      await addRecurringTransaction({
-        user_id: user.id,
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        type: formData.type,
-        frequency: formData.frequency,
-        start_date: formData.start_date,
-        category_id: formData.category_id,
-        context_id: formData.context_id || undefined,
-        group_id: groupId,
-        paid_by_member_id: paidByMemberId,
-      });
+    } catch (error) {
+      console.error("Error saving recurring transaction:", error);
+      if (error instanceof ValidationError) {
+        // Show the first validation error
+        const firstError = error.errors[0];
+        toast.error(`${firstError.path.join(".")}: ${firstError.message}`);
+      } else {
+        toast.error(t("error_saving_transaction") || "Error saving transaction");
+      }
     }
     setIsOpen(false);
     setEditingId(null);
@@ -505,7 +538,6 @@ export function RecurringTransactionsPage() {
                                       value === "none"
                                         ? ""
                                         : (() => {
-                                          // Default to me (my member ID)
                                           const group = groups.find(g => g.id === value);
                                           const member = group?.members.find(m => m.user_id === user?.id);
                                           return member?.id || "";
@@ -572,7 +604,7 @@ export function RecurringTransactionsPage() {
                           </>
                         )}
 
-                        {/* Context Selection */}
+                        {/* Context Selection - Only visible if contexts exist */}
                         {contexts && contexts.length > 0 && (
                           <div className="space-y-2">
                             <label className="text-sm font-medium">
