@@ -1,7 +1,9 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, Category, Transaction, GroupMember } from "../lib/db";
+import { useTranslation } from "react-i18next";
 import { format, subMonths } from "date-fns";
 import { useMemo, useCallback } from "react";
+import { Locale } from "date-fns";
 
 /**
  * Parameters for configuring the statistics hook.
@@ -63,6 +65,26 @@ export function useStatistics(params?: UseStatisticsParams) {
   const currentYear = params?.selectedYear || format(now, "yyyy");
   const mode = params?.mode || "monthly"; // Default to monthly for backwards compatibility
   const userId = params?.userId;
+
+  const { t } = useTranslation();
+
+  // Helper to get localized short month names
+  const getMonthNames = useCallback(() => {
+    return [
+      t('months_short.jan'),
+      t('months_short.feb'),
+      t('months_short.mar'),
+      t('months_short.apr'),
+      t('months_short.may'),
+      t('months_short.jun'),
+      t('months_short.jul'),
+      t('months_short.aug'),
+      t('months_short.sep'),
+      t('months_short.oct'),
+      t('months_short.nov'),
+      t('months_short.dec')
+    ];
+  }, [t]);
 
   // Calculate previous periods for comparison
   const defaultPreviousMonth = format(
@@ -543,30 +565,27 @@ export function useStatistics(params?: UseStatisticsParams) {
     // Skip calculation if in monthly mode - this data is only for yearly view
     if (mode !== "yearly") return defaultData;
 
-    const expenses: { month: string; value: number }[] = [];
-    const income: { month: string; value: number }[] = [];
-    const investments: { month: string; value: number }[] = [];
+    // Initialize with 0 for all months to ensure full radar chart rendering
+    const monthNames = getMonthNames();
 
-    // Initialize arrays with 0 values for all 12 months
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    for (let i = 0; i < 12; i++) {
-      expenses.push({ month: monthNames[i], value: 0 });
-      income.push({ month: monthNames[i], value: 0 });
-      investments.push({ month: monthNames[i], value: 0 });
-    }
+    // Initialize standard monthly data
+    const expenses = monthNames.map((month) => ({
+      month,
+      value: 0,
+      fullMark: 0,
+    }));
+
+    const income = monthNames.map((month) => ({
+      month,
+      value: 0,
+      fullMark: 0,
+    }));
+
+    const investments = monthNames.map((month) => ({
+      month,
+      value: 0,
+      fullMark: 0,
+    }));
 
     // Aggregate yearly transactions by month
     if (yearlyTransactions) {
@@ -590,7 +609,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       monthlyIncome: income,
       monthlyInvestments: investments,
     };
-  }, [yearlyTransactions, mode, getEffectiveAmount]);
+  }, [yearlyTransactions, mode, getEffectiveAmount, getMonthNames]);
 
   // Calculate daily cumulative expenses for current month - #1 Lazy calculation
   const dailyCumulativeExpenses = useMemo(() => {
@@ -681,20 +700,8 @@ export function useStatistics(params?: UseStatisticsParams) {
     // Skip calculation if in monthly mode
     if (mode !== "yearly" || !yearlyTransactions) return data;
     // Monthly trend for selected year
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
+    // Monthly trend for selected year
+    const monthNames = getMonthNames();
     const monthlyMap = new Map<number, { income: number; expense: number }>();
 
     // Determine how many months to show (don't show future months for current year)
@@ -728,7 +735,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       });
     }
     return data;
-  }, [yearlyTransactions, mode, currentYear, getEffectiveAmount]);
+  }, [yearlyTransactions, mode, currentYear, getEffectiveAmount, getMonthNames]);
 
   // 2. CASH FLOW DATA (Stacked Bar/Area Chart)
   // Monthly aggregation for yearly view - #1 Lazy calculation
@@ -738,20 +745,8 @@ export function useStatistics(params?: UseStatisticsParams) {
     // Skip calculation if in monthly mode
     if (mode !== "yearly" || !yearlyTransactions) return data;
     // Monthly cash flow for selected year
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
+    // Monthly cash flow for selected year
+    const monthNames = getMonthNames();
 
     // Determine how many months to show (don't show future months for current year)
     const today = new Date();
@@ -772,7 +767,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       else if (t.type === "expense") data[monthIdx].expense += amount;
     });
     return data;
-  }, [yearlyTransactions, mode, currentYear, getEffectiveAmount]);
+  }, [yearlyTransactions, mode, currentYear, getEffectiveAmount, getMonthNames]);
 
   // 3. CONTEXT ANALYTICS - Enhanced with detailed stats
   const contextStats = useMemo(() => {

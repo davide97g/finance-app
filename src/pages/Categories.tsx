@@ -207,7 +207,7 @@ function DesktopCategoryRows({
                     variant="secondary"
                     className={isRoot ? "" : "text-xs"}
                   >
-                    {t("inactive") || "Inactive"}
+                    {t("inactive")}
                   </Badge>
                 ) : (
                   <Badge
@@ -215,7 +215,7 @@ function DesktopCategoryRows({
                     className={`text-green-600 border-green-600 ${isRoot ? "" : "text-xs"
                       }`}
                   >
-                    {t("active") || "Active"}
+                    {t("active")}
                   </Badge>
                 )}
               </TableCell>
@@ -351,7 +351,7 @@ export function CategoriesPage() {
     if (!user) return;
 
     if (!formData.icon) {
-      alert(t("icon_required") || "Please select an icon");
+      alert(t("icon_required"));
       return;
     }
 
@@ -513,8 +513,7 @@ export function CategoriesPage() {
     if (isGroupCategory) {
       // Show warning about group category
       alert(
-        t("group_category_delete_warning") ||
-        "This is a group category. Deleting it will affect all group members."
+        t("group_category_delete_warning")
       );
     }
 
@@ -742,7 +741,7 @@ export function CategoriesPage() {
               <EyeOff className="h-4 w-4" />
             )}
             <span className="sr-only sm:not-sr-only sm:ml-2">
-              {t("show_inactive") || "Inactive"}
+              {t("show_inactive")}
             </span>
           </Button>
 
@@ -754,9 +753,9 @@ export function CategoriesPage() {
                   <Users className="h-4 w-4" />
                   <span className="hidden md:inline">
                     {selectedGroupFilter === undefined
-                      ? t("all_categories") || "All Categories"
+                      ? t("all_categories")
                       : selectedGroupFilter === null
-                        ? t("personal_categories") || "Personal"
+                        ? t("personal_categories")
                         : groups.find((g) => g.id === selectedGroupFilter)
                           ?.name || t("group")}
                   </span>
@@ -764,7 +763,7 @@ export function CategoriesPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
                 <DropdownMenuLabel>
-                  {t("filter_by") || "Filter by"}
+                  {t("filter_by")}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup
@@ -786,10 +785,10 @@ export function CategoriesPage() {
                   }
                 >
                   <DropdownMenuRadioItem value="all">
-                    {t("all_categories") || "All Categories"}
+                    {t("all_categories")}
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="personal">
-                    {t("personal_categories") || "Personal"}
+                    {t("personal_categories")}
                   </DropdownMenuRadioItem>
                   {groups.map((group) => (
                     <DropdownMenuRadioItem key={group.id} value={group.id}>
@@ -818,8 +817,8 @@ export function CategoriesPage() {
                 </DialogTitle>
                 <DialogDescription className="sr-only">
                   {editingId
-                    ? t("edit_category_description") || "Edit category details"
-                    : t("add_category_description") || "Add a new category"}
+                    ? t("edit_category_description")
+                    : t("add_category_description")}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -834,7 +833,7 @@ export function CategoriesPage() {
                     <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium">
                       <span className="flex items-center gap-2">
                         <ListFilter className="h-4 w-4" />
-                        {t("category_details") || "Category Details"}
+                        {t("category_details")}
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-2 px-1">
@@ -942,7 +941,7 @@ export function CategoriesPage() {
                       <span className="flex items-center gap-2">
                         <SlidersHorizontal className="h-4 w-4" />
                         <span className="text-sm font-medium">
-                          {t("more_options") || "More"}
+                          {t("more_options")}
                         </span>
                         {(formData.group_id ||
                           (formData.budget &&
@@ -965,7 +964,7 @@ export function CategoriesPage() {
                       {groups.length > 0 && (
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
-                            {t("group") || "Group"}
+                            {t("group")}
                           </label>
                           <Select
                             value={formData.group_id || "none"}
@@ -978,12 +977,12 @@ export function CategoriesPage() {
                           >
                             <SelectTrigger>
                               <SelectValue
-                                placeholder={t("select_group") || "Select Group"}
+                                placeholder={t("select_group")}
                               />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">
-                                {t("personal_category") || "Personal Category"}
+                                {t("personal_category")}
                               </SelectItem>
                               {groups.map((group) => (
                                 <SelectItem key={group.id} value={group.id}>
@@ -1029,10 +1028,10 @@ export function CategoriesPage() {
                               htmlFor="active-mode"
                               className="text-sm font-medium"
                             >
-                              {t("active") || "Active"}
+                              {t("active")}
                             </label>
                             <div className="text-[0.8rem] text-muted-foreground">
-                              {t("active_description") || "Enable or disable this category"}
+                              {t("active_description")}
                             </div>
                           </div>
                           <Switch
@@ -1065,7 +1064,7 @@ export function CategoriesPage() {
         >
           {categories && categories.length === 0 ? (
             <div className="text-muted-foreground text-center py-8">
-              {t("no_categories") || "No categories"}
+              {t("no_categories")}
             </div>
           ) : (
             <div className="pb-20">
@@ -1207,7 +1206,7 @@ export function CategoriesPage() {
               <TableHead className="w-8"></TableHead>
               <TableHead>{t("name")}</TableHead>
               <TableHead>{t("type")}</TableHead>
-              <TableHead>{t("status") || "Status"}</TableHead>
+              <TableHead>{t("status")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -1231,10 +1230,9 @@ export function CategoriesPage() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title={t("confirm_delete_category") || t("confirm_delete")}
+        title={t("confirm_delete_category")}
         description={
-          t("confirm_delete_category_description") ||
-          t("confirm_delete_description")
+          t("confirm_delete_category_description")
         }
       />
 
@@ -1245,26 +1243,20 @@ export function CategoriesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t("warning_subcategories") || "Warning: Subcategories Detected"}
+              {t("warning_subcategories")}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {t("subcategory_conflict_description", {
                 count: conflictData?.childrenCount,
                 parentName:
-                  conflictData?.parentName || t("root_category") || "Root",
-              }) ||
-                `This category has ${conflictData?.childrenCount
-                } subcategories. ${conflictData?.action === "delete"
-                  ? "Deleting"
-                  : "Deactivating"
-                } it will make them inaccessible. Do you want to move them to the parent category (${conflictData?.parentName || "Root"
-                })?`}
+                  conflictData?.parentName || t("root_category"),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConflictResolve}>
-              {t("move_children_and_proceed") || "Move Children & Proceed"}
+              {t("move_children_and_proceed")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1276,8 +1268,7 @@ export function CategoriesPage() {
           <DialogHeader>
             <DialogTitle>{t("set_budget")}</DialogTitle>
             <DialogDescription className="sr-only">
-              {t("set_budget_description") ||
-                "Set a monthly budget for this category"}
+              {t("set_budget_description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1354,22 +1345,19 @@ export function CategoriesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {t("delete_category_with_data") || "Delete Category with Data"}
+              {t("delete_category_with_data")}
             </DialogTitle>
             <DialogDescription>
               {t("category_has_data_warning", {
                 transactions: migrationData?.transactionCount || 0,
                 recurring: migrationData?.recurringCount || 0,
-              }) ||
-                `This category is used by ${migrationData?.transactionCount || 0
-                } transactions and ${migrationData?.recurringCount || 0
-                } recurring templates. Please select a new category to move them to.`}
+              })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <label className="text-sm font-medium mb-2 block">
-              {t("select_new_category") || "Select New Category"}
+              {t("select_new_category")}
             </label>
             <CategorySelector
               value={migrationTargetId}
@@ -1399,7 +1387,7 @@ export function CategoriesPage() {
               onClick={handleMigrationResolve}
               disabled={!migrationTargetId}
             >
-              {t("migrate_and_delete") || "Migrate & Delete"}
+              {t("migrate_and_delete")}
             </Button>
           </div>
         </DialogContent>

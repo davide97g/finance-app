@@ -29,6 +29,7 @@ import { CategorySelector } from "@/components/CategorySelector";
 import { ListFilter, SlidersHorizontal, Calculator as CalculatorIcon } from "lucide-react";
 import { Calculator } from "@/components/Calculator";
 import { useRef } from "react";
+import { useCategoryBudgets } from "@/hooks/useCategoryBudgets";
 
 // ... (imports remain)
 
@@ -97,6 +98,9 @@ export function TransactionDialog({
     const [showCalculator, setShowCalculator] = useState(false);
     const amountInputRef = useRef<HTMLInputElement>(null);
     const calculatorContainerRef = useRef<HTMLDivElement>(null);
+
+    // Budget Hook
+    const { getBudgetForCategory } = useCategoryBudgets();
 
     // Reset form when dialog opens/closes or editing transaction changes
     useEffect(() => {
@@ -431,6 +435,58 @@ export function TransactionDialog({
                                         required
                                     />
                                 </div>
+
+                                {/* Budget Feedback */}
+                                {formData.category_id && formData.type === "expense" && (() => {
+                                    const budget = getBudgetForCategory(formData.category_id);
+                                    if (!budget || budget.amount <= 0) return null;
+
+                                    const amount = parseFloat(formData.amount) || 0;
+                                    // If editing, we need to subtract the original amount from 'spent' 
+                                    // to get the "pre-transaction" state.
+                                    // However, 'spent' from hook includes the current transaction if it's already saved.
+                                    // A simple approximation for UX:
+                                    // If adding: Projected = Spent + NewAmount
+                                    // If editing: Projected = (Spent - OldAmount) + NewAmount
+
+                                    let currentSpent = budget.spent;
+                                    if (editingTransaction && editingTransaction.category_id === formData.category_id) {
+                                        const oldAmount = editingTransaction.amount;
+                                        // Ensure we don't go below zero for calculation safety
+                                        currentSpent = Math.max(0, currentSpent - oldAmount);
+                                    }
+
+                                    const projectedSpent = currentSpent + amount;
+                                    const remainingBefore = budget.amount - currentSpent;
+                                    const remainingAfter = budget.amount - projectedSpent;
+                                    const isOver = remainingAfter < 0;
+                                    const willBeOver = !budget.isOverBudget && isOver;
+
+                                    if (remainingBefore <= 0) {
+                                        // Already over budget
+                                        return (
+                                            <div className="text-xs font-medium text-red-600 bg-red-50 dark:bg-red-950/20 p-2 rounded border border-red-200 dark:border-red-900 mt-1">
+                                                {t("budget_feedback_exceeded", { amount: Math.abs(remainingAfter).toFixed(2) })}
+                                            </div>
+                                        );
+                                    }
+
+                                    if (willBeOver) {
+                                        // Will exceed
+                                        return (
+                                            <div className="text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-2 rounded border border-amber-200 dark:border-amber-900 mt-1">
+                                                {t("budget_feedback_will_exceed", { amount: Math.abs(remainingAfter).toFixed(2) })}
+                                            </div>
+                                        );
+                                    }
+
+                                    // Still within budget
+                                    return (
+                                        <div className="text-xs font-medium text-green-600 bg-green-50 dark:bg-green-950/20 p-2 rounded border border-green-200 dark:border-green-900 mt-1">
+                                            {t("budget_feedback_remaining", { amount: remainingAfter.toFixed(2) })}
+                                        </div>
+                                    );
+                                })()}
                             </AccordionContent>
                         </AccordionItem>
 

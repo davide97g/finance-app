@@ -143,7 +143,6 @@ export function StatisticsPage() {
   });
 
 
-
   // Get selected group name for display
   const selectedGroup = groups?.find(g => g.id === selectedGroupId);
 
@@ -303,8 +302,21 @@ export function StatisticsPage() {
     };
   }, [yearlyStats, yearlyNetBalance, monthlyTrendData]);
 
+  // Helper to render vertical dots
+  const renderVerticalDots = (activeIndex: number, activeColorClass: string = "bg-primary") => (
+    <div className="flex flex-col gap-1 ml-1.5">
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          className={`h-1.5 w-1.5 rounded-full transition-colors ${i === activeIndex ? activeColorClass : "bg-muted-foreground/30"
+            }`}
+        />
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" >
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
           {selectedGroup
@@ -335,327 +347,375 @@ export function StatisticsPage() {
         </TabsList>
 
         {/* Filters - Always visible based on selected tab */}
-        {activeTab === "monthly" ? (
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="flex flex-col gap-2 min-w-[180px]">
-              <label className="text-sm font-medium">{t("select_month")}</label>
-              <Select
-                value={selectedMonth.split("-")[1]}
-                onValueChange={handleMonthChange}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {
+          activeTab === "monthly" ? (
+            <div className="flex flex-wrap gap-4 mb-6">
+              <div className="flex flex-col gap-2 min-w-[180px]">
+                <label className="text-sm font-medium">{t("select_month")}</label>
+                <Select
+                  value={selectedMonth.split("-")[1]}
+                  onValueChange={handleMonthChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                <label className="text-sm font-medium">{t("select_year")}</label>
+                <Select value={selectedYear} onValueChange={handleYearChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex flex-col gap-2 min-w-[140px]">
-              <label className="text-sm font-medium">{t("select_year")}</label>
-              <Select value={selectedYear} onValueChange={handleYearChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          ) : (
+            <div className="flex flex-wrap gap-4 mb-6">
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                <label className="text-sm font-medium">{t("select_year")}</label>
+                <Select value={selectedYear} onValueChange={handleYearChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="flex flex-col gap-2 min-w-[140px]">
-              <label className="text-sm font-medium">{t("select_year")}</label>
-              <Select value={selectedYear} onValueChange={handleYearChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Group Filter Dropdown REMOVED as per user request */}
         {/* The page now behaves as a dedicated view when accessed from a group card */}
-      </Tabs>
+      </Tabs >
 
       {/* Summary Cards - Monthly: static | Yearly: interactive flip cards */}
-      <div className="grid gap-2 md:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+      < div className="grid gap-2 md:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-3" >
         {/* Income Card */}
-        {activeTab === "yearly" ? (
-          <FlipCard
-            className="h-[100px] md:h-[116px]"
-            isFlipped={flippedCards.income}
-            onFlip={() => toggleCard("income")}
-            flipDirection="top"
-            frontContent={
-              <Card className="h-full hover:bg-accent/50 transition-colors">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("total_income")}
-                  </CardTitle>
-                  <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div className="text-lg md:text-2xl font-bold text-green-500">
-                    +€{currentStats.income.toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("tap_for_average")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-            backContent={
-              <Card className="h-full bg-accent/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("monthly_average")}
-                  </CardTitle>
-                  <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div className="text-lg md:text-2xl font-bold text-green-500">
-                    +€{yearlyMonthlyAverages.income.toFixed(2)}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("per_month")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-          />
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {t("total_income")}
-              </CardTitle>
-              <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-6">
-              <div className="text-lg md:text-2xl font-bold text-green-500">
-                +€{currentStats.income.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {
+          activeTab === "yearly" ? (
+            <FlipCard
+              className="h-[100px] md:h-[116px]"
+              isFlipped={flippedCards.income}
+              onFlip={() => toggleCard("income")}
+              flipDirection="top"
+              frontContent={
+                <Card className="h-full hover:bg-accent/50 transition-colors">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("total_income")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                      {renderVerticalDots(0, "bg-green-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div className="text-lg md:text-2xl font-bold text-green-500">
+                      +€{currentStats.income.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("tap_for_average")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+              backContent={
+                <Card className="h-full bg-accent/30">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("monthly_average")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                      {renderVerticalDots(1, "bg-green-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div className="text-lg md:text-2xl font-bold text-green-500">
+                      +€{yearlyMonthlyAverages.income.toFixed(2)}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("per_month")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+            />
+          ) : (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  {t("total_income")}
+                </CardTitle>
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+              </CardHeader>
+              <CardContent className="pb-2 md:pb-6">
+                <div className="text-lg md:text-2xl font-bold text-green-500">
+                  +€{currentStats.income.toFixed(2)}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
 
         {/* Expense Card */}
-        {activeTab === "yearly" ? (
-          <FlipCard
-            className="h-[100px] md:h-[116px]"
-            isFlipped={flippedCards.expense}
-            onFlip={() => toggleCard("expense")}
-            flipDirection="top"
-            frontContent={
-              <Card className="h-full hover:bg-accent/50 transition-colors">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("total_expenses")}
-                  </CardTitle>
-                  <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div className="text-lg md:text-2xl font-bold text-red-500">
-                    -€{currentStats.expense.toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("tap_for_average")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-            backContent={
-              <Card className="h-full bg-accent/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("monthly_average")}
-                  </CardTitle>
-                  <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div className="text-lg md:text-2xl font-bold text-red-500">
-                    -€{yearlyMonthlyAverages.expense.toFixed(2)}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("per_month")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-          />
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {t("total_expenses")}
-              </CardTitle>
-              <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-6">
-              <div className="text-lg md:text-2xl font-bold text-red-500">
-                -€{currentStats.expense.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {
+          activeTab === "yearly" ? (
+            <FlipCard
+              className="h-[100px] md:h-[116px]"
+              isFlipped={flippedCards.expense}
+              onFlip={() => toggleCard("expense")}
+              flipDirection="top"
+              frontContent={
+                <Card className="h-full hover:bg-accent/50 transition-colors">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("total_expenses")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
+                      {renderVerticalDots(0, "bg-red-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div className="text-lg md:text-2xl font-bold text-red-500">
+                      -€{currentStats.expense.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("tap_for_average")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+              backContent={
+                <Card className="h-full bg-accent/30">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("monthly_average")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
+                      {renderVerticalDots(1, "bg-red-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div className="text-lg md:text-2xl font-bold text-red-500">
+                      -€{yearlyMonthlyAverages.expense.toFixed(2)}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("per_month")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+            />
+          ) : (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  {t("total_expenses")}
+                </CardTitle>
+                <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
+              </CardHeader>
+              <CardContent className="pb-2 md:pb-6">
+                <div className="text-lg md:text-2xl font-bold text-red-500">
+                  -€{currentStats.expense.toFixed(2)}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
 
         {/* Investment Card */}
-        {activeTab === "yearly" ? (
-          <FlipCard
-            className="h-[100px] md:h-[116px]"
-            isFlipped={flippedCards.investment}
-            onFlip={() => toggleCard("investment")}
-            flipDirection="top"
-            frontContent={
-              <Card className="h-full hover:bg-accent/50 transition-colors">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("investment")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div className="text-lg md:text-2xl font-bold text-blue-500">
-                    €{currentStats.investment.toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("tap_for_average")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-            backContent={
-              <Card className="h-full bg-accent/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("monthly_average")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div className="text-lg md:text-2xl font-bold text-blue-500">
-                    €{yearlyMonthlyAverages.investment.toFixed(2)}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("per_month")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-          />
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {t("investment")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-6">
-              <div className="text-lg md:text-2xl font-bold text-blue-500">
-                €{currentStats.investment.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {
+          activeTab === "yearly" ? (
+            <FlipCard
+              className="h-[100px] md:h-[116px]"
+              isFlipped={flippedCards.investment}
+              onFlip={() => toggleCard("investment")}
+              flipDirection="top"
+              frontContent={
+                <Card className="h-full hover:bg-accent/50 transition-colors">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("investment")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      {/* Placeholder for optional icon or empty space if wanted, but standard card has none here usually. 
+                       Wait, original Investment card code didn't have an icon in the header? 
+                       Checking original lines 536-539: It just had CardTitle. 
+                       I will add the dots aligned to the right. 
+                    */}
+                      {renderVerticalDots(0, "bg-blue-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div className="text-lg md:text-2xl font-bold text-blue-500">
+                      €{currentStats.investment.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("tap_for_average")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+              backContent={
+                <Card className="h-full bg-accent/30">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("monthly_average")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      {renderVerticalDots(1, "bg-blue-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div className="text-lg md:text-2xl font-bold text-blue-500">
+                      €{yearlyMonthlyAverages.investment.toFixed(2)}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("per_month")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+            />
+          ) : (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  {t("investment")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-2 md:pb-6">
+                <div className="text-lg md:text-2xl font-bold text-blue-500">
+                  €{currentStats.investment.toFixed(2)}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
 
         {/* Net Balance Card */}
-        {activeTab === "yearly" ? (
-          <FlipCard
-            className="h-[100px] md:h-[116px]"
-            isFlipped={flippedCards.netBalance}
-            onFlip={() => toggleCard("netBalance")}
-            flipDirection="top"
-            frontContent={
-              <Card className="h-full hover:bg-accent/50 transition-colors">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("net_balance")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div
-                    className={`text-lg md:text-2xl font-bold ${currentNetBalance >= 0 ? "text-green-500" : "text-red-500"
-                      }`}
-                  >
-                    {currentNetBalance >= 0 ? "+" : ""}€
-                    {currentNetBalance.toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("tap_for_average")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-            backContent={
-              <Card className="h-full bg-accent/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">
-                    {t("monthly_average")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2 md:pb-6">
-                  <div
-                    className={`text-lg md:text-2xl font-bold ${yearlyMonthlyAverages.netBalance >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {yearlyMonthlyAverages.netBalance >= 0 ? "+" : ""}€
-                    {yearlyMonthlyAverages.netBalance.toFixed(2)}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("per_month")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
-                  </p>
-                </CardContent>
-              </Card>
-            }
-          />
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {t("net_balance")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-6">
-              <div
-                className={`text-lg md:text-2xl font-bold ${currentNetBalance >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
-              >
-                {currentNetBalance >= 0 ? "+" : ""}€
-                {currentNetBalance.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {
+          activeTab === "yearly" ? (
+            <FlipCard
+              className="h-[100px] md:h-[116px]"
+              isFlipped={flippedCards.netBalance}
+              onFlip={() => toggleCard("netBalance")}
+              flipDirection="top"
+              frontContent={
+                <Card className="h-full hover:bg-accent/50 transition-colors">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("net_balance")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      {/* Net balance doesn't have an icon in original code either (lines 595-599). 
+                       Wait, line 595-599 in Dashboard has icons but Statistics lines 596-599 does NOT have icon?
+                       Let's check original Statistics lines 596-599.
+                       596: <CardTitle ...>
+                       597: {t("net_balance")}
+                       598: </CardTitle>
+                       599: </CardHeader>
+                       Correct, no icon in Net Balance header in Statistics.tsx.
+                    */}
+                      {renderVerticalDots(0, currentNetBalance >= 0 ? "bg-green-500" : "bg-red-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div
+                      className={`text-lg md:text-2xl font-bold ${currentNetBalance >= 0 ? "text-green-500" : "text-red-500"
+                        }`}
+                    >
+                      {currentNetBalance >= 0 ? "+" : ""}€
+                      {currentNetBalance.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("tap_for_average")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+              backContent={
+                <Card className="h-full bg-accent/30">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                    <CardTitle className="text-xs md:text-sm font-medium">
+                      {t("monthly_average")}
+                    </CardTitle>
+                    <div className="flex items-center">
+                      {renderVerticalDots(1, yearlyMonthlyAverages.netBalance >= 0 ? "bg-green-500" : "bg-red-500")}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2 md:pb-6">
+                    <div
+                      className={`text-lg md:text-2xl font-bold ${yearlyMonthlyAverages.netBalance >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {yearlyMonthlyAverages.netBalance >= 0 ? "+" : ""}€
+                      {yearlyMonthlyAverages.netBalance.toFixed(2)}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("per_month")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {yearlyMonthlyAverages.monthCount} {t("months_with_data")}
+                    </p>
+                  </CardContent>
+                </Card>
+              }
+            />
+          ) : (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  {t("net_balance")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-2 md:pb-6">
+                <div
+                  className={`text-lg md:text-2xl font-bold ${currentNetBalance >= 0 ? "text-green-500" : "text-red-500"
+                    }`}
+                >
+                  {currentNetBalance >= 0 ? "+" : ""}€
+                  {currentNetBalance.toFixed(2)}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
 
         {/* Saving Rate - stays static (percentage doesn't need monthly average) */}
         <Card>
@@ -726,57 +786,23 @@ export function StatisticsPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </div >
 
       {/* Charts based on selected tab */}
-      {activeTab === "monthly" ? (
-        <div className="space-y-4">
-          {/* Monthly Charts */}
-          <div className="grid gap-4 md:grid-cols-2 min-w-0">
-            {/* Pie Chart - Income vs Expense */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-0">
-                <CardTitle>{t("income_vs_expense")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 pb-0 min-w-0">
-                <LazyChart height={300} isLoading={isLoading}>
-                  <ChartContainer
-                    config={chartConfig}
-                    className="mx-auto aspect-square max-w-full md:max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
-                  >
-                    <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                      />
-                      <Pie
-                        data={pieData}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={60}
-                        strokeWidth={5}
-                      />
-                      <ChartLegend
-                        content={
-                          <ChartLegendContent className="flex-wrap gap-2" />
-                        }
-                      />
-                    </PieChart>
-                  </ChartContainer>
-                </LazyChart>
-              </CardContent>
-            </Card>
-
-            {/* Radial Chart - Category Distribution */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-0">
-                <CardTitle>{t("category_distribution")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 pb-0 min-w-0">
-                <LazyChart height={300} isLoading={isLoading}>
-                  {currentCategoryPercentages.length > 0 ? (
+      {
+        activeTab === "monthly" ? (
+          <div className="space-y-4">
+            {/* Monthly Charts */}
+            <div className="grid gap-4 md:grid-cols-2 min-w-0">
+              {/* Pie Chart - Income vs Expense */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader className="items-center pb-0">
+                  <CardTitle>{t("income_vs_expense")}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 pb-0 min-w-0">
+                  <LazyChart height={300} isLoading={isLoading}>
                     <ChartContainer
-                      config={categoryChartConfig}
+                      config={chartConfig}
                       className="mx-auto aspect-square max-w-full md:max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                     >
                       <PieChart>
@@ -785,7 +811,7 @@ export function StatisticsPage() {
                           content={<ChartTooltipContent hideLabel />}
                         />
                         <Pie
-                          data={currentCategoryPercentages}
+                          data={pieData}
                           dataKey="value"
                           nameKey="name"
                           innerRadius={60}
@@ -798,353 +824,134 @@ export function StatisticsPage() {
                         />
                       </PieChart>
                     </ChartContainer>
-                  ) : (
-                    <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                      {t("no_data")}
-                    </div>
-                  )}
-                </LazyChart>
-              </CardContent>
-            </Card>
+                  </LazyChart>
+                </CardContent>
+              </Card>
 
-            {/* Horizontal Stacked Bar Chart - Expense Breakdown by Category Hierarchy */}
-            <Card className="md:col-span-2 min-w-0">
-              <CardHeader>
-                <CardTitle>{t("expense_breakdown")}</CardTitle>
-                <CardDescription>{t("expense_breakdown_desc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="min-w-0">
-                <LazyChart
-                  height={Math.max(currentExpensesByHierarchy.length * 50, 250)}
-                  isLoading={isLoading}
-                >
-                  {currentExpensesByHierarchy.length > 0 ? (
-                    <ChartContainer
-                      config={stackedBarConfig}
-                      className="w-full max-w-[100%] aspect-auto overflow-hidden"
-                      style={{
-                        height: `${Math.max(
-                          currentExpensesByHierarchy.length * 50,
-                          250
-                        )}px`,
-                      }}
-                    >
-                      <BarChart
-                        accessibilityLayer
-                        data={currentExpensesByHierarchy}
-                        layout="vertical"
-                        margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
-                        stackOffset="none"
+              {/* Radial Chart - Category Distribution */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader className="items-center pb-0">
+                  <CardTitle>{t("category_distribution")}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 pb-0 min-w-0">
+                  <LazyChart height={300} isLoading={isLoading}>
+                    {currentCategoryPercentages.length > 0 ? (
+                      <ChartContainer
+                        config={categoryChartConfig}
+                        className="mx-auto aspect-square max-w-full md:max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
                       >
-                        <CartesianGrid horizontal={false} />
-                        <YAxis dataKey="rootName" type="category" hide />
-                        <XAxis type="number" hide />
-                        <ChartTooltip
-                          content={
-                            <ChartTooltipContent
-                              formatter={(value, name) => (
-                                <span>
-                                  {name}: €{Number(value).toFixed(2)}
-                                </span>
-                              )}
-                            />
-                          }
-                        />
-                        {allChildCategories.map((childName, index) => (
-                          <Bar
-                            key={childName}
-                            dataKey={childName}
-                            stackId="stack"
-                            fill={
-                              stackedBarConfig[childName]?.color ||
-                              `hsl(var(--chart-${(index % 5) + 1}))`
-                            }
-                            radius={
-                              index === allChildCategories.length - 1
-                                ? [0, 4, 4, 0]
-                                : [0, 0, 0, 0]
+                        <PieChart>
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Pie
+                            data={currentCategoryPercentages}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={60}
+                            strokeWidth={5}
+                          />
+                          <ChartLegend
+                            content={
+                              <ChartLegendContent className="flex-wrap gap-2" />
                             }
                           />
-                        ))}
-                      </BarChart>
-                    </ChartContainer>
-                  ) : (
-                    <div className="flex h-[250px] items-center justify-center text-muted-foreground">
-                      {t("no_data")}
-                    </div>
-                  )}
-                </LazyChart>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Period Comparison Section - Monthly */}
-          <Card className="min-w-0">
-            <CardHeader>
-              <CardTitle>{t("period_comparison")}</CardTitle>
-              <CardDescription>
-                {t("comparison_vs_previous_month", {
-                  current: format(new Date(selectedMonth), "MMMM", { locale: dateLocale }),
-                  previous: format(new Date(previousMonth), "MMMM", { locale: dateLocale }),
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Comparison month selector */}
-              <div className="flex flex-wrap gap-4 mb-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">
-                    {t("compare_with")}
-                  </label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={
-                        comparisonMonth?.split("-")[1] ||
-                        previousMonth.split("-")[1]
-                      }
-                      onValueChange={(value) => {
-                        const year =
-                          comparisonMonth?.split("-")[0] ||
-                          previousMonth.split("-")[0];
-                        setComparisonMonth(`${year}-${value}`);
-                      }}
-                    >
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder={t("previous_month")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map((month) => (
-                          <SelectItem key={month.value} value={month.value}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={
-                        comparisonMonth?.split("-")[0] ||
-                        previousMonth.split("-")[0]
-                      }
-                      onValueChange={(year) => {
-                        const month =
-                          comparisonMonth?.split("-")[1] ||
-                          previousMonth.split("-")[1];
-                        setComparisonMonth(`${year}-${month}`);
-                      }}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map((year) => (
-                          <SelectItem key={year} value={year}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {/* Income Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("income")}
-                  </div>
-                  <div className="text-xl font-bold">
-                    €{monthlyComparison.income.current.toFixed(0)}
-                  </div>
-                  <div
-                    className={`text-xs flex items-center gap-1 ${monthlyComparison.income.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {monthlyComparison.income.trend === "up" ? (
-                      <ArrowUp className="h-3 w-3" />
+                        </PieChart>
+                      </ChartContainer>
                     ) : (
-                      <ArrowDown className="h-3 w-3" />
+                      <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                        {t("no_data")}
+                      </div>
                     )}
-                    {Math.abs(monthlyComparison.income.change).toFixed(1)}%
-                  </div>
-                </div>
-                {/* Expense Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("expense")}
-                  </div>
-                  <div className="text-xl font-bold">
-                    €{monthlyComparison.expense.current.toFixed(0)}
-                  </div>
-                  <div
-                    className={`text-xs flex items-center gap-1 ${monthlyComparison.expense.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {monthlyComparison.expense.current <=
-                      monthlyComparison.expense.previous ? (
-                      <ArrowDown className="h-3 w-3" />
-                    ) : (
-                      <ArrowUp className="h-3 w-3" />
-                    )}
-                    {Math.abs(monthlyComparison.expense.change).toFixed(1)}%
-                  </div>
-                </div>
-                {/* Balance Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("balance")}
-                  </div>
-                  <div
-                    className={`text-xl font-bold ${monthlyComparison.balance.current >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    €{monthlyComparison.balance.current.toFixed(0)}
-                  </div>
-                  <div
-                    className={`text-xs flex items-center gap-1 ${monthlyComparison.balance.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {monthlyComparison.balance.trend === "up" ? (
-                      <ArrowUp className="h-3 w-3" />
-                    ) : (
-                      <ArrowDown className="h-3 w-3" />
-                    )}
-                    {Math.abs(monthlyComparison.balance.change).toFixed(1)}%
-                  </div>
-                </div>
-                {/* Saving Rate Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("saving_rate")}
-                  </div>
-                  <div
-                    className={`text-xl font-bold ${monthlyComparison.savingRate.current >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {monthlyComparison.savingRate.current.toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("previous")}:{" "}
-                    {monthlyComparison.savingRate.previous.toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Cumulative Expense Comparison Chart */}
-              {dailyCumulativeExpenses.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium mb-4">
-                    {t("cumulative_expenses_comparison")}
-                  </h4>
-                  <LazyChart height={250}>
-                    <ChartContainer
-                      config={{
-                        current: {
-                          label: t("current_month"),
-                          color: "hsl(0 84.2% 60.2% )",
-                        },
-                        previous: {
-                          label: format(new Date(previousMonth), "MMMM yyyy", { locale: dateLocale }),
-                          color: "hsl(var(--muted-foreground))",
-                        },
-                      }}
-                      className="h-[250px] w-full aspect-auto"
-                    >
-                      <AreaChart
-                        data={dailyCumulativeExpenses.map((d, i) => {
-                          const prevMonthData = previousMonthCumulativeExpenses[i];
-                          return {
-                            day: d.day,
-                            current: d.cumulative,
-                            previous: prevMonthData?.cumulative,
-                          };
-                        })}
-                        margin={{ left: -5, right: 0, top: 12, bottom: 12 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="currentGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="var(--color-current)"
-                              stopOpacity={0.8}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="var(--color-current)"
-                              stopOpacity={0.1}
-                            />
-                          </linearGradient>
-                          <linearGradient
-                            id="previousGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="var(--color-previous)"
-                              stopOpacity={0.6}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="var(--color-previous)"
-                              stopOpacity={0.1}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" />
-                        <YAxis tickFormatter={(v) => `€${v}`} />
-                        <ChartTooltip content={<ChartTooltipContent valueFormatter={(value) => `€${Number(value).toLocaleString()}`} />} />
-                        <Area
-                          type="monotone"
-                          dataKey="previous"
-                          stroke="var(--color-previous)"
-                          fill="url(#previousGradient)"
-                          strokeDasharray="5 5"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="current"
-                          stroke="var(--color-current)"
-                          fill="url(#currentGradient)"
-                        />
-                        <ChartLegend content={<ChartLegendContent />} />
-                      </AreaChart>
-                    </ChartContainer>
                   </LazyChart>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Category Comparison */}
-          {categoryComparison.length > 0 && (
+              {/* Horizontal Stacked Bar Chart - Expense Breakdown by Category Hierarchy */}
+              <Card className="md:col-span-2 min-w-0">
+                <CardHeader>
+                  <CardTitle>{t("expense_breakdown")}</CardTitle>
+                  <CardDescription>{t("expense_breakdown_desc")}</CardDescription>
+                </CardHeader>
+                <CardContent className="min-w-0">
+                  <LazyChart
+                    height={Math.max(currentExpensesByHierarchy.length * 50, 250)}
+                    isLoading={isLoading}
+                  >
+                    {currentExpensesByHierarchy.length > 0 ? (
+                      <ChartContainer
+                        config={stackedBarConfig}
+                        className="w-full max-w-[100%] aspect-auto overflow-hidden"
+                        style={{
+                          height: `${Math.max(
+                            currentExpensesByHierarchy.length * 50,
+                            250
+                          )}px`,
+                        }}
+                      >
+                        <BarChart
+                          accessibilityLayer
+                          data={currentExpensesByHierarchy}
+                          layout="vertical"
+                          margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
+                          stackOffset="none"
+                        >
+                          <CartesianGrid horizontal={false} />
+                          <YAxis dataKey="rootName" type="category" hide />
+                          <XAxis type="number" hide />
+                          <ChartTooltip
+                            content={
+                              <ChartTooltipContent
+                                formatter={(value, name) => (
+                                  <span>
+                                    {name}: €{Number(value).toFixed(2)}
+                                  </span>
+                                )}
+                              />
+                            }
+                          />
+                          {allChildCategories.map((childName, index) => (
+                            <Bar
+                              key={childName}
+                              dataKey={childName}
+                              stackId="stack"
+                              fill={
+                                stackedBarConfig[childName]?.color ||
+                                `hsl(var(--chart-${(index % 5) + 1}))`
+                              }
+                              radius={
+                                index === allChildCategories.length - 1
+                                  ? [0, 4, 4, 0]
+                                  : [0, 0, 0, 0]
+                              }
+                            />
+                          ))}
+                        </BarChart>
+                      </ChartContainer>
+                    ) : (
+                      <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                        {t("no_data")}
+                      </div>
+                    )}
+                  </LazyChart>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Period Comparison Section - Monthly */}
             <Card className="min-w-0">
               <CardHeader>
-                <CardTitle>{t("category_comparison")}</CardTitle>
+                <CardTitle>{t("period_comparison")}</CardTitle>
                 <CardDescription>
-                  {t("category_comparison_desc")}
+                  {t("comparison_vs_previous_month", {
+                    current: format(new Date(selectedMonth), "MMMM", { locale: dateLocale }),
+                    previous: format(new Date(previousMonth), "MMMM", { locale: dateLocale }),
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Comparison month selector for categories */}
+                {/* Comparison month selector */}
                 <div className="flex flex-wrap gap-4 mb-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium">
@@ -1152,10 +959,14 @@ export function StatisticsPage() {
                     </label>
                     <div className="flex gap-2">
                       <Select
-                        value={comparisonMonth?.split("-")[1] || previousMonth.split("-")[1]}
+                        value={
+                          comparisonMonth?.split("-")[1] ||
+                          previousMonth.split("-")[1]
+                        }
                         onValueChange={(value) => {
                           const year =
-                            comparisonMonth?.split("-")[0] || previousMonth.split("-")[0];
+                            comparisonMonth?.split("-")[0] ||
+                            previousMonth.split("-")[0];
                           setComparisonMonth(`${year}-${value}`);
                         }}
                       >
@@ -1171,9 +982,14 @@ export function StatisticsPage() {
                         </SelectContent>
                       </Select>
                       <Select
-                        value={comparisonMonth?.split("-")[0] || previousMonth.split("-")[0]}
+                        value={
+                          comparisonMonth?.split("-")[0] ||
+                          previousMonth.split("-")[0]
+                        }
                         onValueChange={(year) => {
-                          const month = comparisonMonth?.split("-")[1] || previousMonth.split("-")[1];
+                          const month =
+                            comparisonMonth?.split("-")[1] ||
+                            previousMonth.split("-")[1];
                           setComparisonMonth(`${year}-${month}`);
                         }}
                       >
@@ -1191,542 +1007,788 @@ export function StatisticsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  {categoryComparison.slice(0, 8).map((cat) => (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  {/* Income Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("income")}
+                    </div>
+                    <div className="text-xl font-bold">
+                      €{monthlyComparison.income.current.toFixed(0)}
+                    </div>
                     <div
-                      key={cat.name}
-                      className="flex items-center justify-between"
+                      className={`text-xs flex items-center gap-1 ${monthlyComparison.income.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{cat.name}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground">
-                          €{cat.previous.toFixed(0)} → €{cat.current.toFixed(0)}
-                        </span>
-                        <div
-                          className={`flex items-center gap-1 text-sm ${cat.trend === "improved"
-                            ? "text-green-500"
-                            : "text-red-500"
-                            }`}
+                      {monthlyComparison.income.trend === "up" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )}
+                      {Math.abs(monthlyComparison.income.change).toFixed(1)}%
+                    </div>
+                  </div>
+                  {/* Expense Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("expense")}
+                    </div>
+                    <div className="text-xl font-bold">
+                      €{monthlyComparison.expense.current.toFixed(0)}
+                    </div>
+                    <div
+                      className={`text-xs flex items-center gap-1 ${monthlyComparison.expense.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {monthlyComparison.expense.current <=
+                        monthlyComparison.expense.previous ? (
+                        <ArrowDown className="h-3 w-3" />
+                      ) : (
+                        <ArrowUp className="h-3 w-3" />
+                      )}
+                      {Math.abs(monthlyComparison.expense.change).toFixed(1)}%
+                    </div>
+                  </div>
+                  {/* Balance Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("balance")}
+                    </div>
+                    <div
+                      className={`text-xl font-bold ${monthlyComparison.balance.current >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      €{monthlyComparison.balance.current.toFixed(0)}
+                    </div>
+                    <div
+                      className={`text-xs flex items-center gap-1 ${monthlyComparison.balance.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {monthlyComparison.balance.trend === "up" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )}
+                      {Math.abs(monthlyComparison.balance.change).toFixed(1)}%
+                    </div>
+                  </div>
+                  {/* Saving Rate Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("saving_rate")}
+                    </div>
+                    <div
+                      className={`text-xl font-bold ${monthlyComparison.savingRate.current >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {monthlyComparison.savingRate.current.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t("previous")}:{" "}
+                      {monthlyComparison.savingRate.previous.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cumulative Expense Comparison Chart */}
+                {dailyCumulativeExpenses.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium mb-4">
+                      {t("cumulative_expenses_comparison")}
+                    </h4>
+                    <LazyChart height={250}>
+                      <ChartContainer
+                        config={{
+                          current: {
+                            label: t("current_month"),
+                            color: "hsl(0 84.2% 60.2% )",
+                          },
+                          previous: {
+                            label: format(new Date(previousMonth), "MMMM yyyy", { locale: dateLocale }),
+                            color: "hsl(var(--muted-foreground))",
+                          },
+                        }}
+                        className="h-[250px] w-full aspect-auto"
+                      >
+                        <AreaChart
+                          data={dailyCumulativeExpenses.map((d, i) => {
+                            const prevMonthData = previousMonthCumulativeExpenses[i];
+                            return {
+                              day: d.day,
+                              current: d.cumulative,
+                              previous: prevMonthData?.cumulative,
+                            };
+                          })}
+                          margin={{ left: -5, right: 0, top: 12, bottom: 12 }}
                         >
-                          {cat.trend === "improved" ? (
-                            <ArrowDown className="h-3 w-3" />
-                          ) : (
-                            <ArrowUp className="h-3 w-3" />
-                          )}
-                          {Math.abs(cat.change).toFixed(0)}%
-                        </div>
+                          <defs>
+                            <linearGradient
+                              id="currentGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="var(--color-current)"
+                                stopOpacity={0.8}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="var(--color-current)"
+                                stopOpacity={0.1}
+                              />
+                            </linearGradient>
+                            <linearGradient
+                              id="previousGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="var(--color-previous)"
+                                stopOpacity={0.6}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="var(--color-previous)"
+                                stopOpacity={0.1}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="day" />
+                          <YAxis tickFormatter={(v) => `€${v}`} />
+                          <ChartTooltip content={<ChartTooltipContent valueFormatter={(value) => `€${Number(value).toLocaleString()}`} />} />
+                          <Area
+                            type="monotone"
+                            dataKey="previous"
+                            stroke="var(--color-previous)"
+                            fill="url(#previousGradient)"
+                            strokeDasharray="5 5"
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="current"
+                            stroke="var(--color-current)"
+                            fill="url(#currentGradient)"
+                          />
+                          <ChartLegend content={<ChartLegendContent />} />
+                        </AreaChart>
+                      </ChartContainer>
+                    </LazyChart>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Category Comparison */}
+            {categoryComparison.length > 0 && (
+              <Card className="min-w-0">
+                <CardHeader>
+                  <CardTitle>{t("category_comparison")}</CardTitle>
+                  <CardDescription>
+                    {t("category_comparison_desc")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Comparison month selector for categories */}
+                  <div className="flex flex-wrap gap-4 mb-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium">
+                        {t("compare_with")}
+                      </label>
+                      <div className="flex gap-2">
+                        <Select
+                          value={comparisonMonth?.split("-")[1] || previousMonth.split("-")[1]}
+                          onValueChange={(value) => {
+                            const year =
+                              comparisonMonth?.split("-")[0] || previousMonth.split("-")[0];
+                            setComparisonMonth(`${year}-${value}`);
+                          }}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder={t("previous_month")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {months.map((month) => (
+                              <SelectItem key={month.value} value={month.value}>
+                                {month.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={comparisonMonth?.split("-")[0] || previousMonth.split("-")[0]}
+                          onValueChange={(year) => {
+                            const month = comparisonMonth?.split("-")[1] || previousMonth.split("-")[1];
+                            setComparisonMonth(`${year}-${month}`);
+                          }}
+                        >
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {years.map((year) => (
+                              <SelectItem key={year} value={year}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Radar Charts Row */}
-          <div className="grid gap-4 md:grid-cols-3 min-w-0">
-            {/* Expenses Radar Chart */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-4">
-                <CardTitle>{t("yearly_expenses")}</CardTitle>
-                <CardDescription>{t("yearly_expenses_desc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="pb-0">
-                {monthlyExpenses.length > 0 ? (
-                  <LazyChart height={250}>
-                    <ChartContainer
-                      config={{
-                        value: {
-                          label: t("expense"),
-                          color: "hsl(var(--color-expense))",
-                        },
-                      }}
-                      className="mx-auto aspect-square max-h-[250px]"
-                    >
-                      <RadarChart data={monthlyExpenses}>
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent />}
-                        />
-                        <PolarAngleAxis dataKey="month" />
-                        <PolarGrid />
-                        <Radar
-                          dataKey="value"
-                          fill="var(--color-value)"
-                          fillOpacity={0.6}
-                        />
-                      </RadarChart>
-                    </ChartContainer>
-                  </LazyChart>
-                ) : (
-                  <div className="flex h-[250px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
                   </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex-col gap-2 text-sm pt-4">
-                <div className="text-muted-foreground text-center leading-none">
-                  {selectedYear}
-                </div>
-              </CardFooter>
-            </Card>
-
-            {/* Income Radar Chart */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-4">
-                <CardTitle>{t("yearly_income")}</CardTitle>
-                <CardDescription>{t("yearly_income_desc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="pb-0">
-                {monthlyIncome.length > 0 ? (
-                  <LazyChart height={250}>
-                    <ChartContainer
-                      config={{
-                        value: {
-                          label: t("income"),
-                          color: "hsl(var(--color-income))",
-                        },
-                      }}
-                      className="mx-auto aspect-square max-h-[250px]"
-                    >
-                      <RadarChart data={monthlyIncome}>
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent />}
-                        />
-                        <PolarAngleAxis dataKey="month" />
-                        <PolarGrid />
-                        <Radar
-                          dataKey="value"
-                          fill="var(--color-value)"
-                          fillOpacity={0.6}
-                        />
-                      </RadarChart>
-                    </ChartContainer>
-                  </LazyChart>
-                ) : (
-                  <div className="flex h-[250px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex-col gap-2 text-sm pt-4">
-                <div className="text-muted-foreground text-center leading-none">
-                  {selectedYear}
-                </div>
-              </CardFooter>
-            </Card>
-
-            {/* Investments Radar Chart */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-4">
-                <CardTitle>{t("yearly_investments")}</CardTitle>
-                <CardDescription>
-                  {t("yearly_investments_desc")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pb-0">
-                {monthlyInvestments.length > 0 ? (
-                  <LazyChart height={250}>
-                    <ChartContainer
-                      config={{
-                        value: {
-                          label: t("investment"),
-                          color: "hsl(var(--color-investment))",
-                        },
-                      }}
-                      className="mx-auto aspect-square max-h-[250px]"
-                    >
-                      <RadarChart data={monthlyInvestments}>
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent />}
-                        />
-                        <PolarAngleAxis dataKey="month" />
-                        <PolarGrid />
-                        <Radar
-                          dataKey="value"
-                          fill="var(--color-value)"
-                          fillOpacity={0.6}
-                        />
-                      </RadarChart>
-                    </ChartContainer>
-                  </LazyChart>
-                ) : (
-                  <div className="flex h-[250px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex-col gap-2 text-sm pt-4">
-                <div className="text-muted-foreground text-center leading-none">
-                  {selectedYear}
-                </div>
-              </CardFooter>
-            </Card>
-          </div>
-
-          {/* Category Distribution & Expense Breakdown Row */}
-          <div className="grid gap-4 md:grid-cols-2 min-w-0">
-            {/* Radial Chart - Category Distribution (Yearly) */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader className="items-center pb-0">
-                <CardTitle>{t("category_distribution")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 pb-0 min-w-0">
-                {yearlyCategoryPercentages.length > 0 ? (
-                  <LazyChart height={300}>
-                    <ChartContainer
-                      config={yearlyCategoryPercentages.reduce(
-                        (acc, item, index) => {
-                          acc[item.name] = {
-                            label: item.name,
-                            color: `hsl(var(--chart-${(index % 5) + 1}))`,
-                          };
-                          return acc;
-                        },
-                        {} as ChartConfig
-                      )}
-                      className="mx-auto aspect-square max-w-full md:max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
-                    >
-                      <PieChart>
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent hideLabel />}
-                        />
-                        <Pie
-                          data={yearlyCategoryPercentages}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={60}
-                          strokeWidth={5}
-                        />
-                        <ChartLegend
-                          content={
-                            <ChartLegendContent className="flex-wrap gap-2" />
-                          }
-                        />
-                      </PieChart>
-                    </ChartContainer>
-                  </LazyChart>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Horizontal Stacked Bar Chart - Expense Breakdown (Yearly) */}
-            <Card className="flex flex-col min-w-0">
-              <CardHeader>
-                <CardTitle>{t("expense_breakdown")}</CardTitle>
-                <CardDescription>{t("expense_breakdown_desc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="min-w-0">
-                {currentExpensesByHierarchy.length > 0 ? (
-                  <LazyChart
-                    height={Math.max(
-                      currentExpensesByHierarchy.slice(0, 8).length * 50,
-                      300
-                    )}
-                  >
-                    <ChartContainer
-                      config={stackedBarConfig}
-                      className="w-full max-w-[100%] aspect-auto overflow-hidden"
-                      style={{
-                        height: `${Math.max(
-                          currentExpensesByHierarchy.slice(0, 8).length * 50,
-                          300
-                        )}px`,
-                      }}
-                    >
-                      <BarChart
-                        accessibilityLayer
-                        data={currentExpensesByHierarchy.slice(0, 8)}
-                        layout="vertical"
-                        margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
-                        stackOffset="none"
+                  <div className="space-y-3">
+                    {categoryComparison.slice(0, 8).map((cat) => (
+                      <div
+                        key={cat.name}
+                        className="flex items-center justify-between"
                       >
-                        <CartesianGrid horizontal={false} />
-                        <YAxis dataKey="rootName" type="category" hide />
-                        <XAxis type="number" hide />
-                        <ChartTooltip
-                          content={
-                            <ChartTooltipContent
-                              formatter={(value, name) => (
-                                <span>
-                                  {name}: €{Number(value).toFixed(2)}
-                                </span>
-                              )}
-                            />
-                          }
-                        />
-                        {allChildCategories.map((childName, index) => (
-                          <Bar
-                            key={childName}
-                            dataKey={childName}
-                            stackId="stack"
-                            fill={
-                              stackedBarConfig[childName]?.color ||
-                              `hsl(var(--chart-${(index % 5) + 1}))`
-                            }
-                            radius={
-                              index === allChildCategories.length - 1
-                                ? [0, 4, 4, 0]
-                                : [0, 0, 0, 0]
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{cat.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-muted-foreground">
+                            €{cat.previous.toFixed(0)} → €{cat.current.toFixed(0)}
+                          </span>
+                          <div
+                            className={`flex items-center gap-1 text-sm ${cat.trend === "improved"
+                              ? "text-green-500"
+                              : "text-red-500"
+                              }`}
+                          >
+                            {cat.trend === "improved" ? (
+                              <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUp className="h-3 w-3" />
+                            )}
+                            {Math.abs(cat.change).toFixed(0)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Radar Charts Row */}
+            <div className="grid gap-4 md:grid-cols-3 min-w-0">
+              {/* Expenses Radar Chart */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader className="items-center pb-4">
+                  <CardTitle>{t("yearly_expenses")}</CardTitle>
+                  <CardDescription>{t("yearly_expenses_desc")}</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-0">
+                  {monthlyExpenses.length > 0 ? (
+                    <LazyChart height={250}>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: t("expense"),
+                            color: "hsl(var(--color-expense))",
+                          },
+                        }}
+                        className="mx-auto aspect-square max-h-[250px]"
+                      >
+                        <RadarChart data={monthlyExpenses}>
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                          />
+                          <PolarAngleAxis dataKey="month" />
+                          <PolarGrid />
+                          <Radar
+                            dataKey="value"
+                            fill="var(--color-value)"
+                            fillOpacity={0.6}
+                          />
+                        </RadarChart>
+                      </ChartContainer>
+                    </LazyChart>
+                  ) : (
+                    <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm pt-4">
+                  <div className="text-muted-foreground text-center leading-none">
+                    {selectedYear}
+                  </div>
+                </CardFooter>
+              </Card>
+
+              {/* Income Radar Chart */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader className="items-center pb-4">
+                  <CardTitle>{t("yearly_income")}</CardTitle>
+                  <CardDescription>{t("yearly_income_desc")}</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-0">
+                  {monthlyIncome.length > 0 ? (
+                    <LazyChart height={250}>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: t("income"),
+                            color: "hsl(var(--color-income))",
+                          },
+                        }}
+                        className="mx-auto aspect-square max-h-[250px]"
+                      >
+                        <RadarChart data={monthlyIncome}>
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                          />
+                          <PolarAngleAxis dataKey="month" />
+                          <PolarGrid />
+                          <Radar
+                            dataKey="value"
+                            fill="var(--color-value)"
+                            fillOpacity={0.6}
+                          />
+                        </RadarChart>
+                      </ChartContainer>
+                    </LazyChart>
+                  ) : (
+                    <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm pt-4">
+                  <div className="text-muted-foreground text-center leading-none">
+                    {selectedYear}
+                  </div>
+                </CardFooter>
+              </Card>
+
+              {/* Investments Radar Chart */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader className="items-center pb-4">
+                  <CardTitle>{t("yearly_investments")}</CardTitle>
+                  <CardDescription>
+                    {t("yearly_investments_desc")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-0">
+                  {monthlyInvestments.length > 0 ? (
+                    <LazyChart height={250}>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: t("investment"),
+                            color: "hsl(var(--color-investment))",
+                          },
+                        }}
+                        className="mx-auto aspect-square max-h-[250px]"
+                      >
+                        <RadarChart data={monthlyInvestments}>
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                          />
+                          <PolarAngleAxis dataKey="month" />
+                          <PolarGrid />
+                          <Radar
+                            dataKey="value"
+                            fill="var(--color-value)"
+                            fillOpacity={0.6}
+                          />
+                        </RadarChart>
+                      </ChartContainer>
+                    </LazyChart>
+                  ) : (
+                    <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm pt-4">
+                  <div className="text-muted-foreground text-center leading-none">
+                    {selectedYear}
+                  </div>
+                </CardFooter>
+              </Card>
+            </div>
+
+            {/* Category Distribution & Expense Breakdown Row */}
+            <div className="grid gap-4 md:grid-cols-2 min-w-0">
+              {/* Radial Chart - Category Distribution (Yearly) */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader className="items-center pb-0">
+                  <CardTitle>{t("category_distribution")}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 pb-0 min-w-0">
+                  {yearlyCategoryPercentages.length > 0 ? (
+                    <LazyChart height={300}>
+                      <ChartContainer
+                        config={yearlyCategoryPercentages.reduce(
+                          (acc, item, index) => {
+                            acc[item.name] = {
+                              label: item.name,
+                              color: `hsl(var(--chart-${(index % 5) + 1}))`,
+                            };
+                            return acc;
+                          },
+                          {} as ChartConfig
+                        )}
+                        className="mx-auto aspect-square max-w-full md:max-w-[280px] max-h-[300px] min-h-[250px] w-full [&_.recharts-text]:fill-foreground"
+                      >
+                        <PieChart>
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Pie
+                            data={yearlyCategoryPercentages}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={60}
+                            strokeWidth={5}
+                          />
+                          <ChartLegend
+                            content={
+                              <ChartLegendContent className="flex-wrap gap-2" />
                             }
                           />
+                        </PieChart>
+                      </ChartContainer>
+                    </LazyChart>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Horizontal Stacked Bar Chart - Expense Breakdown (Yearly) */}
+              <Card className="flex flex-col min-w-0">
+                <CardHeader>
+                  <CardTitle>{t("expense_breakdown")}</CardTitle>
+                  <CardDescription>{t("expense_breakdown_desc")}</CardDescription>
+                </CardHeader>
+                <CardContent className="min-w-0">
+                  {currentExpensesByHierarchy.length > 0 ? (
+                    <LazyChart
+                      height={Math.max(
+                        currentExpensesByHierarchy.slice(0, 8).length * 50,
+                        300
+                      )}
+                    >
+                      <ChartContainer
+                        config={stackedBarConfig}
+                        className="w-full max-w-[100%] aspect-auto overflow-hidden"
+                        style={{
+                          height: `${Math.max(
+                            currentExpensesByHierarchy.slice(0, 8).length * 50,
+                            300
+                          )}px`,
+                        }}
+                      >
+                        <BarChart
+                          accessibilityLayer
+                          data={currentExpensesByHierarchy.slice(0, 8)}
+                          layout="vertical"
+                          margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
+                          stackOffset="none"
+                        >
+                          <CartesianGrid horizontal={false} />
+                          <YAxis dataKey="rootName" type="category" hide />
+                          <XAxis type="number" hide />
+                          <ChartTooltip
+                            content={
+                              <ChartTooltipContent
+                                formatter={(value, name) => (
+                                  <span>
+                                    {name}: €{Number(value).toFixed(2)}
+                                  </span>
+                                )}
+                              />
+                            }
+                          />
+                          {allChildCategories.map((childName, index) => (
+                            <Bar
+                              key={childName}
+                              dataKey={childName}
+                              stackId="stack"
+                              fill={
+                                stackedBarConfig[childName]?.color ||
+                                `hsl(var(--chart-${(index % 5) + 1}))`
+                              }
+                              radius={
+                                index === allChildCategories.length - 1
+                                  ? [0, 4, 4, 0]
+                                  : [0, 0, 0, 0]
+                              }
+                            />
+                          ))}
+                        </BarChart>
+                      </ChartContainer>
+                    </LazyChart>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                      {t("no_data")}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Period Comparison Section - Yearly */}
+            <Card className="min-w-0">
+              <CardHeader>
+                <CardTitle>{t("yearly_comparison")}</CardTitle>
+                <CardDescription>
+                  {t("comparison_vs_previous_year", {
+                    current: selectedYear,
+                    previous: previousYear,
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="min-w-0">
+                {/* Comparison year selector */}
+                <div className="flex flex-wrap gap-4 mb-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">
+                      {t("compare_with")}
+                    </label>
+                    <Select
+                      value={comparisonYear || previousYear}
+                      onValueChange={(value) => {
+                        setComparisonYear(value);
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder={previousYear} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
                         ))}
-                      </BarChart>
-                    </ChartContainer>
-                  </LazyChart>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                    {t("no_data")}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  {/* Income Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("income")}
+                    </div>
+                    <div className="text-xl font-bold">
+                      €{yearlyComparison.income.current.toFixed(0)}
+                    </div>
+                    <div
+                      className={`text-xs flex items-center gap-1 ${yearlyComparison.income.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {yearlyComparison.income.trend === "up" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )}
+                      {Math.abs(yearlyComparison.income.change).toFixed(1)}%
+                    </div>
+                  </div>
+                  {/* Expense Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("expense")}
+                    </div>
+                    <div className="text-xl font-bold">
+                      €{yearlyComparison.expense.current.toFixed(0)}
+                    </div>
+                    <div
+                      className={`text-xs flex items-center gap-1 ${yearlyComparison.expense.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {yearlyComparison.expense.current <=
+                        yearlyComparison.expense.previous ? (
+                        <ArrowDown className="h-3 w-3" />
+                      ) : (
+                        <ArrowUp className="h-3 w-3" />
+                      )}
+                      {Math.abs(yearlyComparison.expense.change).toFixed(1)}%
+                    </div>
+                  </div>
+                  {/* Balance Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("balance")}
+                    </div>
+                    <div
+                      className={`text-xl font-bold ${yearlyComparison.balance.current >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      €{yearlyComparison.balance.current.toFixed(0)}
+                    </div>
+                    <div
+                      className={`text-xs flex items-center gap-1 ${yearlyComparison.balance.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {yearlyComparison.balance.trend === "up" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )}
+                      {Math.abs(yearlyComparison.balance.change).toFixed(1)}%
+                    </div>
+                  </div>
+                  {/* Saving Rate Comparison */}
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">
+                      {t("saving_rate")}
+                    </div>
+                    <div
+                      className={`text-xl font-bold ${yearlyComparison.savingRate.current >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                        }`}
+                    >
+                      {yearlyComparison.savingRate.current.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t("previous")}:{" "}
+                      {yearlyComparison.savingRate.previous.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cumulative Expense Comparison Chart - Yearly */}
+                {yearlyCumulativeExpenses.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium mb-4">
+                      {t("cumulative_expenses_yearly")}
+                    </h4>
+                    <LazyChart height={250}>
+                      <ChartContainer
+                        config={{
+                          current: {
+                            label: selectedYear,
+                            color: "hsl(0 84.2% 60.2%)",
+                          },
+                          previous: {
+                            label: previousYear,
+                            color: "hsl(var(--muted-foreground))",
+                          },
+                        }}
+                        className="h-[250px] w-full aspect-auto"
+                      >
+                        <AreaChart
+                          data={yearlyCumulativeExpenses.map((d, i) => {
+                            const prevYearData = previousYearCumulativeExpenses[i];
+                            return {
+                              month: d.month,
+                              current: d.cumulative,
+                              previous: prevYearData?.cumulative,
+                            };
+                          })}
+                          margin={{ left: -5, right: 0, top: 12, bottom: 12 }}
+                        >
+                          <defs>
+                            <linearGradient
+                              id="currentYearlyGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="var(--color-current)"
+                                stopOpacity={0.8}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="var(--color-current)"
+                                stopOpacity={0.1}
+                              />
+                            </linearGradient>
+                            <linearGradient
+                              id="previousYearlyGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="var(--color-previous)"
+                                stopOpacity={0.6}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="var(--color-previous)"
+                                stopOpacity={0.1}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="month"
+                            tick={{ fontSize: 11 }}
+                            tickFormatter={(value) => value.substring(0, 3)}
+                            interval={yearlyCumulativeExpenses.length > 9 ? 1 : 0}
+                          />
+                          <YAxis tickFormatter={(v) => `€${v}`} />
+                          <ChartTooltip
+                            content={<ChartTooltipContent valueFormatter={(value) => `€${Number(value).toLocaleString()}`} />}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="previous"
+                            stroke="var(--color-previous)"
+                            fill="url(#previousYearlyGradient)"
+                            strokeDasharray="5 5"
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="current"
+                            stroke="var(--color-current)"
+                            fill="url(#currentYearlyGradient)"
+                          />
+                          <ChartLegend content={<ChartLegendContent />} />
+                        </AreaChart>
+                      </ChartContainer>
+                    </LazyChart>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-
-          {/* Period Comparison Section - Yearly */}
-          <Card className="min-w-0">
-            <CardHeader>
-              <CardTitle>{t("yearly_comparison")}</CardTitle>
-              <CardDescription>
-                {t("comparison_vs_previous_year", {
-                  current: selectedYear,
-                  previous: previousYear,
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="min-w-0">
-              {/* Comparison year selector */}
-              <div className="flex flex-wrap gap-4 mb-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">
-                    {t("compare_with")}
-                  </label>
-                  <Select
-                    value={comparisonYear || previousYear}
-                    onValueChange={(value) => {
-                      setComparisonYear(value);
-                    }}
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder={previousYear} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map((year) => (
-                        <SelectItem key={year} value={year}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {/* Income Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("income")}
-                  </div>
-                  <div className="text-xl font-bold">
-                    €{yearlyComparison.income.current.toFixed(0)}
-                  </div>
-                  <div
-                    className={`text-xs flex items-center gap-1 ${yearlyComparison.income.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {yearlyComparison.income.trend === "up" ? (
-                      <ArrowUp className="h-3 w-3" />
-                    ) : (
-                      <ArrowDown className="h-3 w-3" />
-                    )}
-                    {Math.abs(yearlyComparison.income.change).toFixed(1)}%
-                  </div>
-                </div>
-                {/* Expense Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("expense")}
-                  </div>
-                  <div className="text-xl font-bold">
-                    €{yearlyComparison.expense.current.toFixed(0)}
-                  </div>
-                  <div
-                    className={`text-xs flex items-center gap-1 ${yearlyComparison.expense.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {yearlyComparison.expense.current <=
-                      yearlyComparison.expense.previous ? (
-                      <ArrowDown className="h-3 w-3" />
-                    ) : (
-                      <ArrowUp className="h-3 w-3" />
-                    )}
-                    {Math.abs(yearlyComparison.expense.change).toFixed(1)}%
-                  </div>
-                </div>
-                {/* Balance Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("balance")}
-                  </div>
-                  <div
-                    className={`text-xl font-bold ${yearlyComparison.balance.current >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    €{yearlyComparison.balance.current.toFixed(0)}
-                  </div>
-                  <div
-                    className={`text-xs flex items-center gap-1 ${yearlyComparison.balance.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {yearlyComparison.balance.trend === "up" ? (
-                      <ArrowUp className="h-3 w-3" />
-                    ) : (
-                      <ArrowDown className="h-3 w-3" />
-                    )}
-                    {Math.abs(yearlyComparison.balance.change).toFixed(1)}%
-                  </div>
-                </div>
-                {/* Saving Rate Comparison */}
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">
-                    {t("saving_rate")}
-                  </div>
-                  <div
-                    className={`text-xl font-bold ${yearlyComparison.savingRate.current >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
-                  >
-                    {yearlyComparison.savingRate.current.toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("previous")}:{" "}
-                    {yearlyComparison.savingRate.previous.toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Cumulative Expense Comparison Chart - Yearly */}
-              {yearlyCumulativeExpenses.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium mb-4">
-                    {t("cumulative_expenses_yearly")}
-                  </h4>
-                  <LazyChart height={250}>
-                    <ChartContainer
-                      config={{
-                        current: {
-                          label: selectedYear,
-                          color: "hsl(0 84.2% 60.2%)",
-                        },
-                        previous: {
-                          label: previousYear,
-                          color: "hsl(var(--muted-foreground))",
-                        },
-                      }}
-                      className="h-[250px] w-full aspect-auto"
-                    >
-                      <AreaChart
-                        data={yearlyCumulativeExpenses.map((d, i) => {
-                          const prevYearData = previousYearCumulativeExpenses[i];
-                          return {
-                            month: d.month,
-                            current: d.cumulative,
-                            previous: prevYearData?.cumulative,
-                          };
-                        })}
-                        margin={{ left: -5, right: 0, top: 12, bottom: 12 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="currentYearlyGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="var(--color-current)"
-                              stopOpacity={0.8}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="var(--color-current)"
-                              stopOpacity={0.1}
-                            />
-                          </linearGradient>
-                          <linearGradient
-                            id="previousYearlyGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="var(--color-previous)"
-                              stopOpacity={0.6}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="var(--color-previous)"
-                              stopOpacity={0.1}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="month"
-                          tick={{ fontSize: 11 }}
-                          tickFormatter={(value) => value.substring(0, 3)}
-                          interval={yearlyCumulativeExpenses.length > 9 ? 1 : 0}
-                        />
-                        <YAxis tickFormatter={(v) => `€${v}`} />
-                        <ChartTooltip
-                          content={<ChartTooltipContent valueFormatter={(value) => `€${Number(value).toLocaleString()}`} />}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="previous"
-                          stroke="var(--color-previous)"
-                          fill="url(#previousYearlyGradient)"
-                          strokeDasharray="5 5"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="current"
-                          stroke="var(--color-current)"
-                          fill="url(#currentYearlyGradient)"
-                        />
-                        <ChartLegend content={<ChartLegendContent />} />
-                      </AreaChart>
-                    </ChartContainer>
-                  </LazyChart>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        )
+      }
 
       <div className="space-y-4">
         {/* === NEW CHARTS SECTION === */}
@@ -2116,6 +2178,6 @@ export function StatisticsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div >
   );
 }

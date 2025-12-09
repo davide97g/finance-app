@@ -1,4 +1,10 @@
 {
+  "budget_feedback_remaining": "Budget rimanente: {{amount}}",
+  "budget_feedback_will_exceed": "Sforerai il budget di {{amount}}",
+  "budget_feedback_exceeded": "Budget già superato di {{amount}}",
+  "budget_alerts_title": "Avvisi Budget",
+  "budget_alerts_desc": "Ctg. che richiedono attenzione",
+  "view_details": "Vedi dettagli",
   "app_title": "GoNuts",
   "app_info": "Informazioni applicazione",
   "version": "Versione",
@@ -504,6 +510,20 @@
   "november": "Novembre",
   "december": "Dicembre",
   "months_with_data": "mesi con dati",
+  "months_short": {
+    "jan": "Gen",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "Mag",
+    "jun": "Giu",
+    "jul": "Lug",
+    "aug": "Ago",
+    "sep": "Set",
+    "oct": "Ott",
+    "nov": "Nov",
+    "dec": "Dic"
+  },
   "app_user": "Utente App",
   "validation": {
     "invalid_uuid": "Formato UUID non valido",

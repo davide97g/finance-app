@@ -269,29 +269,38 @@ export interface Profile {
 }
 
 /**
+ * Rules for auto-categorizing transactions during import/reconciliation.
+ */
+export interface ImportRule {
+  /** UUID primary key */
+  id: string;
+  /** Owner user ID */
+  user_id: string;
+  /** String to match against transaction description */
+  match_string: string;
+  /** Match type strategy */
+  match_type: "contains" | "exact" | "regex";
+  /** Category to assign if matched */
+  category_id: string;
+  /** 1 = active, 0 = disabled */
+  active: number;
+  /** Soft delete timestamp (ISO 8601) */
+  deleted_at?: string | null;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+  /** Last update timestamp (ISO 8601) */
+  updated_at?: string;
+}
+
+/**
  * Dexie database class for the expense tracker application.
  *
  * Provides typed access to all IndexedDB tables with proper indexing
  * for efficient queries. Supports versioned schema migrations.
- *
- * @example
- * ```ts
- * import { db } from './lib/db';
- *
- * // Query transactions for a specific month
- * const transactions = await db.transactions
- *   .where('year_month')
- *   .equals('2024-06')
- *   .toArray();
- *
- * // Add a new transaction
- * await db.transactions.add({
- *   id: 'uuid',
- *   user_id: 'user-123',
- *   // ... other fields
- *   pendingSync: 1
- * });
- * ```
  */
 export class AppDatabase extends Dexie {
   groups!: Table<Group>;
@@ -303,6 +312,7 @@ export class AppDatabase extends Dexie {
   user_settings!: Table<Setting>;
   category_budgets!: Table<CategoryBudget>;
   profiles!: Table<Profile>;
+  import_rules!: Table<ImportRule>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -393,6 +403,24 @@ export class AppDatabase extends Dexie {
         "id, user_id, category_id, period, pendingSync, deleted_at",
       profiles: "id, pendingSync",
     });
+
+    // Version 7: Add import_rules
+    this.version(7).stores({
+      groups: "id, created_by, pendingSync, deleted_at",
+      group_members:
+        "id, group_id, user_id, guest_name, is_guest, pendingSync, removed_at",
+      transactions:
+        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at",
+      categories: "id, user_id, group_id, name, type, pendingSync, deleted_at",
+      contexts: "id, user_id, pendingSync, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, paid_by_member_id, type, frequency, pendingSync, deleted_at",
+      user_settings: "user_id",
+      category_budgets:
+        "id, user_id, category_id, period, pendingSync, deleted_at",
+      profiles: "id, pendingSync",
+      import_rules: "id, user_id, match_type, pendingSync, deleted_at",
+    });
   }
 
   /**
@@ -411,6 +439,7 @@ export class AppDatabase extends Dexie {
       this.user_settings.clear(),
       this.category_budgets.clear(),
       this.profiles.clear(),
+      this.import_rules.clear(),
     ]);
   }
 }

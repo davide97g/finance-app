@@ -119,7 +119,7 @@ export function RecurringTransactionsPage() {
     if (!user) return;
 
     if (!formData.category_id) {
-      toast.warning(t("category_required") || "Category is required");
+      toast.warning(t("category_required"));
       return;
     }
 
@@ -183,7 +183,7 @@ export function RecurringTransactionsPage() {
         const firstError = error.errors[0];
         toast.error(`${firstError.path.join(".")}: ${firstError.message}`);
       } else {
-        toast.error(t("error_saving_transaction") || "Error saving transaction");
+        toast.error(t("error_saving_transaction"));
       }
     }
     setIsOpen(false);
@@ -330,9 +330,9 @@ export function RecurringTransactionsPage() {
             onClick={async () => {
               const count = await generateTransactions();
               if (count > 0) {
-                toast.success(t("recurring_expenses_added", { count, defaultValue: "{{count}} recurring expenses added" }));
+                toast.success(t("recurring_expenses_added", { count }));
               } else {
-                toast.info(t("no_expenses_to_load", { defaultValue: "No expenses to load" }));
+                toast.info(t("no_expenses_to_load"));
               }
             }}
             size="icon"
@@ -359,10 +359,8 @@ export function RecurringTransactionsPage() {
                 </DialogTitle>
                 <DialogDescription className="sr-only">
                   {editingId
-                    ? t("edit_recurring_description") ||
-                    "Edit recurring transaction details"
-                    : t("add_recurring_description") ||
-                    "Add a new recurring transaction"}
+                    ? t("edit_recurring_description")
+                    : t("add_recurring_description")}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -377,7 +375,7 @@ export function RecurringTransactionsPage() {
                     <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium">
                       <span className="flex items-center gap-2">
                         <ListFilter className="h-4 w-4" />
-                        {t("transaction_details") || "Details"}
+                        {t("transaction_details")}
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-2 px-1">
@@ -507,7 +505,7 @@ export function RecurringTransactionsPage() {
                         <span className="flex items-center gap-2">
                           <SlidersHorizontal className="h-4 w-4" />
                           <span className="text-sm font-medium">
-                            {t("more_options") || "More"}
+                            {t("more_options")}
                           </span>
                           {(formData.group_id || formData.context_id) && (
                             <Badge className="ml-2">
@@ -679,7 +677,7 @@ export function RecurringTransactionsPage() {
               <TableHead>{t("frequency")}</TableHead>
               <TableHead>{t("type")}</TableHead>
               <TableHead className="text-right">{t("amount")}</TableHead>
-              <TableHead>{t("next_occurrence") || "Next Occurrence"}</TableHead>
+              <TableHead>{t("next_occurrence")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
