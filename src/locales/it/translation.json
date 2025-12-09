@@ -258,6 +258,7 @@
   "parent_category": "Categoria Padre",
   "no_parent": "Nessun Genitore",
   "show_subcategories": "Mostra sottocategorie",
+  "subcategories": "sottocategorie",
   "warning_subcategories": "Attenzione: Sottocategorie Rilevate",
   "subcategory_conflict_description": "Questa categoria ha {{count}} sottocategorie. {{action}} la renderà inaccessibile. Vuoi spostarle nella categoria genitore ({{parentName}})?",
   "move_children_and_proceed": "Sposta Figli e Procedi",

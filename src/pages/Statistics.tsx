@@ -4,7 +4,6 @@ import { useStatistics } from "@/hooks/useStatistics";
 import { useGroups } from "@/hooks/useGroups";
 
 import { LazyChart } from "@/components/LazyChart";
-import { createColorShade } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -25,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import {
   PieChart,
   Pie,
-  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -34,7 +32,6 @@ import {
   RadarChart,
   PolarAngleAxis,
   PolarGrid,
-
   ComposedChart,
   AreaChart,
   Area,
@@ -59,6 +56,7 @@ import { StatsSummaryCards } from "@/components/statistics/StatsSummaryCards";
 import { StatsBurnRateCard } from "@/components/statistics/StatsBurnRateCard";
 import { StatsContextAnalytics } from "@/components/statistics/StatsContextAnalytics";
 import { StatsCategoryDistribution } from "@/components/statistics/StatsCategoryDistribution";
+import { StatsExpenseBreakdown } from "@/components/statistics/StatsExpenseBreakdown";
 
 export function StatisticsPage() {
   const { t, i18n } = useTranslation();
@@ -169,41 +167,7 @@ export function StatisticsPage() {
       ? monthlyExpensesByHierarchy
       : yearlyExpensesByHierarchy;
 
-  // Get all unique child category names across all hierarchy data for stacked bar config
-  const allChildCategories = useMemo(() => {
-    const allChildren = new Set<string>();
-    currentExpensesByHierarchy.forEach((item) => {
-      item._children.forEach((child) => {
-        allChildren.add(child.name);
-      });
-    });
-    return Array.from(allChildren);
-  }, [currentExpensesByHierarchy]);
 
-  // Color utilities moved to @/lib/utils - using hexToHsl and createColorShade
-
-  // Generate chart config with shaded colors per root category
-  const stackedBarConfig = useMemo(() => {
-    const config: ChartConfig = {};
-
-    currentExpensesByHierarchy.forEach((item) => {
-      const rootColor = item.rootColor || "#6366f1"; // Default indigo if no color
-      const childCount = item._children.length;
-
-      item._children.forEach((child, index) => {
-        // Create unique key combining root and child to avoid conflicts
-        const uniqueKey = child.name;
-        if (!config[uniqueKey]) {
-          config[uniqueKey] = {
-            label: child.name,
-            color: createColorShade(rootColor, index, childCount),
-          };
-        }
-      });
-    });
-
-    return config;
-  }, [currentExpensesByHierarchy]);
 
   const chartConfig = {
     income: {
@@ -442,75 +406,12 @@ export function StatisticsPage() {
                 isLoading={isLoading}
               />
 
-              {/* Horizontal Stacked Bar Chart - Expense Breakdown by Category Hierarchy */}
-              <Card className="md:col-span-2 min-w-0">
-                <CardHeader>
-                  <CardTitle>{t("expense_breakdown")}</CardTitle>
-                  <CardDescription>{t("expense_breakdown_desc")}</CardDescription>
-                </CardHeader>
-                <CardContent className="min-w-0">
-                  <LazyChart
-                    height={Math.max(currentExpensesByHierarchy.length * 50, 250)}
-                    isLoading={isLoading}
-                  >
-                    {currentExpensesByHierarchy.length > 0 ? (
-                      <ChartContainer
-                        config={stackedBarConfig}
-                        className="w-full max-w-[100%] aspect-auto overflow-hidden"
-                        style={{
-                          height: `${Math.max(
-                            currentExpensesByHierarchy.length * 50,
-                            250
-                          )}px`,
-                        }}
-                      >
-                        <BarChart
-                          accessibilityLayer
-                          data={currentExpensesByHierarchy}
-                          layout="vertical"
-                          margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
-                          stackOffset="none"
-                        >
-                          <CartesianGrid horizontal={false} />
-                          <YAxis dataKey="rootName" type="category" hide />
-                          <XAxis type="number" hide />
-                          <ChartTooltip
-                            content={
-                              <ChartTooltipContent
-                                formatter={(value, name) => (
-                                  <span>
-                                    {name}: €{Number(value).toFixed(2)}
-                                  </span>
-                                )}
-                              />
-                            }
-                          />
-                          {allChildCategories.map((childName, index) => (
-                            <Bar
-                              key={childName}
-                              dataKey={childName}
-                              stackId="stack"
-                              fill={
-                                stackedBarConfig[childName]?.color ||
-                                `hsl(var(--chart-${(index % 5) + 1}))`
-                              }
-                              radius={
-                                index === allChildCategories.length - 1
-                                  ? [0, 4, 4, 0]
-                                  : [0, 0, 0, 0]
-                              }
-                            />
-                          ))}
-                        </BarChart>
-                      </ChartContainer>
-                    ) : (
-                      <div className="flex h-[250px] items-center justify-center text-muted-foreground">
-                        {t("no_data")}
-                      </div>
-                    )}
-                  </LazyChart>
-                </CardContent>
-              </Card>
+              {/* Expense Breakdown - Expandable Cards Component */}
+              <StatsExpenseBreakdown
+                expensesByHierarchy={currentExpensesByHierarchy}
+                totalExpense={currentStats.expense}
+                isLoading={isLoading}
+              />
             </div>
 
             {/* Period Comparison Section - Monthly */}
@@ -1013,77 +914,12 @@ export function StatisticsPage() {
                 isLoading={false}
               />
 
-              {/* Horizontal Stacked Bar Chart - Expense Breakdown (Yearly) */}
-              <Card className="flex flex-col min-w-0">
-                <CardHeader>
-                  <CardTitle>{t("expense_breakdown")}</CardTitle>
-                  <CardDescription>{t("expense_breakdown_desc")}</CardDescription>
-                </CardHeader>
-                <CardContent className="min-w-0">
-                  {currentExpensesByHierarchy.length > 0 ? (
-                    <LazyChart
-                      height={Math.max(
-                        currentExpensesByHierarchy.slice(0, 8).length * 50,
-                        300
-                      )}
-                    >
-                      <ChartContainer
-                        config={stackedBarConfig}
-                        className="w-full max-w-[100%] aspect-auto overflow-hidden"
-                        style={{
-                          height: `${Math.max(
-                            currentExpensesByHierarchy.slice(0, 8).length * 50,
-                            300
-                          )}px`,
-                        }}
-                      >
-                        <BarChart
-                          accessibilityLayer
-                          data={currentExpensesByHierarchy.slice(0, 8)}
-                          layout="vertical"
-                          margin={{ left: 0, right: 12, top: 0, bottom: 0 }}
-                          stackOffset="none"
-                        >
-                          <CartesianGrid horizontal={false} />
-                          <YAxis dataKey="rootName" type="category" hide />
-                          <XAxis type="number" hide />
-                          <ChartTooltip
-                            content={
-                              <ChartTooltipContent
-                                formatter={(value, name) => (
-                                  <span>
-                                    {name}: €{Number(value).toFixed(2)}
-                                  </span>
-                                )}
-                              />
-                            }
-                          />
-                          {allChildCategories.map((childName, index) => (
-                            <Bar
-                              key={childName}
-                              dataKey={childName}
-                              stackId="stack"
-                              fill={
-                                stackedBarConfig[childName]?.color ||
-                                `hsl(var(--chart-${(index % 5) + 1}))`
-                              }
-                              radius={
-                                index === allChildCategories.length - 1
-                                  ? [0, 4, 4, 0]
-                                  : [0, 0, 0, 0]
-                              }
-                            />
-                          ))}
-                        </BarChart>
-                      </ChartContainer>
-                    </LazyChart>
-                  ) : (
-                    <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                      {t("no_data")}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Expense Breakdown - Expandable Cards Component (Yearly) */}
+              <StatsExpenseBreakdown
+                expensesByHierarchy={currentExpensesByHierarchy}
+                totalExpense={currentStats.expense}
+                isLoading={false}
+              />
             </div>
 
             {/* Period Comparison Section - Yearly */}
