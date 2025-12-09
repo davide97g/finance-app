@@ -2,6 +2,7 @@ import { useState, useMemo, startTransition, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useStatistics } from "@/hooks/useStatistics";
 import { useGroups } from "@/hooks/useGroups";
+import { useSettings } from "@/hooks/useSettings";
 
 import { LazyChart } from "@/components/LazyChart";
 import {
@@ -61,6 +62,7 @@ import { StatsExpenseBreakdown } from "@/components/statistics/StatsExpenseBreak
 export function StatisticsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const { settings } = useSettings();
   const dateLocale = i18n.language === "it" ? it : enUS;
   const now = new Date();
   const location = useLocation();
@@ -413,6 +415,19 @@ export function StatisticsPage() {
                 isLoading={isLoading}
               />
             </div>
+
+            {/* Burn Rate / Spending Projection Card */}
+            {settings?.monthly_budget && settings.monthly_budget > 0 && (
+              <StatsBurnRateCard
+                spending={monthlyStats.expense}
+                budget={settings.monthly_budget}
+                periodName={format(new Date(selectedMonth), "MMMM yyyy", { locale: dateLocale })}
+                daysInPeriod={new Date(parseInt(selectedMonth.split("-")[0]), parseInt(selectedMonth.split("-")[1]), 0).getDate()}
+                daysElapsed={burnRate.daysElapsed}
+                daysRemaining={burnRate.daysRemaining}
+                isLoading={isLoading}
+              />
+            )}
 
             {/* Period Comparison Section - Monthly */}
             <Card className="min-w-0">
@@ -1364,12 +1379,18 @@ export function StatisticsPage() {
         {/* Context Analytics - using extracted component */}
         <StatsContextAnalytics contextStats={contextStats} />
 
-        {/* Burn Rate - using extracted component */}
-        <StatsBurnRateCard
-          activeTab={activeTab}
-          burnRate={burnRate}
-          yearlyBurnRate={yearlyBurnRate}
-        />
+        {/* Burn Rate / Spending Projection Card - Yearly */}
+        {settings?.monthly_budget && settings.monthly_budget > 0 && (
+          <StatsBurnRateCard
+            spending={yearlyStats.expense}
+            budget={settings.monthly_budget * 12}
+            periodName={selectedYear}
+            daysInPeriod={yearlyBurnRate.daysElapsed + yearlyBurnRate.daysRemaining}
+            daysElapsed={yearlyBurnRate.daysElapsed}
+            daysRemaining={yearlyBurnRate.daysRemaining}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     </div >
   );
