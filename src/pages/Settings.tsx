@@ -196,7 +196,7 @@ export function SettingsPage() {
 
       {/* Tab Navigation */}
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 h-13">
+        <TabsList className="grid w-full grid-cols-3 h-13 dark:bg-primary/20">
           <TabsTrigger value="appearance" className="gap-2 text-xs sm:text-sm">
             <Palette className="h-4 w-4 hidden sm:block" />
             {t("tab_appearance")}
