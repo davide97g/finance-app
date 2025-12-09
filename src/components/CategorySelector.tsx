@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, ChevronRight, ArrowLeft } from "lucide-react";
+import { Check, ChevronsUpDown, ChevronRight, ArrowLeft, ListFilter } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -350,91 +351,187 @@ export function CategorySelector({
     </div>
   );
 
-  // Mobile View: Drill-down Sheet
+  // Mobile View: Drill-down Sheet with Animations
+  const [direction, setDirection] = React.useState(0);
+
+  const handleMobileNavigate = (category: CategoryNode) => {
+    setDirection(1);
+    handleNavigate(category);
+  };
+
+  const handleMobileBack = () => {
+    setDirection(-1);
+    if (navigationPath.length === 1) {
+      setNavigationPath([]);
+    } else {
+      setNavigationPath(navigationPath.slice(0, -1));
+    }
+  };
+
+  const variants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? "100%" : "-100%",
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction: number) => ({
+      x: direction < 0 ? "100%" : "-100%",
+      opacity: 0,
+    }),
+  };
+
   const MobileContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden relative">
+      {/* Header only shown when navigating deep */}
       {navigationPath.length > 0 && (
-        <div className="flex items-center p-4 border-b">
+        <div className="flex items-center p-4 border-b shrink-0 bg-background z-10 transition-all duration-300 ease-in-out">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (navigationPath.length === 1) {
-                setNavigationPath([]);
-              } else {
-                setNavigationPath(navigationPath.slice(0, -1));
-              }
-            }}
-            aria-label={t("back")}
+            onClick={handleMobileBack}
+            className="p-0 hover:bg-transparent"
+            aria-label={t("back_to_parent") || "Back to parent category"}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-            {t("back")}
+            <ArrowLeft className="mr-2 h-5 w-5" />
           </Button>
-          <span className="ml-2 font-semibold" aria-current="location">
+          <span className="flex-1 text-center font-semibold text-lg" role="heading" aria-level={2}>
             {currentParent?.name}
           </span>
+          <div className="w-5" /> {/* Spacer for alignment */}
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {/* No Parent option when selecting parent category */}
-        {excludeId && navigationPath.length === 0 && (
-          <div
-            className={cn(
-              "flex items-center p-3 rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer",
-              value === "" && "border-primary"
-            )}
-            onClick={() => handleSelect(null)}
-          >
-            <span className="flex-1 font-medium italic text-muted-foreground">
-              {t("no_parent") || "No Parent"}
-            </span>
-            {value === "" && <Check className="h-4 w-4 text-primary" />}
-          </div>
-        )}
 
-        {currentLevelCategories.map((category) => (
-          <div
-            key={category.id}
-            className="flex items-center justify-between p-3 rounded-lg border bg-card text-card-foreground shadow-sm"
+      <div className="flex-1 overflow-hidden relative">
+        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+          <motion.div
+            key={currentParent ? currentParent.id : "root"}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="absolute inset-0 overflow-y-auto p-4 space-y-2"
           >
-            <div
-              className="flex items-center flex-1 cursor-pointer"
-              onClick={() => handleSelect(category)}
-            >
-              {renderCategoryIcon(category.icon, category.color)}
-              <span className="font-medium">{category.name}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {value === category.id && (
-                <Check className="h-4 w-4 text-primary" />
-              )}
-              {category.children.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNavigate(category);
-                  }}
-                  aria-label={
-                    t("show_subcategories") ||
-                    `Show subcategories of ${category.name}`
+            {/* "Select This Category" option (only when deep in hierarchy) */}
+            {currentParent && (
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label={t("select_category_name", { name: currentParent.name })}
+                className={cn(
+                  "flex items-center p-3 rounded-lg border-2 border-dashed border-muted bg-muted/20 cursor-pointer mb-4 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  value === currentParent.id && "border-primary bg-primary/10"
+                )}
+                onClick={() => handleSelect(currentParent)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(currentParent);
                   }
+                }}
+              >
+                <div className="flex items-center flex-1">
+                  {renderCategoryIcon(currentParent.icon, currentParent.color)}
+                  <span className="font-medium">
+                    {t("select_category_name", { name: currentParent.name })}
+                  </span>
+                </div>
+                {value === currentParent.id && <Check className="h-5 w-5 text-primary" />}
+              </div>
+            )}
+
+            {/* No Parent option (only at root) */}
+            {excludeId && navigationPath.length === 0 && (
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label={t("no_parent") || "Select no parent category"}
+                className={cn(
+                  "flex items-center p-3 rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  value === "" && "border-primary"
+                )}
+                onClick={() => handleSelect(null)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(null);
+                  }
+                }}
+              >
+                <span className="flex-1 font-medium italic text-muted-foreground">
+                  {t("no_parent") || "No Parent"}
+                </span>
+                {value === "" && <Check className="h-5 w-5 text-primary" />}
+              </div>
+            )}
+
+            {currentLevelCategories.map((category) => {
+              const isParent = category.children.length > 0;
+              return (
+                <div
+                  key={category.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={isParent ? t("navigate_to_subcategory", { name: category.name }) : t("select_category_name", { name: category.name })}
+                  aria-expanded={isParent ? "false" : undefined}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card text-card-foreground shadow-sm active:scale-[0.98] transition-transform focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onClick={() => {
+                    if (isParent) {
+                      handleMobileNavigate(category);
+                    } else {
+                      handleSelect(category);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (isParent) {
+                        handleMobileNavigate(category);
+                      } else {
+                        handleSelect(category);
+                      }
+                    }
+                  }}
                 >
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                </Button>
+                  <div className="flex items-center flex-1">
+                    {renderCategoryIcon(category.icon, category.color)}
+                    <span className="font-medium text-base">{category.name}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {value === category.id && !isParent && (
+                      <Check className="h-5 w-5 text-primary" />
+                    )}
+                    {isParent && (
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {currentLevelCategories.length === 0 &&
+              !currentParent && /* Only show empty state at root if truly empty */
+              (
+                <div className="text-center text-muted-foreground py-10 flex flex-col items-center gap-2">
+                  <div className="p-3 rounded-full bg-muted">
+                    <ListFilter className="h-6 w-6 opacity-50" />
+                  </div>
+                  <p>{t("no_categories")}</p>
+                </div>
               )}
-            </div>
-          </div>
-        ))}
-        {currentLevelCategories.length === 0 &&
-          navigationPath.length === 0 &&
-          !excludeId && (
-            <div className="text-center text-muted-foreground py-8">
-              {t("no_categories")}
-            </div>
-          )}
+
+            {currentLevelCategories.length === 0 && currentParent && (
+              <div className="text-center text-muted-foreground py-4 text-sm">
+                {t("no_subcategories")}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
