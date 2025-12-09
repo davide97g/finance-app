@@ -12,7 +12,8 @@ import { RevolutParser } from '@/lib/import/parsers/RevolutParser';
 import { ImportProcessor } from '@/lib/import/ImportProcessor';
 import { RulesEngine } from '@/lib/import/RulesEngine';
 import { useAuth } from '@/contexts/AuthProvider';
-import { ParsedData, TransactionParser, CsvMapping, ParsedTransaction } from '@/lib/import/types';
+import { ParsedData, TransactionParser, CsvMapping, ParsedTransaction, PotentialMerge } from '@/lib/import/types';
+import { ImportConflictResolver } from './ImportConflictResolver';
 import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
 import Papa from 'papaparse';
@@ -29,7 +30,7 @@ interface ImportWizardProps {
     onImportComplete: (stats?: { transactions: number; categories: number }) => void;
 }
 
-type WizardStep = 'select_type' | 'upload' | 'mapping' | 'revolut_config' | 'preview' | 'reconciliation' | 'importing' | 'success';
+type WizardStep = 'select_type' | 'upload' | 'mapping' | 'revolut_config' | 'preview' | 'resolving_conflicts' | 'reconciliation' | 'importing' | 'success';
 type ImportType = 'backup' | 'bank_csv';
 
 export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWizardProps) {
@@ -43,6 +44,8 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
     const [progress, setProgress] = useState(0);
     const [progressMessage, setProgressMessage] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [conflicts, setConflicts] = useState<PotentialMerge[]>([]);
+    const [recurringConflicts, setRecurringConflicts] = useState<PotentialMerge[]>([]);
 
     // CSV Specific State
     const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -276,6 +279,38 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
     const handleImport = async () => {
         if (!parsedData || !user) return;
 
+        // For backups/migrations: Check for fuzzy category matches first
+        if (parsedData.categories && parsedData.categories.length > 0) {
+            const processor = new ImportProcessor(user.id);
+            setIsProcessing(true);
+            try {
+                // 1. Analyze Category Conflicts
+                const foundConflicts = await processor.analyzeCategoryConflicts(parsedData);
+
+                // 2. Analyze Recurring Conflicts
+                const foundRecurringConflicts = await processor.analyzeRecurringConflicts(parsedData);
+
+                if (foundConflicts.length > 0 || foundRecurringConflicts.length > 0) {
+                    setConflicts(foundConflicts);
+                    setRecurringConflicts(foundRecurringConflicts);
+                    setStep('resolving_conflicts');
+                    setIsProcessing(false);
+                    return; // Stop here, wait for user resolution
+                }
+            } catch (e) {
+                console.warn("Failed to analyze conflicts", e);
+            } finally {
+                setIsProcessing(false);
+            }
+        }
+
+        // If no categories or no conflicts, proceed directly
+        await handleImportAfterMerge(new Map(), new Set());
+    };
+
+    const handleImportAfterMerge = async (mergeMap: Map<string, string>, skippedRecurringIds: Set<string>) => {
+        if (!parsedData || !user) return;
+
         setStep('importing');
         setIsProcessing(true);
         const processor = new ImportProcessor(user.id);
@@ -285,7 +320,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                 const pct = Math.round((current / total) * 100);
                 setProgress(pct);
                 setProgressMessage(msg);
-            });
+            }, mergeMap, skippedRecurringIds);
 
             setStep('success');
             onImportComplete({
@@ -314,6 +349,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                         {step === 'mapping' && "Map columns from your CSV to transaction fields."}
                         {step === 'revolut_config' && "Configure specific options for Revolut import."}
                         {step === 'preview' && "Review the data found in the file."}
+                        {step === 'resolving_conflicts' && "Similar categories found. Please review."}
                         {step === 'reconciliation' && "Categorize transactions and create rules."}
                         {step === 'importing' && "Importing your data..."}
                         {step === 'success' && "Import completed successfully!"}
@@ -587,6 +623,21 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                     )}
 
                     {/* STEP 3.5: RECONCILIATION */}
+                    {step === 'resolving_conflicts' && (
+                        <div className="py-4">
+                            <ImportConflictResolver
+                                conflicts={conflicts}
+                                recurringConflicts={recurringConflicts}
+                                onResolve={async (mergeMap, skippedRecurringIds) => {
+                                    await handleImportAfterMerge(mergeMap, skippedRecurringIds);
+                                }}
+                                onCancel={() => {
+                                    setStep('preview');
+                                }}
+                            />
+                        </div>
+                    )}
+
                     {step === 'reconciliation' && parsedData && (
                         <div className="space-y-4">
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 p-4 rounded-lg flex items-start gap-3">

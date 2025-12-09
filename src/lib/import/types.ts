@@ -27,6 +27,12 @@ export interface PotentialMerge {
     score: number;
 }
 
+export interface RecurringConflict {
+    imported: any; // Raw recurring object
+    existing: any; // Existing recurring object
+    score: number; // 0 = exact match
+}
+
 export interface ParsedData {
     source: ImportSource; // Changed to use the updated ImportSource
     transactions: ParsedTransaction[];

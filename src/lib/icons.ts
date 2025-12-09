@@ -39,6 +39,33 @@ import {
     Sun,
     Moon,
     Star,
+    Calendar,
+    Tag,
+    CheckSquare,
+    Receipt,
+    Wallet,
+    Building2,
+    Award,
+    FileText,
+    Pen,
+    Brain,
+    Fingerprint,
+    Fish,
+    Carrot,
+    Beer,
+    Mountain,
+    TreePine,
+    Map,
+    MapPin,
+    Palmtree,
+    Hotel,
+    Laptop,
+    Tablet,
+    User,
+    Settings,
+    Lock,
+    Trophy,
+    Medal,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -88,6 +115,33 @@ export const AVAILABLE_ICONS: IconItem[] = [
     { name: 'Sun', icon: Sun },
     { name: 'Moon', icon: Moon },
     { name: 'Star', icon: Star },
+    { name: 'Calendar', icon: Calendar },
+    { name: 'Tag', icon: Tag },
+    { name: 'CheckSquare', icon: CheckSquare },
+    { name: 'Receipt', icon: Receipt },
+    { name: 'Wallet', icon: Wallet },
+    { name: 'Building2', icon: Building2 }, // Building
+    { name: 'Award', icon: Award }, // Certificate
+    { name: 'FileText', icon: FileText }, // License
+    { name: 'Pen', icon: Pen },
+    { name: 'Brain', icon: Brain }, // Cognitive
+    { name: 'Fingerprint', icon: Fingerprint },
+    { name: 'Fish', icon: Fish },
+    { name: 'Carrot', icon: Carrot }, // Corn/Veg
+    { name: 'Beer', icon: Beer }, // Bar
+    { name: 'Mountain', icon: Mountain },
+    { name: 'TreePine', icon: TreePine }, // Tree
+    { name: 'Map', icon: Map },
+    { name: 'MapPin', icon: MapPin }, // Location
+    { name: 'Palmtree', icon: Palmtree },
+    { name: 'Hotel', icon: Hotel },
+    { name: 'Laptop', icon: Laptop },
+    { name: 'Tablet', icon: Tablet },
+    { name: 'User', icon: User },
+    { name: 'Settings', icon: Settings },
+    { name: 'Lock', icon: Lock }, // Password
+    { name: 'Trophy', icon: Trophy },
+    { name: 'Medal', icon: Medal },
 ];
 
 export function getIconComponent(iconName: string): LucideIcon | null {

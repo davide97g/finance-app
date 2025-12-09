@@ -24,15 +24,15 @@ export class ImportProcessor {
         this.userId = userId;
     }
 
-    async process(data: ParsedData, onProgress?: ImportProgressCallback, mergedCategoryIds?: Map<string, string>): Promise<{
+    async process(data: ParsedData, onProgress?: ImportProgressCallback, mergedCategoryIds?: Map<string, string>, skippedRecurringIds?: Set<string>): Promise<{
         categories: number;
         transactions: number;
         recurring: number;
     }> {
         if (data.source === 'legacy_vue') {
-            return this.processVueImport(data, onProgress);
+            return this.processVueImport(data, onProgress, mergedCategoryIds, skippedRecurringIds);
         } else {
-            return this.processStandardImport(data, onProgress, mergedCategoryIds);
+            return this.processStandardImport(data, onProgress, mergedCategoryIds, skippedRecurringIds);
         }
     }
 
@@ -45,20 +45,33 @@ export class ImportProcessor {
         const existingNames = existingCategories.map(c => c.name);
         const existingMap = new Map(existingCategories.map(c => [c.name.toLowerCase(), c]));
 
+        console.log("Analyzing conflicts...", { importedCount: data.categories.length, existingCount: existingCategories.length });
+
         for (const importedCat of data.categories) {
+            // Ensure we have a name to compare
+            const importedName = importedCat.name || (importedCat as any).title;
+            if (!importedName) continue;
+
             // Skip if exact match exists (logic already handles this as auto-merge)
-            if (existingMap.has(importedCat.name.toLowerCase())) {
+            if (existingMap.has(importedName.toLowerCase())) {
+                console.log(`Exact match found for '${importedName}'. Auto-merging.`);
                 continue;
             }
 
             // Check for fuzzy match
-            const bestMatch = findBestMatch(importedCat.name, existingNames);
+            const bestMatch = findBestMatch(importedName, existingNames);
+
+            if (bestMatch) {
+                console.log(`Checking '${importedName}': Best match '${bestMatch.match}' (dist: ${bestMatch.distance})`);
+            } else {
+                console.log(`Checking '${importedName}': No close match found.`);
+            }
 
             // Threshold: length <= 3 -> distance 0 (exact only, handled above)
             // length > 3 -> distance <= 1
             // length > 6 -> distance <= 2
             let threshold = 1;
-            if (importedCat.name.length > 6) threshold = 2;
+            if (importedName.length > 6) threshold = 2;
 
             if (bestMatch && bestMatch.distance > 0 && bestMatch.distance <= threshold) {
                 const existing = existingCategories.find(c => c.name === bestMatch.match);
@@ -74,19 +87,59 @@ export class ImportProcessor {
         return conflicts;
     }
 
+    async analyzeRecurringConflicts(data: ParsedData): Promise<PotentialMerge[]> {
+        if (!data.recurring || data.recurring.length === 0) return [];
+
+        const conflicts: PotentialMerge[] = [];
+        const existingRecurring = await db.recurring_transactions.where('user_id').equals(this.userId).toArray();
+
+        // Helper to normalize description for comparison
+        const normalize = (s: string) => s.toLowerCase().trim();
+
+        for (const importedRec of data.recurring) {
+            const impDesc = normalize(importedRec.description || "");
+            const impAmount = parseFloat(importedRec.amount);
+
+            // Check for potential duplicates
+            // Logic: Same amount AND similar description
+            const match = existingRecurring.find(ex => {
+                const exDesc = normalize(ex.description);
+                const exAmount = ex.amount;
+
+                if (Math.abs(impAmount - exAmount) > 0.01) return false; // Amount mismatch
+
+                // Exact description match
+                if (impDesc === exDesc) return true;
+
+                // Fuzzy description match
+                const dist = findBestMatch(impDesc, [exDesc]);
+                const maxLen = Math.max(impDesc.length, exDesc.length);
+                // Allow ~20% difference or 2 chars
+                const threshold = Math.max(2, Math.floor(maxLen * 0.2));
+
+                return dist && dist.distance <= threshold;
+            });
+
+            if (match) {
+                // Return as PotentialMerge structure but for recurring
+                // We map 'imported' to the raw object and 'existing' to a simplified view for UI
+                conflicts.push({
+                    imported: { ...importedRec, name: importedRec.description, id: importedRec.id || uuidv4() } as any,
+                    existing: { id: match.id, name: match.description, color: "#888888" }, // Mock color/name for compatibility with resolver UI
+                    score: 0
+                });
+            }
+        }
+        return conflicts;
+    }
+
     // --- STANDARD IMPORT STRATEGY ---
-    private async processStandardImport(data: ParsedData, onProgress?: ImportProgressCallback, mergedCategoryIds?: Map<string, string>) {
+    private async processStandardImport(data: ParsedData, onProgress?: ImportProgressCallback, mergedCategoryIds?: Map<string, string>, skippedRecurringIds?: Set<string>) {
         let importedCategories = 0;
         let importedTransactions = 0;
         let importedRecurring = 0;
 
-        // We Map IDs to ensure valid references if we generate new ones
-        // For standard backups, we might trust IDs if they match UUID format, 
-        // but strict safety suggests checking collisions or using map.
-        // For now, let's assume standard backup restores IDs if possible, or generates new if collision.
-        // Actually, if we import on top of existing data, we should probably generate NEW IDs to avoid conflicts.
-        // Let's stick to "Merge/New" approach.
-
+        // ... existing setup logic ...
         const categoryIdMap = new Map<string, string>();
         const contextIdMap = new Map<string, string>();
 
@@ -214,6 +267,12 @@ export class ImportProcessor {
         // 4. Recurring (if any in standard backup)
         if (data.recurring) {
             for (const rec of data.recurring) {
+                // SKIP Check
+                // Assuming standard backup uses stable IDs
+                if (rec.id && skippedRecurringIds?.has(rec.id)) {
+                    continue;
+                }
+
                 const mappedId = rec.category_id ? categoryIdMap.get(rec.category_id) : undefined;
                 const finalCatId = mappedId || await this.ensureFallbackCategory();
                 const finalCtxId = rec.context_id ? contextIdMap.get(rec.context_id) : undefined;
@@ -241,7 +300,7 @@ export class ImportProcessor {
     }
 
     // --- VUE MIGRATION STRATEGY ---
-    private async processVueImport(data: ParsedData, onProgress?: ImportProgressCallback) {
+    private async processVueImport(data: ParsedData, onProgress?: ImportProgressCallback, mergedCategoryIds?: Map<string, string>, skippedRecurringIds?: Set<string>) {
         // Logic extracted from Settings.tsx
         const ROOT_CATEGORY_TYPES: Record<string, "expense" | "income" | "investment"> = {
             "533d4482-df54-47e5-b8d8-000000000001": "expense",
@@ -259,6 +318,13 @@ export class ImportProcessor {
 
         const categoryIdMap = new Map<string, string>();
         const vueCategoriesMap = new Map<string, any>();
+
+        // Pre-fill map with user validated merges
+        if (mergedCategoryIds) {
+            mergedCategoryIds.forEach((targetId, sourceId) => {
+                categoryIdMap.set(sourceId, targetId);
+            });
+        }
 
         // Index
         for (const c of (data.categories || [])) {
@@ -284,9 +350,24 @@ export class ImportProcessor {
 
             if (ROOT_IDS.has(vueCat.id)) continue;
 
+            // If already mapped (via merge), skip creation but we might need it in map for children resolution?
+            // Actually, if it's merged, we already have the target ID in categoryIdMap.
+            if (categoryIdMap.has(vueCat.id)) continue;
+
+            // Check exact match (Auto-merge) - standard safety check
+            const existing = await db.categories
+                .where('user_id').equals(this.userId)
+                .filter(c => c.name.toLowerCase() === vueCat.title.toLowerCase())
+                .first();
+
+            if (existing) {
+                categoryIdMap.set(vueCat.id, existing.id);
+                continue;
+            }
+
             const type = resolveCategoryType(vueCat.id);
             const newId = uuidv4();
-            if (vueCat.id) categoryIdMap.set(vueCat.id, newId);
+            categoryIdMap.set(vueCat.id, newId);
 
             let newParentId: string | undefined = undefined;
             if (vueCat.parentCategoryId && !ROOT_IDS.has(vueCat.parentCategoryId)) {
@@ -366,6 +447,10 @@ export class ImportProcessor {
         // Recurring
         if (data.recurring) {
             for (const vueRec of data.recurring) {
+                if (vueRec.id && skippedRecurringIds?.has(vueRec.id)) {
+                    continue;
+                }
+
                 onProgress?.(++currentStep, totalSteps, 'Migrating Recurring...');
 
                 let frequency: "daily" | "weekly" | "monthly" | "yearly" = "monthly";
