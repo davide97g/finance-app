@@ -90,10 +90,8 @@ export class RevolutParser implements TransactionParser {
                             // Revolut CSV: "Importo" usually includes sign. "-10.00".
                             // "Costo" (Fee) is usually "0.00".
                             const amountRaw = row[map.amount];
-                            const feeRaw = row[map.fee];
-
                             let amount = this.parseNumber(amountRaw);
-                            const fee = this.parseNumber(feeRaw);
+                            // const fee = this.parseNumber(feeRaw); // Unused
 
                             // In Revolut export, Amount is usually net of fees? Or inclusive?
                             // Example: "Importo": -13.00, "Costo": 0.00. Total -13.00.

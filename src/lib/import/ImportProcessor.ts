@@ -1,5 +1,9 @@
 import { db } from "@/lib/db";
-import { ParsedData, PotentialMerge } from "./types";
+import {
+    ParsedData,
+    PotentialMerge,
+    RecurringConflict
+} from "./types";
 import { v4 as uuidv4 } from "uuid";
 import { AVAILABLE_ICONS } from "@/lib/icons";
 import { findBestMatch } from "../stringUtils";
@@ -15,10 +19,14 @@ function validateIcon(iconName: string | undefined | null): string {
     return iconName;
 }
 
+// Helper to normalize description for comparison
+const normalizeString = (s: string | undefined | null): string => (s || "").toLowerCase().trim();
+
 export type ImportProgressCallback = (current: number, total: number, status: string) => void;
 
 export class ImportProcessor {
     private userId: string;
+    private existingRecurring: any[] = []; // To be populated before conflict analysis
 
     constructor(userId: string) {
         this.userId = userId;
@@ -87,23 +95,24 @@ export class ImportProcessor {
         return conflicts;
     }
 
-    async analyzeRecurringConflicts(data: ParsedData): Promise<PotentialMerge[]> {
+    async loadExistingRecurring() {
+        this.existingRecurring = await db.recurring_transactions.where('user_id').equals(this.userId).toArray();
+    }
+
+    analyzeRecurringConflicts(data: ParsedData): RecurringConflict[] {
         if (!data.recurring || data.recurring.length === 0) return [];
+        if (!this.existingRecurring || this.existingRecurring.length === 0) return [];
 
-        const conflicts: PotentialMerge[] = [];
-        const existingRecurring = await db.recurring_transactions.where('user_id').equals(this.userId).toArray();
-
-        // Helper to normalize description for comparison
-        const normalize = (s: string) => s.toLowerCase().trim();
+        const conflicts: RecurringConflict[] = [];
 
         for (const importedRec of data.recurring) {
-            const impDesc = normalize(importedRec.description || "");
+            const impDesc = normalizeString(importedRec.description);
             const impAmount = parseFloat(importedRec.amount);
 
             // Check for potential duplicates
             // Logic: Same amount AND similar description
-            const match = existingRecurring.find(ex => {
-                const exDesc = normalize(ex.description);
+            const match = this.existingRecurring.find(ex => {
+                const exDesc = normalizeString(ex.description);
                 const exAmount = ex.amount;
 
                 if (Math.abs(impAmount - exAmount) > 0.01) return false; // Amount mismatch
@@ -121,10 +130,9 @@ export class ImportProcessor {
             });
 
             if (match) {
-                // Return as PotentialMerge structure but for recurring
-                // We map 'imported' to the raw object and 'existing' to a simplified view for UI
+                // Return as RecurringConflict structure
                 conflicts.push({
-                    imported: { ...importedRec, name: importedRec.description, id: importedRec.id || uuidv4() } as any,
+                    imported: { ...importedRec, name: importedRec.description, id: importedRec.id || uuidv4() },
                     existing: { id: match.id, name: match.description, color: "#888888" }, // Mock color/name for compatibility with resolver UI
                     score: 0
                 });

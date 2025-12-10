@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PotentialMerge } from "@/lib/import/types";
+import { PotentialMerge, RecurringConflict } from "@/lib/import/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ImportConflictResolverProps {
     conflicts: PotentialMerge[];
-    recurringConflicts: PotentialMerge[];
+    recurringConflicts: RecurringConflict[];
     onResolve: (mergedCategoryIds: Map<string, string>, skippedRecurringIds: Set<string>) => void;
     onCancel: () => void;
 }

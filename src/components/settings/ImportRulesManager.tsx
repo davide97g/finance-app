@@ -1,9 +1,9 @@
 
-import React from 'react';
+
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { Button } from "@/components/ui/button";
-import { Trash2, AlertCircle, ArrowRight } from "lucide-react";
+import { Trash2, ArrowRight } from "lucide-react";
 import { toast } from 'sonner';
 import {
     Table,
@@ -13,13 +13,13 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { useAuth } from '@/contexts/AuthProvider';
-import { useTranslation } from "react-i18next";
+
 
 export function ImportRulesManager() {
     const { user } = useAuth();
-    const { t } = useTranslation();
+
 
     // Fetch rules and categories
     const rules = useLiveQuery(

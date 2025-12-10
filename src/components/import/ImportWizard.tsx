@@ -12,7 +12,7 @@ import { RevolutParser } from '@/lib/import/parsers/RevolutParser';
 import { ImportProcessor } from '@/lib/import/ImportProcessor';
 import { RulesEngine } from '@/lib/import/RulesEngine';
 import { useAuth } from '@/contexts/AuthProvider';
-import { ParsedData, TransactionParser, CsvMapping, ParsedTransaction, PotentialMerge } from '@/lib/import/types';
+import { ParsedData, TransactionParser, CsvMapping, ParsedTransaction, PotentialMerge, RecurringConflict } from '@/lib/import/types';
 import { ImportConflictResolver } from './ImportConflictResolver';
 import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
@@ -47,7 +47,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
     const [progressMessage, setProgressMessage] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [conflicts, setConflicts] = useState<PotentialMerge[]>([]);
-    const [recurringConflicts, setRecurringConflicts] = useState<PotentialMerge[]>([]);
+    const [recurringConflicts, setRecurringConflicts] = useState<RecurringConflict[]>([]);
 
     // CSV Specific State
     const [csvFile, setCsvFile] = useState<File | null>(null);
