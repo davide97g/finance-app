@@ -348,7 +348,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
     return (
         <Dialog open={open} onOpenChange={() => { }}>
             <DialogContent
-                className="sm:max-w-md p-0 gap-0 overflow-hidden"
+                className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[90vh]"
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >
@@ -356,20 +356,20 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                 <DialogDescription className="sr-only">{t("welcome.description")}</DialogDescription>
 
                 {/* Enhanced Progress bar with step name */}
-                <div className="px-6 pt-6">
-                    <Progress value={progress} className="h-2" />
-                    <div className="flex justify-between items-center mt-2">
-                        <p className="text-xs text-muted-foreground">
+                <div className="px-4 sm:px-6 pt-4 sm:pt-6">
+                    <Progress value={progress} className="h-1.5 sm:h-2" />
+                    <div className="flex justify-between items-center mt-1.5 sm:mt-2">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                             {currentStep + 1} / {STEPS.length}
                         </p>
-                        <p className="text-xs font-medium text-primary">
+                        <p className="text-[10px] sm:text-xs font-medium text-primary truncate max-w-[150px] sm:max-w-none">
                             {t(currentStepData.titleKey)}
                         </p>
                     </div>
                 </div>
 
                 {/* Step content with swipe gesture */}
-                <div ref={constraintsRef} className="relative min-h-[360px] overflow-hidden touch-pan-y">
+                <div ref={constraintsRef} className="relative min-h-[280px] sm:min-h-[360px] overflow-hidden touch-pan-y">
                     <AnimatePresence mode="wait" custom={direction}>
                         <motion.div
                             key={currentStep}
@@ -413,7 +413,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                 </div>
 
                 {/* Navigation buttons */}
-                <div className="p-6 pt-4 border-t space-y-4">
+                <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t space-y-3 sm:space-y-4">
                     {/* Skip section with checkbox */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -451,8 +451,8 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
 
-                        {/* Dot indicators */}
-                        <div className="flex gap-1.5">
+                        {/* Dot indicators - smaller inactive, larger active */}
+                        <div className="flex gap-1 sm:gap-1.5 items-center">
                             {STEPS.map((_, index) => (
                                 <button
                                     key={index}
@@ -461,10 +461,10 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                                         setCurrentStep(index);
                                     }}
                                     className={cn(
-                                        "w-2 h-2 rounded-full transition-all duration-200",
+                                        "rounded-full transition-all duration-200",
                                         index === currentStep
-                                            ? "bg-primary w-6"
-                                            : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                                            ? "bg-primary w-4 sm:w-6 h-2 sm:h-2.5"
+                                            : "bg-muted-foreground/30 hover:bg-muted-foreground/50 w-1.5 h-1.5 sm:w-2 sm:h-2"
                                     )}
                                 />
                             ))}
