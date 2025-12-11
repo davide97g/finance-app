@@ -91,14 +91,20 @@ export function MobileTransactionRow({
           style={{ backgroundColor: background }}
           className="absolute inset-0 flex items-center justify-between px-4 rounded-lg"
         >
-          <div className="flex items-center text-white font-medium">
+          <motion.div
+            style={{ scale: useTransform(x, [50, 220], [0.8, 1.2]) }}
+            className="flex items-center text-white font-medium"
+          >
             <Edit className="h-5 w-5 mr-2" />
             {t("edit")}
-          </div>
-          <div className="flex items-center text-white font-medium">
+          </motion.div>
+          <motion.div
+            style={{ scale: useTransform(x, [-50, -220], [0.8, 1.2]) }}
+            className="flex items-center text-white font-medium"
+          >
             {t("delete")}
             <Trash2 className="h-5 w-5 ml-2" />
-          </div>
+          </motion.div>
         </motion.div>
       )}
 

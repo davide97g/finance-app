@@ -16,6 +16,7 @@ import { useMemo, useRef, useCallback } from "react";
 import { ContentLoader } from "@/components/ui/content-loader";
 import { SmoothLoader } from "@/components/ui/smooth-loader";
 import { motion, Variants } from "framer-motion";
+import { FadeIn } from "@/components/ui/fade-in";
 import { getIconComponent } from "@/lib/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { UI_DEFAULTS } from "@/lib/constants";
@@ -370,19 +371,21 @@ export function TransactionList({
                         padding: "0 4px",
                       }}
                     >
-                      <MobileTransactionRow
-                        transaction={item.data}
-                        category={getCategory(item.data.category_id)}
-                        context={getContext(item.data.context_id)}
-                        group={getGroup(item.data.group_id)}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onClick={() => handleRowClick(item.data)}
-                        isVirtual={true}
-                        hideContext={hideContext}
-                        personalAmount={getPersonalAmount(item.data)}
-                        isGroupShare={!!item.data.group_id}
-                      />
+                      <FadeIn delay={0} duration={200}>
+                        <MobileTransactionRow
+                          transaction={item.data}
+                          category={getCategory(item.data.category_id)}
+                          context={getContext(item.data.context_id)}
+                          group={getGroup(item.data.group_id)}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                          onClick={() => handleRowClick(item.data)}
+                          isVirtual={true}
+                          hideContext={hideContext}
+                          personalAmount={getPersonalAmount(item.data)}
+                          isGroupShare={!!item.data.group_id}
+                        />
+                      </FadeIn>
                     </div>
                   );
                 })}
@@ -454,6 +457,8 @@ export function TransactionList({
       );
     }
 
+
+
     // Desktop view
     // Virtualized table for large datasets
     if (shouldVirtualize) {
@@ -500,11 +505,13 @@ export function TransactionList({
                             transform: `translateY(${virtualRow.start}px)`,
                           }}
                         >
-                          <Table>
-                            <TableBody>
-                              {renderDesktopRow(t_item, virtualRow.index, true)}
-                            </TableBody>
-                          </Table>
+                          <FadeIn delay={0} duration={200}>
+                            <Table>
+                              <TableBody>
+                                {renderDesktopRow(t_item, virtualRow.index, true)}
+                              </TableBody>
+                            </Table>
+                          </FadeIn>
                         </div>
                       );
                     })}
@@ -552,3 +559,4 @@ export function TransactionList({
     </SmoothLoader>
   );
 }
+

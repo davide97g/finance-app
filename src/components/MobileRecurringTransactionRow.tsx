@@ -141,6 +141,7 @@ export function MobileRecurringTransactionRow({
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.7}
         onDragEnd={handleDragEnd}
+        whileTap={{ scale: 0.98 }}
         onClick={() => {
           if (x.get() === 0 && onClick) {
             onClick(transaction);

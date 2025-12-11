@@ -269,7 +269,7 @@ export function TransactionDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px] w-[95vw] rounded-lg">
+            <DialogContent className="sm:max-w-[600px] w-[95vw] rounded-lg">
                 <DialogHeader>
                     <DialogTitle>
                         {editingTransaction ? t("edit_transaction") : t("add_transaction")}

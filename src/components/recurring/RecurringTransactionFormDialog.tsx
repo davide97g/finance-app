@@ -84,7 +84,7 @@ export function RecurringTransactionFormDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] rounded-lg">
+            <DialogContent className="sm:max-w-[600px] w-[95vw] rounded-lg">
                 <DialogHeader>
                     <DialogTitle>
                         {editingId ? t("edit_recurring") : t("add_recurring")}
