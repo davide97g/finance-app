@@ -103,8 +103,6 @@ function AppLoadingState() {
 
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { syncManager } from "@/lib/sync";
-import { WelcomeWizard } from "@/components/welcome/WelcomeWizard";
-import { useWelcomeWizard } from "@/hooks/useWelcomeWizard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, isOffline } = useAuth();
@@ -113,9 +111,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   useRealtimeSync(initialSyncComplete); // Subscribe to realtime changes only after initial sync
   useAutoGenerate(); // Generate recurring transactions on app load
   useBudgetNotifications(); // Monitor budget and show warnings
-
-  // Welcome wizard state
-  const welcomeWizard = useWelcomeWizard();
 
   // Handle initial sync and visibility changes
   useEffect(() => {
@@ -153,16 +148,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" />;
   }
 
-  return (
-    <>
-      {children}
-      <WelcomeWizard
-        open={welcomeWizard.shouldShow}
-        onComplete={welcomeWizard.complete}
-        onSkip={welcomeWizard.skip}
-      />
-    </>
-  );
+  return <>{children}</>;
 }
 
 /**
