@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Upload, FileJson, CheckCircle2, AlertTriangle, Loader2, ArrowRight, FileSpreadsheet, RefreshCw, Wand2, Trash2, Info, Download, Settings2, Turtle } from "lucide-react";
 
+import { IntesaSanpaoloParser } from '../../lib/import/parsers/IntesaSanpaoloParser';
 import { AntigravityBackupParser } from '../../lib/import/parsers/AntigravityBackupParser';
 import { LegacyVueParser } from '../../lib/import/parsers/LegacyVueParser';
 import { GenericCsvParser } from '../../lib/import/parsers/GenericCsvParser';
@@ -25,6 +26,7 @@ import { Switch } from "../ui/switch";
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useTranslation } from 'react-i18next';
+import { Building2, Command } from 'lucide-react';
 
 interface ImportWizardProps {
     open: boolean;
@@ -32,8 +34,9 @@ interface ImportWizardProps {
     onImportComplete: (stats?: { transactions: number; categories: number }) => void;
 }
 
-type WizardStep = 'select_type' | 'upload' | 'mapping' | 'revolut_config' | 'preview' | 'resolving_conflicts' | 'reconciliation' | 'importing' | 'success';
+type WizardStep = 'select_type' | 'select_bank' | 'upload' | 'mapping' | 'revolut_config' | 'preview' | 'resolving_conflicts' | 'reconciliation' | 'importing' | 'success';
 type ImportType = 'backup' | 'bank_csv';
+type BankType = 'intesa' | 'revolut' | 'generic';
 
 export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWizardProps) {
     const { user } = useAuth();
@@ -42,6 +45,8 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
 
     const [step, setStep] = useState<WizardStep>('select_type');
     const [importType, setImportType] = useState<ImportType | null>(null);
+    const [selectedBank, setSelectedBank] = useState<BankType | null>(null);
+
     const [parsedData, setParsedData] = useState<ParsedData | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -77,6 +82,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
     const resetState = () => {
         setStep('select_type');
         setImportType(null);
+        setSelectedBank(null);
         setParsedData(null);
         setIsProcessing(false);
         setError(null);
@@ -97,6 +103,15 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
 
     const handleSelectType = (type: ImportType) => {
         setImportType(type);
+        if (type === 'bank_csv') {
+            setStep('select_bank');
+        } else {
+            setStep('upload');
+        }
+    };
+
+    const handleSelectBank = (bank: BankType) => {
+        setSelectedBank(bank);
         setStep('upload');
     };
 
@@ -108,25 +123,47 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
         setError(null);
 
         try {
-            const text = await file.text();
+            // For XLSX files, file.text() might be garbage, verify extension first if parsing as text
+            // IntesaParser uses ArrayBuffer so it's fine.
+            // But others use FileReader or text.
+            // Let's get text only if needed. Common parsers take text.
+            const isBinary = file.name.toLowerCase().endsWith('.xlsx');
+            let text = "";
+            if (!isBinary) {
+                text = await file.text();
+            }
+
             let parser: TransactionParser | null = null;
 
-            // Detect Parser
-            const parsers = [
-                new AntigravityBackupParser(),
-                new LegacyVueParser(),
-                new RevolutParser(),
-                new GenericCsvParser()
-            ];
-
-            for (const p of parsers) {
-                if (await p.canParse(file, text)) {
-                    parser = p;
-                    break;
+            if (importType === 'backup') {
+                const parsers = [
+                    new AntigravityBackupParser(),
+                    new LegacyVueParser(),
+                ];
+                for (const p of parsers) {
+                    if (await p.canParse(file, text)) {
+                        parser = p;
+                        break;
+                    }
+                }
+            } else if (importType === 'bank_csv') {
+                // Instantiate based on selection
+                if (selectedBank === 'intesa') {
+                    const p = new IntesaSanpaoloParser();
+                    if (await p.canParse(file, text)) parser = p;
+                } else if (selectedBank === 'revolut') {
+                    const p = new RevolutParser();
+                    if (await p.canParse(file, text)) parser = p;
+                } else {
+                    const p = new GenericCsvParser();
+                    if (await p.canParse(file, text)) parser = p;
                 }
             }
 
             if (!parser) {
+                if (selectedBank) {
+                    throw new Error(`The file does not match the expected format for ${selectedBank === 'intesa' ? 'Intesa Sanpaolo' : selectedBank === 'revolut' ? 'Revolut' : 'CSV'}.`);
+                }
                 throw new Error("Unsupported file format or invalid content.");
             }
 
@@ -145,8 +182,11 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                     throw new Error("Could not detect CSV headers. Please ensure the file has a header row.");
                 }
             } else if (parser instanceof RevolutParser) {
-                // Show dedicated config
                 setStep('revolut_config');
+            } else if (parser instanceof IntesaSanpaoloParser) {
+                const data = await parser.parse(file, text);
+                setParsedData(data);
+                setStep('preview');
             } else {
                 // Standard parsers (Backup, Vue)
                 const data = await parser.parse(file, text);
@@ -177,13 +217,29 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
     };
 
     const handleDownloadTemplate = () => {
-        const headers = "Date,Amount,Description,Fee";
-        const exampleRow = "2023-12-01,-50.00,Grocery Store,0.00";
+        const headers = "Date,Amount,Description,Fee,Category";
+        const exampleRow = "2023-12-01,-50.00,Grocery Store,0.00,Groceries";
         const csvContent = "data:text/csv;charset=utf-8," + [headers, exampleRow].join("\n");
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
         link.setAttribute("download", "bank_import_template.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleDownloadCategories = () => {
+        if (!activeCategories) return;
+
+        // Format: Name,Type,ID
+        const header = "Name,Type,ID";
+        const rows = activeCategories.map(c => `${c.name},${c.type},${c.id}`).join("\n");
+        const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(header + "\n" + rows);
+
+        const link = document.createElement("a");
+        link.setAttribute("href", csvContent);
+        link.setAttribute("download", "antigravity_categories.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -348,6 +404,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                     <DialogTitle>{t("import.title", "Import Data")}</DialogTitle>
                     <DialogDescription>
                         {step === 'select_type' && t("import.step_select_type", "Choose what kind of data you want to import.")}
+                        {step === 'select_bank' && t("import.step_select_bank", "Select your bank.")}
                         {step === 'upload' && t("import.step_upload", "Select the file from your computer.")}
                         {step === 'mapping' && t("import.step_mapping", "Map columns from your CSV to transaction fields.")}
                         {step === 'revolut_config' && t("import.step_revolut_config", "Configure specific options for Revolut import.")}
@@ -406,11 +463,62 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                         </div>
                     )}
 
+                    {/* STEP 1.5: SELECT BANK */}
+                    {step === 'select_bank' && (
+                        <div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-4">
+                                <Card
+                                    className="cursor-pointer hover:border-primary transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+                                    onClick={() => handleSelectBank('intesa')}
+                                >
+                                    <CardContent className="flex flex-col items-center justify-center p-6 text-center h-full">
+                                        <Building2 className="h-8 w-8 mb-3 text-orange-600" />
+                                        <h3 className="font-semibold text-md mb-1">Intesa Sanpaolo</h3>
+                                        <p className="text-xs text-muted-foreground">Excel (.xlsx)</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card
+                                    className="cursor-pointer hover:border-primary transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+                                    onClick={() => handleSelectBank('revolut')}
+                                >
+                                    <CardContent className="flex flex-col items-center justify-center p-6 text-center h-full">
+                                        <Building2 className="h-8 w-8 mb-3 text-blue-500" />
+                                        <h3 className="font-semibold text-md mb-1">Revolut</h3>
+                                        <p className="text-xs text-muted-foreground">CSV Export</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card
+                                    className="cursor-pointer hover:border-primary transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+                                    onClick={() => handleSelectBank('generic')}
+                                >
+                                    <CardContent className="flex flex-col items-center justify-center p-6 text-center h-full">
+                                        <Command className="h-8 w-8 mb-3 text-slate-500" />
+                                        <h3 className="font-semibold text-md mb-1">Generic CSV</h3>
+                                        <p className="text-xs text-muted-foreground">Custom Mapping</p>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <div className="flex justify-center">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleDownloadCategories}
+                                    className="text-xs gap-2"
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Download Category List
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* STEP 2: UPLOAD */}
                     {step === 'upload' && (
                         <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl bg-slate-50 dark:bg-slate-950 relative">
                             {/* Template Download Button for Bank CVS */}
-                            {importType === 'bank_csv' && !isProcessing && (
+                            {importType === 'bank_csv' && selectedBank === 'generic' && !isProcessing && (
                                 <div className="absolute top-4 right-4">
                                     <Button
                                         variant="outline"
@@ -439,7 +547,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                                     )}
                                     <p className="text-sm text-muted-foreground mb-4 text-center">
                                         {importType === 'bank_csv'
-                                            ? t("import.select_csv_bank", "Select a .csv file from your bank.")
+                                            ? selectedBank === 'intesa' ? "Select your Intesa Sanpaolo .xlsx file" : t("import.select_csv_bank", "Select a .csv file from your bank.")
                                             : t("import.select_json_backup", "Select a .json file to restore your backup.")}
                                     </p>
                                     <Button onClick={() => fileInputRef.current?.click()}>
@@ -449,8 +557,9 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                                         type="file"
                                         ref={fileInputRef}
                                         className="hidden"
-                                        accept={importType === 'bank_csv' ? ".csv" : ".json"}
+                                        accept={selectedBank === 'intesa' ? ".xlsx" : importType === 'bank_csv' ? ".csv" : ".json"}
                                         onChange={handleFileSelect}
+                                        onClick={(e) => { (e.target as any).value = null; }} // Reset to allow re-selection of same file
                                     />
                                     {error && (
                                         <div className="mt-4 p-3 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded text-sm flex items-center">
@@ -465,6 +574,7 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
 
                     {/* STEP 2.5: MAPPING (CSV ONLY) */}
                     {step === 'mapping' && (
+
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-2">
@@ -508,6 +618,19 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                                             {t("import.fee_note", "Note: Tax will be added to the amount (Amount + Fee).")}
                                         </p>
                                     )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t("import.col_category", "Category Column (Optional)")}</Label>
+                                    <Select
+                                        value={csvMapping.categoryColumn || ""}
+                                        onValueChange={(v) => setCsvMapping(p => ({ ...p, categoryColumn: v === "none" ? undefined : v }))}
+                                    >
+                                        <SelectTrigger><SelectValue placeholder={t("import.col_select_placeholder", "Select column")} /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none" className="text-muted-foreground font-light">{t("import.col_none", "None")}</SelectItem>
+                                            {csvHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>{t("import.col_description", "Description Column")}</Label>

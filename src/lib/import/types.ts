@@ -54,6 +54,7 @@ export type CsvMapping = {
     dateColumn: string;
     amountColumn: string;
     feeColumn?: string;
+    categoryColumn?: string;
     descriptionColumn: string;
     dateFormat?: string;
     hasHeader: boolean;
