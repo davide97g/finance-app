@@ -25,6 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { WelcomeStep } from "./WelcomeStep";
 import { demoData, getDemoStats } from "@/lib/demoData";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/useSettings";
 
 interface WelcomeWizardProps {
     open: boolean;
@@ -137,6 +138,7 @@ const fireConfetti = () => {
 
 export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) {
     const { t, i18n } = useTranslation();
+    const { updateSettings } = useSettings();
     const [currentStep, setCurrentStep] = useState(0);
     const [direction, setDirection] = useState<Direction>(1);
     const constraintsRef = useRef<HTMLDivElement>(null);
@@ -367,6 +369,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                                 onClick={() => {
                                     const newLang = i18n.language === "it" ? "en" : "it";
                                     i18n.changeLanguage(newLang);
+                                    updateSettings({ language: newLang });
                                 }}
                                 className="text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded border border-muted-foreground/30 hover:border-muted-foreground/50"
                             >

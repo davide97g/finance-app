@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sheet";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { TransactionDialog, TransactionFormData } from "@/components/TransactionDialog";
+import { Badge } from "@/components/ui/badge";
 
 import { format } from "date-fns";
 
@@ -478,7 +479,12 @@ export function TransactionsPage() {
     <div className="space-y-4">
       {/* First row: Title and action buttons */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("transactions")}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">{t("transactions")}</h1>
+          <Badge variant="secondary" className="px-2 py-0.5 h-6">
+            {filteredTransactions.length}
+          </Badge>
+        </div>
         <div className="flex gap-2">
           {/* Mobile Filter Sheet */}
           <div className="md:hidden">

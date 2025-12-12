@@ -220,7 +220,7 @@ export function TransactionList({
 
       return (
         <TableRow key={t_item.id} {...animationProps}>
-          <TableCell>
+          <TableCell className="w-[120px]">
             <time dateTime={t_item.date}>{t_item.date}</time>
           </TableCell>
           <TableCell>
@@ -229,13 +229,13 @@ export function TransactionList({
               <SyncStatusBadge isPending={t_item.pendingSync === 1} />
             </div>
           </TableCell>
-          <TableCell>
+          <TableCell className="w-[180px]">
             <div className="flex items-center gap-2">
               {IconComp && <IconComp className="h-4 w-4" aria-hidden="true" />}
               <span>{category?.name || "-"}</span>
             </div>
           </TableCell>
-          <TableCell>
+          <TableCell className="w-[130px]">
             {context && !hideContext ? (
               <div className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-md">
                 <Tag className="h-3 w-3" aria-hidden="true" />
@@ -245,7 +245,7 @@ export function TransactionList({
               <span className="text-muted-foreground">-</span>
             )}
           </TableCell>
-          <TableCell>
+          <TableCell className="w-[130px]">
             {group ? (
               <div className="inline-flex items-center gap-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md">
                 <Users className="h-3 w-3" aria-hidden="true" />
@@ -255,8 +255,8 @@ export function TransactionList({
               <span className="text-muted-foreground">-</span>
             )}
           </TableCell>
-          <TableCell className="capitalize">{t(t_item.type)}</TableCell>
-          <TableCell className={`text-right ${getTypeTextColor(t_item.type)}`}>
+          <TableCell className="capitalize w-[100px]">{t(t_item.type)}</TableCell>
+          <TableCell className={`text-right w-[120px] ${getTypeTextColor(t_item.type)}`}>
             {t_item.type === "expense"
               ? "-"
               : t_item.type === "investment"
@@ -270,7 +270,7 @@ export function TransactionList({
             )}
           </TableCell>
           {showActions && (
-            <TableCell>
+            <TableCell className="w-[100px]">
               <div
                 className="flex items-center justify-end gap-2"
                 role="group"
@@ -467,14 +467,14 @@ export function TransactionList({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("date")}</TableHead>
+                <TableHead className="w-[120px]">{t("date")}</TableHead>
                 <TableHead>{t("description")}</TableHead>
-                <TableHead>{t("category")}</TableHead>
-                <TableHead>{t("context")}</TableHead>
-                <TableHead>{t("group")}</TableHead>
-                <TableHead>{t("type")}</TableHead>
-                <TableHead className="text-right">{t("amount")}</TableHead>
-                {showActions && <TableHead></TableHead>}
+                <TableHead className="w-[180px]">{t("category")}</TableHead>
+                <TableHead className="w-[130px]">{t("context")}</TableHead>
+                <TableHead className="w-[130px]">{t("group")}</TableHead>
+                <TableHead className="w-[100px]">{t("type")}</TableHead>
+                <TableHead className="text-right w-[120px]">{t("amount")}</TableHead>
+                {showActions && <TableHead className="w-[100px]"></TableHead>}
               </TableRow>
             </TableHeader>
           </Table>
@@ -530,14 +530,14 @@ export function TransactionList({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t("date")}</TableHead>
+              <TableHead className="w-[120px]">{t("date")}</TableHead>
               <TableHead>{t("description")}</TableHead>
-              <TableHead>{t("category")}</TableHead>
-              <TableHead>{t("context")}</TableHead>
-              <TableHead>{t("group")}</TableHead>
-              <TableHead>{t("type")}</TableHead>
-              <TableHead className="text-right">{t("amount")}</TableHead>
-              {showActions && <TableHead></TableHead>}
+              <TableHead className="w-[180px]">{t("category")}</TableHead>
+              <TableHead className="w-[130px]">{t("context")}</TableHead>
+              <TableHead className="w-[130px]">{t("group")}</TableHead>
+              <TableHead className="w-[100px]">{t("type")}</TableHead>
+              <TableHead className="text-right w-[120px]">{t("amount")}</TableHead>
+              {showActions && <TableHead className="w-[100px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
