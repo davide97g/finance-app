@@ -10,6 +10,8 @@ export interface ParsedTransaction {
     category_id?: string;
     context_id?: string; // For Antigravity backups
     type?: "expense" | "income" | "investment"; // Often missing in CSVs
+    group_id?: string; // For group expenses
+    user_id?: string; // For checking ownership
     raw_data?: any; // Original row/object for debugging
 }
 
@@ -40,6 +42,8 @@ export interface ParsedData {
     recurring?: ParsedRecurringTransaction[];
     contexts?: ParsedContext[];
     budgets?: any[];      // Used for full backups
+    groups?: any[];
+    group_members?: any[];
     metadata?: {
         totalItems: number;
         version?: string;

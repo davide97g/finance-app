@@ -20,6 +20,10 @@ jest.mock('../../db', () => ({
         recurring_transactions: {
             where: jest.fn(),
             put: jest.fn()
+        },
+        category_budgets: {
+            put: jest.fn(),
+            where: jest.fn()
         }
     }
 }));
@@ -182,6 +186,105 @@ describe('ImportProcessor', () => {
             expect(db.categories.put).toHaveBeenCalledWith(expect.objectContaining({
                 name: 'Inactive Cat',
                 active: 0
+            }));
+        });
+
+        it('should import category budgets', async () => {
+            const data: any = {
+                source: 'standard',
+                categories: [
+                    { id: 'cat-1', name: 'Budgeted Cat' }
+                ],
+                budgets: [
+                    { category_id: 'cat-1', amount: 500, period: 'monthly' }
+                ],
+                transactions: []
+            };
+
+            // Mock checks
+            (db.categories.where as jest.Mock).mockReturnValue({
+                equals: jest.fn().mockReturnValue({
+                    filter: jest.fn().mockReturnValue({
+                        first: jest.fn().mockResolvedValue(null)
+                    })
+                })
+            });
+            // Update: mock 'get' sequence:
+            // 1. First call (Category Insert Check): returns null (so we insert category)
+            // 2. Second call (Budget Check): returns object (so we proceed to check budget)
+            (db.categories.get as jest.Mock)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({ id: 'cat-1', name: 'Budgeted Cat' });
+
+            // Mock budget check to return null (so it creates new)
+            (db.category_budgets.where as jest.Mock).mockReturnValue({
+                first: jest.fn().mockResolvedValue(null)
+            });
+
+            await processor.process(data);
+
+            // Verify category created
+            expect(db.categories.put).toHaveBeenCalledWith(expect.objectContaining({
+                name: 'Budgeted Cat'
+            }));
+
+            // Verify budget created
+            expect(db.category_budgets.put).toHaveBeenCalledWith(expect.objectContaining({
+                amount: 500,
+                period: 'monthly'
+            }));
+        });
+
+        it('should import group transaction share correctly', async () => {
+            const data: any = {
+                source: 'standard',
+                userId: 'export-user-1',
+                categories: [
+                    { id: 'cat-1', name: 'Food' }
+                ],
+                groups: [
+                    { id: 'group-1', name: 'Shared House' }
+                ],
+                group_members: [
+                    { id: 'mem-1', group_id: 'group-1', user_id: 'export-user-1', share: 50 },
+                    { id: 'mem-2', group_id: 'group-1', user_id: 'other-user', share: 50 }
+                ],
+                transactions: [
+                    {
+                        id: 'tx-1',
+                        user_id: 'export-user-1',
+                        group_id: 'group-1',
+                        amount: -100,
+                        description: 'Shared Dinner',
+                        category_id: 'cat-1',
+                        date: '2023-01-01'
+                    }
+                ]
+            };
+
+            // Mock checks
+            (db.categories.where as jest.Mock).mockReturnValue({
+                equals: jest.fn().mockReturnValue({
+                    filter: jest.fn().mockReturnValue({
+                        first: jest.fn().mockResolvedValue(null)
+                    })
+                })
+            });
+            (db.categories.get as jest.Mock).mockResolvedValue(null);
+
+            await processor.process(data);
+
+            const calls = (db.transactions.put as jest.Mock).mock.calls;
+            if (JSON.stringify(calls).indexOf('50') === -1) {
+                // throw new Error(`DEBUG: Put calls did not contain 50. Calls: ${JSON.stringify(calls, null, 2)}`);
+            }
+
+            // Verify transaction imported with 50% of the amount (50)
+            expect(db.transactions.put).toHaveBeenCalledWith(expect.objectContaining({
+                description: 'Shared Dinner',
+                amount: 50,
+                group_id: null,
+                user_id: userId
             }));
         });
     });

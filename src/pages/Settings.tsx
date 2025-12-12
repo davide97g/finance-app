@@ -145,6 +145,18 @@ export function SettingsPage() {
       const budgets = await db.category_budgets
         .filter((b) => b.user_id === user.id && !b.deleted_at)
         .toArray();
+      const groups = await db.groups
+        .filter((g) => !g.deleted_at) // Groups might not have user_id directly if I'm just a member, but created_by is there. 
+        // Actually, for a backup, ideally we want groups I'm a member of.
+        // But simply filtering by created_by might miss groups where I am a guest/member.
+        // However, checking membership for every group is expensive.
+        // For now, let's export ALL local groups since this is a local-first app and I only have groups I'm involved in locally?
+        // Let's verify db.ts. 
+        // Sync pulls groups I'm in. So local DB should only have relevant groups.
+        .toArray();
+      const groupMembers = await db.group_members
+        .filter((m) => !m.removed_at)
+        .toArray();
 
       const exportData = {
         exportDate: new Date().toISOString(),
@@ -158,6 +170,8 @@ export function SettingsPage() {
         contexts: contexts.map(({ pendingSync, deleted_at, ...rest }) => rest),
         recurring_transactions: recurring.map(({ pendingSync, deleted_at, ...rest }) => rest),
         category_budgets: budgets.map(({ pendingSync, deleted_at, ...rest }) => rest),
+        groups: groups.map(({ pendingSync, deleted_at, ...rest }) => rest),
+        group_members: groupMembers.map(({ pendingSync, removed_at, ...rest }) => rest),
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {

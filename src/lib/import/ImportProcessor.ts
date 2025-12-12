@@ -141,13 +141,27 @@ export class ImportProcessor {
         return conflicts;
     }
 
+    analyzeGroupData(data: ParsedData): { hasGroups: boolean; groupTransactionCount: number } {
+        let groupTransactionCount = 0;
+        if (data.transactions) {
+            groupTransactionCount = data.transactions.filter(t => {
+                // Check raw_data for common group fields from various sources (though mainly Antigravity/Turtlet)
+                const raw = t.raw_data || {};
+                return !!(raw.group_id || raw.groupId || t.raw_data?.groupId || t.raw_data?.group_id);
+            }).length;
+        }
+        return {
+            hasGroups: groupTransactionCount > 0,
+            groupTransactionCount
+        };
+    }
+
     // --- STANDARD IMPORT STRATEGY ---
     private async processStandardImport(data: ParsedData, onProgress?: ImportProgressCallback, mergedCategoryIds?: Map<string, string>, skippedRecurringIds?: Set<string>) {
         let importedCategories = 0;
         let importedTransactions = 0;
         let importedRecurring = 0;
 
-        // ... existing setup logic ...
         const categoryIdMap = new Map<string, string>();
         const contextIdMap = new Map<string, string>();
 
@@ -158,14 +172,13 @@ export class ImportProcessor {
             });
         }
 
-        const totalSteps = (data.categories?.length || 0) + (data.contexts?.length || 0) + (data.transactions?.length || 0);
+        const totalSteps = (data.categories?.length || 0) + (data.contexts?.length || 0) + (data.transactions?.length || 0) + (data.recurring?.length || 0) + (data.budgets?.length || 0);
         let currentStep = 0;
 
         // 1. Contexts
         if (data.contexts) {
             for (const ctx of data.contexts) {
                 onProgress?.(++currentStep, totalSteps, `Importing Context: ${ctx.name}`);
-                // Try to find existing by name
                 const existing = await db.contexts.where({ name: ctx.name, user_id: this.userId }).first();
                 if (existing) {
                     if (ctx.id) contextIdMap.set(ctx.id, existing.id);
@@ -187,17 +200,9 @@ export class ImportProcessor {
 
         // 2. Categories
         if (data.categories) {
-            // Two pass for parents
             // Pass 1: IDs
             for (const cat of data.categories) {
-                // If already mapped (via merge), skip ID generation
                 if (categoryIdMap.has(cat.id)) continue;
-
-                // Check exact match (Auto-merge)
-                // Note: Dexie case-sensitivity depends on collation, usually strictly case sensitive by default, 
-                // but we might want case-insensitive logic here too? 
-                // For now, consistent with legacy logic: exact name match.
-                // We do a manual case-insensitive check to be safe and consistent with "Normalizing" plan.
                 const existing = await db.categories
                     .where('user_id').equals(this.userId)
                     .filter(c => c.name.toLowerCase() === cat.name.toLowerCase())
@@ -212,15 +217,13 @@ export class ImportProcessor {
             // Pass 2: Insert
             for (const cat of data.categories) {
                 onProgress?.(++currentStep, totalSteps, `Importing Category: ${cat.name}`);
-
-                // If it was merged (either manually or auto-exact), we don't CREATE it.
-                // But we check if it was "auto-merged" (exact match) vs "manual merge" (different ID but mapped).
-                // Actually, if mapped, we just need to ensure we don't overwrite if it exists.
-
                 const newId = categoryIdMap.get(cat.id);
                 if (!newId) continue;
 
                 const existing = await db.categories.get(newId);
+                // Check if we need to insert this category
+                // Logic: If we merged it (existing is found via map), verify if we actually need to create it?
+                // If existing is found by ID, we skip.
                 if (!existing) {
                     await db.categories.put({
                         id: newId,
@@ -236,51 +239,72 @@ export class ImportProcessor {
                     });
                     importedCategories++;
                 }
+
+                // Import category budget if present
+                // Since we are iterating categories, we can check for budgets here or in a separate pass.
+                // The previous implementation had budget logic here OR separate. 
+                // Wait, I saw budget logic in a separate block in previous views.
+                // Ideally keep it separate or integrated.
+                // Let's check if `data.budgets` is available. Yes.
+                // But `processStandardImport` iterates `data.budgets` separately in previous code.
+                // I will stick to separate block loop for budgets to keep logic clean.
             }
         }
 
         // 3. Transactions
-        for (const tx of data.transactions) {
-            onProgress?.(++currentStep, totalSteps, 'Importing Transactions...');
+        if (data.transactions) {
+            for (const tx of data.transactions) {
+                onProgress?.(++currentStep, totalSteps, 'Importing Transactions...');
 
-            let finalCatId = tx.category_id ? categoryIdMap.get(tx.category_id) : undefined;
-            if (!finalCatId) {
-                finalCatId = await this.ensureFallbackCategory();
-            }
-
-            const finalCtxId = tx.context_id ? contextIdMap.get(tx.context_id) : undefined;
-
-            // Normalize amount: always store as positive value
-            // Type is determined by parser based on original sign
-            const normalizedAmount = Math.abs(tx.amount);
-
-            await db.transactions.put({
-                id: uuidv4(),
-                user_id: this.userId,
-                category_id: finalCatId,
-                context_id: finalCtxId,
-                type: tx.type || 'expense',
-                amount: normalizedAmount,
-                date: tx.date,
-                year_month: tx.date.substring(0, 7),
-                description: tx.description,
-                group_id: null,
-                paid_by_member_id: null,
-                deleted_at: null,
-                pendingSync: 1
-            });
-            importedTransactions++;
-        }
-
-        // 4. Recurring (if any in standard backup)
-        if (data.recurring) {
-            for (const rec of data.recurring) {
-                // SKIP Check
-                // Assuming standard backup uses stable IDs
-                if (rec.id && skippedRecurringIds?.has(rec.id)) {
-                    continue;
+                let finalCatId = tx.category_id ? categoryIdMap.get(tx.category_id) : undefined;
+                if (!finalCatId) {
+                    finalCatId = await this.ensureFallbackCategory();
                 }
 
+                const finalCtxId = tx.context_id ? contextIdMap.get(tx.context_id) : undefined;
+
+                // Normalize amount: always store as positive value
+                const normalizedAmount = Math.abs(tx.amount);
+                let finalAmount = normalizedAmount;
+
+                if (tx.group_id && data.groups && data.group_members) {
+                    const groupMembers = (data.group_members || []).filter((m: any) => m.group_id === tx.group_id);
+                    const myMemberRecord = groupMembers.find((m: any) => m.user_id === tx.user_id);
+
+                    if (myMemberRecord && typeof myMemberRecord.share === 'number') {
+                        const sharePercentage = myMemberRecord.share;
+                        const newAmount = finalAmount * (sharePercentage / 100);
+                        finalAmount = Number(newAmount.toFixed(2));
+                    }
+                }
+
+                await db.transactions.put({
+                    id: uuidv4(),
+                    user_id: this.userId,
+                    category_id: finalCatId,
+                    context_id: finalCtxId,
+                    type: tx.type || 'expense',
+                    amount: finalAmount,
+                    date: tx.date,
+                    year_month: tx.date.substring(0, 7),
+                    description: tx.description,
+                    group_id: null,
+                    paid_by_member_id: null,
+                    deleted_at: null,
+                    pendingSync: 1
+                });
+                importedTransactions++;
+            }
+        }
+
+        // 4. Recurring
+        if (data.recurring) {
+            for (const rec of data.recurring) {
+                onProgress?.(++currentStep, totalSteps, `Importing Recurring: ${rec.description}`);
+                // Skip logic if needed
+                if (skippedRecurringIds?.has(rec.id)) continue;
+
+                // ... recurring logic ...
                 const mappedId = rec.category_id ? categoryIdMap.get(rec.category_id) : undefined;
                 const finalCatId = mappedId || await this.ensureFallbackCategory();
                 const finalCtxId = rec.context_id ? contextIdMap.get(rec.context_id) : undefined;
@@ -301,6 +325,36 @@ export class ImportProcessor {
                     pendingSync: 1
                 });
                 importedRecurring++;
+            }
+        }
+
+        // 5. Category Budgets
+        if (data.budgets) {
+            for (const budget of data.budgets) {
+                onProgress?.(++currentStep, totalSteps, `Importing Budget for category ${budget.category_id}...`);
+                const mappedCatId = categoryIdMap.get(budget.category_id);
+                if (mappedCatId) {
+                    const catExists = await db.categories.get(mappedCatId);
+                    if (catExists) {
+                        const existingBudget = await db.category_budgets
+                            .where({ category_id: mappedCatId, period: budget.period })
+                            .first();
+
+                        if (!existingBudget) {
+                            await db.category_budgets.put({
+                                id: uuidv4(),
+                                user_id: this.userId,
+                                category_id: mappedCatId,
+                                amount: Number(budget.amount),
+                                period: budget.period,
+                                deleted_at: null,
+                                pendingSync: 1,
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
+                            });
+                        }
+                    }
+                }
             }
         }
 
@@ -416,31 +470,42 @@ export class ImportProcessor {
         for (const tx of data.transactions) {
             onProgress?.(++currentStep, totalSteps, 'Migrating Transactions...');
 
-            let finalCatId = "";
-            let type: "expense" | "income" | "investment" = "expense";
+            onProgress?.(++currentStep, totalSteps, 'Importing Transactions...');
 
-            if (tx.category_id) {
-                const mappedId = categoryIdMap.get(tx.category_id);
-                if (mappedId) {
-                    finalCatId = mappedId;
-                    const cat = await db.categories.get(mappedId);
-                    if (cat) type = cat.type;
-                } else {
-                    finalCatId = await this.ensureFallbackCategory();
-                }
-            } else {
+            let finalCatId = tx.category_id ? categoryIdMap.get(tx.category_id) : undefined;
+            if (!finalCatId) {
                 finalCatId = await this.ensureFallbackCategory();
             }
 
+            const finalCtxId = tx.context_id ? undefined : undefined; // Vue parser likely doesn't have contexts/IDs easily mapped or I need to check where contextIdMap is defined. 
+            // Actually, `processVueImport` does NOT verify contexts in the beginning? 
+            // In the `view_file` output of Step 330, `processVueImport` does NOT seem to initialize `contextIdMap`.
+            // So I should remove `contextIdMap` usage or define it.
+            // Given Vue import is legacy, I'll just set context to undefined.
+
             // Normalize amount: always store as positive value
             const normalizedAmount = Math.abs(tx.amount);
+            let finalAmount = normalizedAmount;
+
+            if (tx.group_id && data.groups && data.group_members) {
+                // Try to find my share in the group
+                const groupMembers = data.group_members.filter((m: any) => m.group_id === tx.group_id);
+                const myMemberRecord = groupMembers.find((m: any) => m.user_id === tx.user_id);
+
+                if (myMemberRecord && typeof myMemberRecord.share === 'number') {
+                    const sharePercentage = myMemberRecord.share;
+                    const newAmount = finalAmount * (sharePercentage / 100);
+                    finalAmount = Number(newAmount.toFixed(2));
+                }
+            }
 
             await db.transactions.put({
                 id: uuidv4(),
                 user_id: this.userId,
                 category_id: finalCatId,
-                type: type,
-                amount: normalizedAmount,
+                context_id: finalCtxId,
+                type: tx.type || 'expense',
+                amount: finalAmount,
                 date: tx.date,
                 year_month: tx.date.substring(0, 7),
                 description: tx.description,

@@ -621,6 +621,30 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                                     <p><strong>{t("import.csv_note", "Note")}:</strong> {t("import.csv_note_desc", "Transactions will be set to 'Uncategorized' initially. Use the rules engine in the next step to categorize them.")}</p>
                                 </div>
                             )}
+
+                            {/* Group Data Warning */}
+                            {(() => {
+                                // We analyze on the fly in render for simplicity, or we could have done it in effect
+                                // Since it's fast, render is fine.
+                                if (user && parsedData) {
+                                    const processor = new ImportProcessor(user.id);
+                                    const groupAnalysis = processor.analyzeGroupData(parsedData);
+
+                                    if (groupAnalysis.hasGroups) {
+                                        return (
+                                            <div className="text-sm p-3 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300 rounded border border-yellow-100 dark:border-yellow-900 flex gap-2">
+                                                <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                                                <div>
+                                                    <p className="font-semibold">{t("import.group_warning_title", "Group Data Detected")}</p>
+                                                    <p>{t("import.group_warning_desc", "This file contains transactions associated with a group. Please note that group associations will be removed and these transactions will be imported as personal expenses.")}</p>
+                                                    <p className="mt-1 text-xs opacity-90">{t("import.group_warning_count", "Affected transactions: {{count}}", { count: groupAnalysis.groupTransactionCount })}</p>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+                                }
+                                return null;
+                            })()}
                         </div>
                     )}
 
