@@ -133,40 +133,18 @@ BEGIN
   (mem_charlie_guest, group_guest_id, NULL, guest_name, true, 50.00);
 
   -- ==========================================================================
+  -- ==========================================================================
   -- 2.1 CREATE CONTEXTS (NEW)
   -- ==========================================================================
-  INSERT INTO public.contexts (id, user_id, name, description, active) VALUES
-  (uuid_generate_v4(), user_a_id, 'Lavoro', 'Spese rimborsabili o legate al lavoro', 1),
-  (uuid_generate_v4(), user_a_id, 'Vacanza', 'Viaggi e relax', 1);
-
-  -- Get definitions for later usage in the loop (approximate lookup by name)
-  -- NOTE: In a real seed we'd use variables, but let's just select them back or assume IDs if we forced them.
-  -- Since we didn't force IDs, let's grab them into variables:
-  DECLARE
-    ctx_work uuid;
-    ctx_vac uuid;
-  BEGIN
-    SELECT id INTO ctx_work FROM public.contexts WHERE user_id = user_a_id AND name = 'Lavoro' LIMIT 1;
-    SELECT id INTO ctx_vac FROM public.contexts WHERE user_id = user_a_id AND name = 'Vacanza' LIMIT 1;
-  -- END block for just these variables is not quite right in PL/PGSQL structure nested here, 
-  -- but we are inside the main DO block. So we can just use `SELECT INTO`.
-  -- However, we are ALREADY in a DO block. Let's just use the outer variables or declare new ones?
-  -- We'll declare `ctx_work` and `ctx_vac` at the top with other vars for cleanliness. 
-  -- But since I cannot edit the DECLARE block easily without replacing the whole file, 
-  -- I will use a nested DECLARE or just inline SQL lookups. 
-  -- Actually, let's just create them with KNOWN UUIDs to be safe and easy.
-  END;
-  -- RE-DOING Context Insert with specific IDs to make it easier to reference
-  DELETE FROM public.contexts WHERE user_id = user_a_id; -- Safety clear of what I just did if run twice
   
   DECLARE 
      ctx_work_id uuid := uuid_generate_v4();
      ctx_vac_id uuid := uuid_generate_v4();
   BEGIN
-     -- Re-insert with known IDs
+     -- Insert with known IDs
      INSERT INTO public.contexts (id, user_id, name, description, active) VALUES
-     (ctx_work_id, user_a_id, 'Lavoro', 'Spese rimborsabili o legate al lavoro', 1),
-     (ctx_vac_id, user_a_id, 'Vacanza', 'Viaggi e relax', 1);
+     (ctx_work_id, user_a_id, 'Lavoro', 'Spese rimborsabili o legate al lavoro', true),
+     (ctx_vac_id, user_a_id, 'Vacanza', 'Viaggi e relax', true);
 
   -- ==========================================================================
   -- 3. CREATE CATEGORIES (HIERARCHY & VOLUME)
