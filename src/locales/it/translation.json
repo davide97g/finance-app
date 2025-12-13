@@ -109,6 +109,8 @@
   "category_distribution": "Distribuzione Categorie",
   "total": "Totale",
   "no_data": "Nessun dato disponibile",
+  "dashboard_empty_title": "Nessuna spesa",
+  "dashboard_empty_subtitle": "Aggiungi una transazione per vedere i tuoi trend finanziari!",
   "cumulative_expenses": "Spese Cumulative",
   "cumulative_expenses_desc": "Confronto spese cumulative giornaliere",
   "monthly_expenses_trend": "Tendenza Spese Mensili",
@@ -549,6 +551,7 @@
     "turtlet_app": "App Turtlet",
     "complete": "Importazione Completata",
     "complete_desc": "I tuoi dati sono stati importati con successo.",
+    "start_import": "Avvia Importazione",
     "orphan_warning": "{{count}} transazioni richiedono revisione",
     "orphan_warning_desc": "Queste transazioni hanno categorie mancanti e non verranno sincronizzate fino alla categorizzazione. Usa il filtro 'Richiede Revisione' per trovarle.",
     "syncing": "Sincronizzazione in corso...",
@@ -671,6 +674,11 @@
     "step_statistics_title": "Statistiche Dettagliate",
     "step_statistics_desc": "Esplora statistiche mensili e annuali con grafici eleganti e monitoraggio del budget.",
     "step_offline_title": "Funziona Offline",
-    "step_offline_desc": "Usa l'app anche senza internet. I tuoi dati si sincronizzano automaticamente quando torni online."
-  }
+    "step_offline_desc": "Usa l'app anche senza internet. I tuoi dati si sincronizzano automaticamente quando torni online.",
+    "step_encryption_title": "I Tuoi Dati sono Protetti",
+    "step_encryption_desc": "Tutti i dati sensibili sono criptati localmente sul tuo dispositivo usando crittografia standard. La tua password è l'unica chiave—non la salviamo mai.",
+    "encryption_preview_title": "Crittografia Locale",
+    "encryption_preview_subtitle": "Protezione AES-256"
+  },
+  "encrypted": "Criptato"
 }

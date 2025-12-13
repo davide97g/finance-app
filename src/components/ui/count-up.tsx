@@ -48,5 +48,5 @@ export function CountUp({
         });
     }, [springValue, decimals, prefix, suffix]);
 
-    return <span className={className} ref={ref} />;
+    return <span className={`tabular-nums ${className || ''}`} ref={ref} />;
 }

@@ -109,6 +109,8 @@
   "category_distribution": "Category Distribution",
   "total": "Total",
   "no_data": "No data available",
+  "dashboard_empty_title": "No expenses yet",
+  "dashboard_empty_subtitle": "Start by adding a transaction to see your financial trends!",
   "cumulative_expenses": "Cumulative Expenses",
   "cumulative_expenses_desc": "Daily cumulative spending comparison",
   "monthly_expenses_trend": "Monthly Expenses Trend",
@@ -549,6 +551,7 @@
     "turtlet_app": "Turtlet App",
     "complete": "Import Complete",
     "complete_desc": "Your data has been successfully imported.",
+    "start_import": "Start Import",
     "orphan_warning": "{{count}} transactions need review",
     "orphan_warning_desc": "These transactions have missing categories and won't sync until categorized. Use the 'Needs Review' filter to find them.",
     "syncing": "Syncing to cloud...",
@@ -671,6 +674,11 @@
     "step_statistics_title": "Detailed Analytics",
     "step_statistics_desc": "Explore monthly and yearly statistics with beautiful charts and budget tracking.",
     "step_offline_title": "Works Offline",
-    "step_offline_desc": "Use the app even without internet. Your data syncs automatically when you're back online."
-  }
+    "step_offline_desc": "Use the app even without internet. Your data syncs automatically when you're back online.",
+    "step_encryption_title": "Your Data is Protected",
+    "step_encryption_desc": "All sensitive data is encrypted locally on your device using industry-standard encryption. Your password is the only key—we never store it.",
+    "encryption_preview_title": "Local Encryption",
+    "encryption_preview_subtitle": "AES-256 protection"
+  },
+  "encrypted": "Encrypted"
 }
