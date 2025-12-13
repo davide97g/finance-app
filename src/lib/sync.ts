@@ -626,6 +626,7 @@ export class SyncManager {
             .from(tableName)
             .select("*")
             .gt("sync_token", lastSyncToken)
+            .order("sync_token", { ascending: true })
             .range(page * SUPABASE_LIMIT, (page + 1) * SUPABASE_LIMIT - 1);
 
           if (error) {
@@ -708,6 +709,7 @@ export class SyncManager {
 
       // Update last sync token
       if (maxToken > lastSyncToken) {
+        console.log(`[Sync] Updating last_sync_token to ${maxToken} after processing ${tableName}`);
         await this.updateLastSyncToken(userId, maxToken, userSettings);
       }
 
@@ -748,6 +750,7 @@ export class SyncManager {
           const { data, error } = await supabase
             .from(tableName)
             .select("*")
+            .order("sync_token", { ascending: true })
             .range(page * SUPABASE_LIMIT, (page + 1) * SUPABASE_LIMIT - 1);
 
           if (error) {
