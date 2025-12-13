@@ -1,8 +1,6 @@
 import { render, screen, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { StatsBurnRateCard } from "./StatsBurnRateCard";
-import React from 'react';
-
 // Mock translation
 jest.mock("react-i18next", () => ({
     useTranslation: () => ({
@@ -27,9 +25,9 @@ jest.mock("lucide-react", () => ({
 }));
 
 // Mock AnimatedProgress to render value directly for checking
-function MockProgress({ value, className }: { value: number; className?: string }) {
-    return <div data-testid="progress-bar" data-value={value} className={className} />;
-}
+// function MockProgress({ value, className }: { value: number; className?: string }) {
+//     return <div data-testid="progress-bar" data-value={value} className={className} />;
+// }
 
 // We need to mock the internal AnimatedProgress component which is not exported usually.
 // However, since we are testing the exported component, we can't easily mock the internal one if it's defined in the same file.
