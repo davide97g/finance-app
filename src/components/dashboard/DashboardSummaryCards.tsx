@@ -26,14 +26,14 @@ export function DashboardSummaryCards({
 
     // Helper to render value or placeholder
     const renderAnimatedValue = (value: number, prefix: string = "", suffix: string = "", decimals: number = 2) => {
-        if (value === 0) {
-            return <span>-</span>;
-        }
+        // Remove sign from prefix if value is 0
+        const finalPrefix = value === 0 ? prefix.replace(/^[+-]/, "") : prefix;
+
         return (
             <CountUp
                 value={value}
                 decimals={decimals}
-                prefix={prefix}
+                prefix={finalPrefix}
                 suffix={suffix}
             />
         );

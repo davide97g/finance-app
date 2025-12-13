@@ -227,7 +227,7 @@ export function TransactionList({
             <div className="flex items-center gap-2">
               {t_item.description}
               {t_item.category_id === UNCATEGORIZED_CATEGORY.ID && (
-                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <AlertCircle className="h-4 w-4 text-amber-500" aria-hidden="true" />
               )}
               <SyncStatusBadge isPending={t_item.pendingSync === 1} />
             </div>

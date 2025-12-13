@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { format } from "date-fns";
+import { Wallet } from "lucide-react";
 import { SmoothLoader } from "@/components/ui/smooth-loader";
 import { ContentLoader } from "@/components/ui/content-loader";
 import { TransactionList } from "@/components/TransactionList";
@@ -181,8 +182,16 @@ export function DashboardChartCard({
                                     </ChartContainer>
                                 </div>
                             ) : (
-                                <div className="flex flex-1 items-center justify-center text-muted-foreground h-full">
-                                    {t("no_data")}
+                                <div className="flex flex-1 flex-col items-center justify-center text-center p-4 h-full gap-3">
+                                    <div className="p-3 bg-muted/50 rounded-full">
+                                        <Wallet className="h-8 w-8 text-muted-foreground/50" />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <h3 className="font-medium text-foreground">{t("dashboard_empty_title")}</h3>
+                                        <p className="text-sm text-muted-foreground max-w-[220px]">
+                                            {t("dashboard_empty_subtitle")}
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </SmoothLoader>

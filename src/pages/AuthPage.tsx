@@ -127,11 +127,14 @@ export function AuthPage() {
                   size="icon"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t("hide_password") : t("show_password")}
+                  aria-controls="password"
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   )}
                   <span className="sr-only">
                     {showPassword ? t("hide_password") : t("show_password")}
@@ -160,11 +163,14 @@ export function AuthPage() {
                     size="icon"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? t("hide_password") : t("show_password")}
+                    aria-controls="confirmPassword"
+                    aria-pressed={showConfirmPassword}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     )}
                     <span className="sr-only">
                       {showConfirmPassword

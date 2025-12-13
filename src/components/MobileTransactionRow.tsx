@@ -116,9 +116,18 @@ export function MobileTransactionRow({
         dragElastic={0.7}
         onDragEnd={handleDragEnd}
         onClick={onClick}
+        onKeyDown={(e) => {
+          if (onClick && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        tabIndex={onClick ? 0 : undefined}
+        role={onClick ? "button" : undefined}
+        aria-label={`${transaction.description}, ${(personalAmount ?? transaction.amount).toFixed(2)}`}
         whileTap={{ scale: 0.98 }}
         style={{ x, touchAction: "pan-y" }} // Important for vertical scrolling
-        className="relative bg-card p-3 rounded-lg border shadow-sm flex items-center gap-3 h-[72px]"
+        className="relative bg-card p-3 rounded-lg border shadow-sm flex items-center gap-3 h-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         {/* Icon */}
         <div
@@ -129,6 +138,7 @@ export function MobileTransactionRow({
               : "#f3f4f6",
             color: category?.color || "#6b7280",
           }}
+          aria-hidden="true"
         >
           {IconComp ? (
             <IconComp className="h-5 w-5" />
@@ -142,7 +152,7 @@ export function MobileTransactionRow({
           <div className="font-medium text-sm truncate flex items-center gap-1">
             {transaction.description || t("transaction")}
             {transaction.category_id === UNCATEGORIZED_CATEGORY.ID && (
-              <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+              <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" aria-hidden="true" />
             )}
           </div>
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">

@@ -109,6 +109,8 @@
   "category_distribution": "Distribuzione Categorie",
   "total": "Totale",
   "no_data": "Nessun dato disponibile",
+  "dashboard_empty_title": "Nessuna spesa",
+  "dashboard_empty_subtitle": "Aggiungi una transazione per vedere i tuoi trend finanziari!",
   "cumulative_expenses": "Spese Cumulative",
   "cumulative_expenses_desc": "Confronto spese cumulative giornaliere",
   "monthly_expenses_trend": "Tendenza Spese Mensili",

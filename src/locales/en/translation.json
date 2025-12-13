@@ -109,6 +109,8 @@
   "category_distribution": "Category Distribution",
   "total": "Total",
   "no_data": "No data available",
+  "dashboard_empty_title": "No expenses yet",
+  "dashboard_empty_subtitle": "Start by adding a transaction to see your financial trends!",
   "cumulative_expenses": "Cumulative Expenses",
   "cumulative_expenses_desc": "Daily cumulative spending comparison",
   "monthly_expenses_trend": "Monthly Expenses Trend",
