@@ -1,169 +1,317 @@
 -- ============================================================================
--- SEED DATA SCRIPT
+-- SEED DATA SCRIPT (REALISTIC GENERATOR)
 -- ============================================================================
 
--- Clean up existing data (optional, be careful in production!)
--- TRUNCATE public.transactions, public.recurring_transactions, public.category_budgets, public.categories, public.contexts, public.group_members, public.groups, public.user_settings, public.profiles CASCADE;
--- DELETE FROM auth.users;
+-- TRUNCATE TABLES (Clean slate)
+TRUNCATE public.transactions, public.recurring_transactions, public.category_budgets, public.categories, public.contexts, public.group_members, public.groups, public.user_settings, public.profiles CASCADE;
+-- DELETE FROM auth.users; -- Optional: Uncomment if you want to wipe users too (requires privs)
 
 DO $$
 DECLARE
-  -- User IDs
-  user_a_id uuid := 'b71c594d-0f53-4408-873f-d210c53bd7aa';
-  user_b_id uuid := 'b74f26db-c1cd-45c9-8e2e-56221e42506e';
-  
-  -- Group IDs
-  group_ab_id uuid := uuid_generate_v4(); -- Shared A & B
-  group_abc_id uuid := uuid_generate_v4(); -- Shared A & B & Guest
-  
-  -- Member IDs (we need these for transactions)
-  member_a_ab_id uuid := uuid_generate_v4();
-  member_b_ab_id uuid := uuid_generate_v4();
-  
-  member_a_abc_id uuid := uuid_generate_v4();
-  member_b_abc_id uuid := uuid_generate_v4();
-  member_guest_abc_id uuid := uuid_generate_v4(); -- The Guest
-  
-  -- Category IDs (A)
-  cat_a_food uuid := uuid_generate_v4();
-  cat_a_transp uuid := uuid_generate_v4();
-  cat_a_salary uuid := uuid_generate_v4();
-  cat_a_invest uuid := uuid_generate_v4();
-  
-  -- Category IDs (B)
-  cat_b_food uuid := uuid_generate_v4();
-  cat_b_fun uuid := uuid_generate_v4();
-  
-  -- Shared Category IDs (Group AB)
-  cat_ab_groceries uuid := uuid_generate_v4();
-  cat_ab_rent uuid := uuid_generate_v4();
-  
-  -- Shared Category IDs (Group ABC)
-  cat_abc_trip uuid := uuid_generate_v4();
-  cat_abc_dinner uuid := uuid_generate_v4();
-  
-  -- Context IDs
-  ctx_a_work uuid := uuid_generate_v4();
-  ctx_a_trip uuid := uuid_generate_v4();
-  
-  -- Dates
-  date_today date := CURRENT_DATE;
-  i integer;
-  
-BEGIN
+  -- ==========================================================================
+  -- CONFIGURATION MATCHING YOUR APP
+  -- ==========================================================================
+  -- Replace these with your actual Supabase User UUIDs if running against real Auth
+  user_a_id uuid := 'b71c594d-0f53-4408-873f-d210c53bd7aa'; -- CHANGE ME TO YOUR ID
+  user_b_id uuid := 'b74f26db-c1cd-45c9-8e2e-56221e42506e'; -- CHANGE ME TO SECOND USER ID (or keep as placeholder)
 
-  -- 1. Create Auth Users (We insert directly into auth.users provided we have permissions)
-  -- Password for both is 'password123' (hashed usually, but here we just mock existence for FKs)
-  -- NOTE: In a real Supabase instance, you might not be able to insert into auth.users easily from SQL editor without being postgres role.
-  -- Assuming this runs in a local dev env or with sufficient privs.
+  -- Names for Guests
+  guest_name text := 'Guest Charlie';
+
+  -- Group IDs
+  group_main_id uuid := uuid_generate_v4();    -- User A + User B
+  group_guest_id uuid := uuid_generate_v4();   -- User A + Guest
+
+  -- Member IDs
+  mem_a_main uuid := uuid_generate_v4();
+  mem_b_main uuid := uuid_generate_v4();
   
+  mem_a_guest uuid := uuid_generate_v4();
+  mem_charlie_guest uuid := uuid_generate_v4();
+
+  -- Category Standard Colors
+  c_exp text := '#EF4444'; -- Red
+  c_inc text := '#10B981'; -- Green
+  c_inv text := '#8B5CF6'; -- Purple
+  c_blue text := '#3B82F6';
+  c_orange text := '#F59E0B';
+  c_slate text := '#64748B';
+
+  -- Time variables
+  start_date date := CURRENT_DATE - INTERVAL '2 years';
+  end_date date := CURRENT_DATE;
+  curr_date date;
+  
+  -- Iterators
+  i int;
+  t int;
+  
+  -- Temp variables for generation
+  tmp_cat_id uuid;
+  tmp_grp_id uuid;
+  tmp_mem_id uuid;
+  tmp_amount numeric;
+  tmp_desc text;
+  
+  -- Category Storage (We store some key IDs to use in transactions)
+  -- Arrays of IDs for random selection
+  cats_a_food uuid[];
+  cats_a_trans uuid[];
+  cats_a_shop uuid[];
+  cats_a_bills uuid[];
+  cats_b_gen uuid[];
+  cats_grp_main uuid[];
+  cats_grp_guest uuid[];
+  
+  cat_id_salary uuid;
+  
+  -- Helper to create category
+  FUNCTION create_cat(uid uuid, gid uuid, pid uuid, nm text, icn text, col text, typ text, act boolean DEFAULT true) RETURNS uuid AS $_$
+  DECLARE
+    new_id uuid := uuid_generate_v4();
+  BEGIN
+    INSERT INTO public.categories (id, user_id, group_id, parent_id, name, icon, color, type, active)
+    VALUES (new_id, uid, gid, pid, nm, icn, col, typ, act);
+    RETURN new_id;
+  END;
+  $_$ LANGUAGE plpgsql;
+
+BEGIN
+  -- ==========================================================================
+  -- 1. ENSURE USERS EXIST (Mock Insert for FK satisfaction if checking local)
+  -- ==========================================================================
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = user_a_id) THEN
     INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data)
-    VALUES (user_a_id, 'authenticated', 'authenticated', 'alice@example.com', 'scrypt_hash_placeholder', now(), '{"full_name": "Alice Wonderland", "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice"}');
+    VALUES (user_a_id, 'authenticated', 'authenticated', 'user_a@example.com', 'hash', now(), '{"full_name": "User A", "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=A"}');
   END IF;
-
+  
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = user_b_id) THEN
     INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data)
-    VALUES (user_b_id, 'authenticated', 'authenticated', 'bob@example.com', 'scrypt_hash_placeholder', now(), '{"full_name": "Bob Builder", "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob"}');
+    VALUES (user_b_id, 'authenticated', 'authenticated', 'user_b@example.com', 'hash', now(), '{"full_name": "User B", "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=B"}');
   END IF;
 
-  -- 2. User Settings
-  INSERT INTO public.user_settings (user_id, currency, language) VALUES (user_a_id, 'EUR', 'en') ON CONFLICT DO NOTHING;
+  -- Settings
+  INSERT INTO public.user_settings (user_id, currency, language) VALUES (user_a_id, 'EUR', 'it') ON CONFLICT DO NOTHING;
   INSERT INTO public.user_settings (user_id, currency, language) VALUES (user_b_id, 'USD', 'en') ON CONFLICT DO NOTHING;
 
-  -- 3. Categories (Personal)
-  INSERT INTO public.categories (id, user_id, group_id, name, icon, color, type) VALUES
-    (cat_a_food, user_a_id, NULL, 'Food', 'Utensils', '#EF4444', 'expense'),
-    (cat_a_transp, user_a_id, NULL, 'Transport', 'Car', '#3B82F6', 'expense'),
-    (cat_a_salary, user_a_id, NULL, 'Salary', 'Wallet', '#10B981', 'income'),
-    (cat_a_invest, user_a_id, NULL, 'Crypto', 'Bitcoin', '#8B5CF6', 'investment'),
-    
-    (cat_b_food, user_b_id, NULL, 'Food', 'Utensils', '#EF4444', 'expense'),
-    (cat_b_fun, user_b_id, NULL, 'Fun', 'PartyPopper', '#F59E0B', 'expense');
-
-  -- 4. Contexts
-  INSERT INTO public.contexts (id, user_id, name, description) VALUES
-    (ctx_a_work, user_a_id, 'Work', 'Office expenses'),
-    (ctx_a_trip, user_a_id, 'Paris Trip', 'Holiday 2024');
-
-  -- 5. Groups
-  INSERT INTO public.groups (id, name, description, created_by) VALUES
-    (group_ab_id, 'Alice & Bob Home', 'Household expenses', user_a_id),
-    (group_abc_id, 'Roadtrip 2024', 'Summer vacation', user_a_id);
-
-  -- 6. Group Members
-  -- Group AB
+  -- ==========================================================================
+  -- 2. CREATE GROUPS AND MEMBERS
+  -- ==========================================================================
+  -- Group 1: Couple/House (A + B)
+  INSERT INTO public.groups (id, name, description, created_by) 
+  VALUES (group_main_id, 'Casa & Spese', 'Spese condivise tra A e B', user_a_id);
+  
   INSERT INTO public.group_members (id, group_id, user_id, share) VALUES
-    (member_a_ab_id, group_ab_id, user_a_id, 60), -- Alice pays 60%
-    (member_b_ab_id, group_ab_id, user_b_id, 40); -- Bob pays 40%
+  (mem_a_main, group_main_id, user_a_id, 50.00),
+  (mem_b_main, group_main_id, user_b_id, 50.00);
 
-  -- Group ABC (Alice, Bob, Guest "Charlie")
+  -- Group 2: Trip with Guest (A + Guest)
+  INSERT INTO public.groups (id, name, description, created_by) 
+  VALUES (group_guest_id, 'Viaggio con Charlie', 'Costi viaggio 2024', user_a_id);
+  
   INSERT INTO public.group_members (id, group_id, user_id, guest_name, is_guest, share) VALUES
-    (member_a_abc_id, group_abc_id, user_a_id, NULL, false, 33.33),
-    (member_b_abc_id, group_abc_id, user_b_id, NULL, false, 33.33),
-    (member_guest_abc_id, group_abc_id, NULL, 'Charlie Mock', true, 33.34);
+  (mem_a_guest, group_guest_id, user_a_id, NULL, false, 50.00),
+  (mem_charlie_guest, group_guest_id, NULL, guest_name, true, 50.00);
 
-  -- 7. Categories (Group)
-  INSERT INTO public.categories (id, user_id, group_id, name, icon, color, type) VALUES
-    (cat_ab_groceries, user_a_id, group_ab_id, 'Groceries', 'ShoppingCart', '#10B981', 'expense'),
-    (cat_ab_rent, user_a_id, group_ab_id, 'Rent', 'Home', '#6366F1', 'expense'),
-    (cat_abc_trip, user_a_id, group_abc_id, 'Travel', 'Plane', '#3B82F6', 'expense'),
-    (cat_abc_dinner, user_a_id, group_abc_id, 'Restaurants', 'Utensils', '#EF4444', 'expense');
+  -- ==========================================================================
+  -- 3. CREATE CATEGORIES (HIERARCHY & VOLUME)
+  -- ==========================================================================
+  
+  -- USER A CATEGORIES --------------------------------------------------------
+  DECLARE
+    p_trans uuid;
+    p_car uuid; -- sub-parent
+    p_moto uuid; -- sub-parent
+    p_house uuid;
+    p_shop uuid;
+    p_food uuid;
+    p_ent uuid;
+    c_tmp uuid;
+  BEGIN
+    -- Transport Hierarchy
+    p_trans := create_cat(user_a_id, NULL, NULL, 'Trasporti', 'Car', c_blue, 'expense');
+      -- Car Sub-tree
+      p_car := create_cat(user_a_id, NULL, p_trans, 'Auto', 'Car', c_blue, 'expense');
+        c_tmp := create_cat(user_a_id, NULL, p_car, 'Carburante Auto', 'Fuel', c_blue, 'expense'); cats_a_trans := array_append(cats_a_trans, c_tmp);
+        c_tmp := create_cat(user_a_id, NULL, p_car, 'Manutenzione Auto', 'Wrench', c_orange, 'expense'); cats_a_trans := array_append(cats_a_trans, c_tmp);
+        c_tmp := create_cat(user_a_id, NULL, p_car, 'Assicurazione', 'ShieldCheck', c_slate, 'expense'); cats_a_bills := array_append(cats_a_bills, c_tmp);
+      
+      -- Moto Sub-tree
+      p_moto := create_cat(user_a_id, NULL, p_trans, 'Moto', 'Trophy', c_blue, 'expense');
+        c_tmp := create_cat(user_a_id, NULL, p_moto, 'Carburante Moto', 'Fuel', c_blue, 'expense'); cats_a_trans := array_append(cats_a_trans, c_tmp);
+        c_tmp := create_cat(user_a_id, NULL, p_moto, 'Manutenzione Moto', 'Wrench', c_orange, 'expense'); cats_a_trans := array_append(cats_a_trans, c_tmp);
+      
+      -- Public
+      c_tmp := create_cat(user_a_id, NULL, p_trans, 'Mezzi Pubblici', 'Bus', c_blue, 'expense'); cats_a_trans := array_append(cats_a_trans, c_tmp);
+      
+    -- Housing Hierarchy
+    p_house := create_cat(user_a_id, NULL, NULL, 'Casa', 'Home', c_slate, 'expense');
+      c_tmp := create_cat(user_a_id, NULL, p_house, 'Affitto', 'Key', c_exp, 'expense'); cats_a_bills := array_append(cats_a_bills, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_house, 'Bollette', 'Lightbulb', c_orange, 'expense'); cats_a_bills := array_append(cats_a_bills, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_house, 'Internet', 'Wifi', c_blue, 'expense'); cats_a_bills := array_append(cats_a_bills, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_house, 'Riparazioni', 'Hammer', c_orange, 'expense');
+      -- Inactive
+      perform create_cat(user_a_id, NULL, p_house, 'Vecchia Casa', 'Trash', c_slate, 'expense', false);
+
+    -- Food Hierarchy
+    p_food := create_cat(user_a_id, NULL, NULL, 'Cibo & Drink', 'Utensils', c_exp, 'expense');
+      c_tmp := create_cat(user_a_id, NULL, p_food, 'Spesa', 'ShoppingCart', c_inc, 'expense'); cats_a_food := array_append(cats_a_food, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_food, 'Ristoranti', 'UtensilsCrossed', c_exp, 'expense'); cats_a_food := array_append(cats_a_food, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_food, 'Bar & Caffè', 'Coffee', c_orange, 'expense'); cats_a_food := array_append(cats_a_food, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_food, 'Delivery', 'Truck', c_slate, 'expense'); cats_a_food := array_append(cats_a_food, c_tmp);
+
+    -- Shopping Hierarchy
+    p_shop := create_cat(user_a_id, NULL, NULL, 'Shopping', 'ShoppingBag', c_inv, 'expense');
+      c_tmp := create_cat(user_a_id, NULL, p_shop, 'Abbigliamento', 'Shirt', c_inv, 'expense'); cats_a_shop := array_append(cats_a_shop, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_shop, 'Elettronica', 'Monitor', c_slate, 'expense'); cats_a_shop := array_append(cats_a_shop, c_tmp);
+      c_tmp := create_cat(user_a_id, NULL, p_shop, 'Hobby', 'Gamepad2', c_inv, 'expense'); cats_a_shop := array_append(cats_a_shop, c_tmp);
+      
+    -- Income
+    cat_id_salary := create_cat(user_a_id, NULL, NULL, 'Stipendio', 'Wallet', c_inc, 'income');
+    perform create_cat(user_a_id, NULL, NULL, 'Extra', 'Banknote', c_inc, 'income');
     
+    -- Other
+    perform create_cat(user_a_id, NULL, NULL, 'Salute', 'Heart', c_exp, 'expense');
+    perform create_cat(user_a_id, NULL, NULL, 'Viaggi', 'Plane', c_blue, 'expense');
+  END;
+  
+  -- USER B CATEGORIES (Simpler subset) ---------------------------------------
+  DECLARE
+    p_misc uuid;
+  BEGIN
+    p_misc := create_cat(user_b_id, NULL, NULL, 'Generale', 'Box', c_slate, 'expense');
+    cats_b_gen := array_append(cats_b_gen, create_cat(user_b_id, NULL, p_misc, 'Spese Varie', 'CreditCard', c_exp, 'expense'));
+    cats_b_gen := array_append(cats_b_gen, create_cat(user_b_id, NULL, p_misc, 'Uscite', 'Beer', c_orange, 'expense'));
+    cats_b_gen := array_append(cats_b_gen, create_cat(user_b_id, NULL, NULL, 'Affitto', 'Home', c_blue, 'expense'));
+  END;
+
+  -- GROUP CATEGORIES ---------------------------------------------------------
+  -- Group Main
+  cats_grp_main := array_append(cats_grp_main, create_cat(user_a_id, group_main_id, NULL, 'Affitto Casa', 'Home', c_exp, 'expense'));
+  cats_grp_main := array_append(cats_grp_main, create_cat(user_a_id, group_main_id, NULL, 'Spesa Comune', 'ShoppingCart', c_inc, 'expense'));
+  cats_grp_main := array_append(cats_grp_main, create_cat(user_a_id, group_main_id, NULL, 'Bollette', 'Zap', c_orange, 'expense'));
+
+  -- Group Guest
+  cats_grp_guest := array_append(cats_grp_guest, create_cat(user_a_id, group_guest_id, NULL, 'Alloggio', 'Bed', c_blue, 'expense'));
+  cats_grp_guest := array_append(cats_grp_guest, create_cat(user_a_id, group_guest_id, NULL, 'Cene Fuori', 'Utensils', c_exp, 'expense'));
+
+
+  -- ==========================================================================
+  -- 4. RECURRING TRANSACTIONS
+  -- ==========================================================================
+  -- User A: Netflix
+  INSERT INTO public.recurring_transactions (user_id, group_id, paid_by_member_id, type, category_id, amount, description, frequency, start_date)
+  VALUES (user_a_id, NULL, NULL, 'expense', cats_a_bills[3], 15.99, 'Netflix', 'monthly', start_date);
+  
+  -- Group Main: Rent (Paid by A)
+  INSERT INTO public.recurring_transactions (user_id, group_id, paid_by_member_id, type, category_id, amount, description, frequency, start_date)
+  VALUES (user_a_id, group_main_id, mem_a_main, 'expense', cats_grp_main[1], 1200.00, 'Affitto Mensile', 'monthly', start_date);
+
+  -- ==========================================================================
+  -- 5. GENERATE TRANSACTIONS (2 Years, ~40/month each)
+  -- ==========================================================================
+  -- Logic: Iterate every day. 
+  -- User A: ~1.5 tx/day average.
+  -- User B: ~1.5 tx/day average.
+  
+  curr_date := start_date;
+  WHILE curr_date <= end_date LOOP
     
-  -- 8. Recurring Transactions
-  -- Rent (Paid by Alice in Group AB)
-  INSERT INTO public.recurring_transactions (user_id, group_id, paid_by_member_id, type, category_id, amount, description, frequency, start_date) VALUES
-  (user_a_id, group_ab_id, member_a_ab_id, 'expense', cat_ab_rent, 1200.00, 'Monthly Rent', 'monthly', '2024-01-01');
-
-  -- Netflix (Personal Alice)
-  INSERT INTO public.recurring_transactions (user_id, group_id, paid_by_member_id, type, category_id, amount, description, frequency, start_date) VALUES
-  (user_a_id, NULL, NULL, 'expense', cat_a_transp, 15.99, 'Netflix Sub', 'monthly', '2024-01-01');
-
-
-  -- 9. GENERATE 30 TRANSACTIONS FOR ALICE (Mixed)
-  FOR i IN 1..10 LOOP
-    -- Personal Expense
-    INSERT INTO public.transactions (user_id, category_id, type, amount, date, description) 
-    VALUES (user_a_id, cat_a_food, 'expense', (random() * 50 + 5)::numeric(10,2), date_today - (i * 2), 'Lunch #' || i);
+    -- ------------------------------------------------------------------------
+    -- USER A TRANSACTIONS FOR TODAY
+    -- ------------------------------------------------------------------------
+    -- Random number of tx: 0 to 4
+    t := floor(random() * 5); -- 0,1,2,3,4
+    FOR i IN 1..t LOOP
+       -- Decide Category & Type
+       -- 10% Income (Salary is monthly usually, let's just do expenses here mostly)
+       -- 20% Group Transaction (Main)
+       -- 5% Group Transaction (Guest)
+       -- 65% Personal Expense (Food, Transport, Shop)
+       
+       DECLARE
+         rnd float := random();
+       BEGIN
+         IF rnd < 0.20 THEN
+           -- Group Main (20%)
+           -- Paid by A (mostly) or B (sometimes inserted by A? No, "paid_by_member_id" defines who paid)
+           -- Let's say A paid this one.
+           tmp_amount := (random() * 80 + 10)::numeric(10,2);
+           tmp_cat_id := cats_grp_main[ floor(random() * array_length(cats_grp_main, 1) + 1) ];
+           INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description)
+           VALUES (user_a_id, group_main_id, mem_a_main, tmp_cat_id, 'expense', tmp_amount, curr_date, 'Spesa gruppo ' || curr_date);
+           
+         ELSIF rnd < 0.25 THEN
+           -- Group Guest (5%)
+           tmp_amount := (random() * 50 + 20)::numeric(10,2);
+           tmp_cat_id := cats_grp_guest[ floor(random() * array_length(cats_grp_guest, 1) + 1) ];
+           -- Randomly paid by A or Guest
+           IF random() < 0.5 THEN
+              -- Paid by A
+              INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description)
+              VALUES (user_a_id, group_guest_id, mem_a_guest, tmp_cat_id, 'expense', tmp_amount, curr_date, 'Cena fuori');
+           ELSE
+              -- Paid by Guest
+              INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description)
+              VALUES (user_a_id, group_guest_id, mem_charlie_guest, tmp_cat_id, 'expense', tmp_amount, curr_date, 'Pagato da Ospite');
+           END IF;
+           
+         ELSE
+           -- Personal (75%)
+           -- Pick Sub-Category type
+           rnd := random();
+           IF rnd < 0.4 THEN
+             -- Food (High Freq)
+             tmp_cat_id := cats_a_food[ floor(random() * array_length(cats_a_food, 1) + 1) ];
+             tmp_amount := (random() * 30 + 5)::numeric(10,2);
+             tmp_desc := 'Cibo ' || curr_date;
+           ELSIF rnd < 0.7 THEN
+             -- Transport
+             tmp_cat_id := cats_a_trans[ floor(random() * array_length(cats_a_trans, 1) + 1) ];
+             tmp_amount := (random() * 60 + 20)::numeric(10,2);
+             tmp_desc := 'Trasporto';
+           ELSE
+             -- Shop/Bills
+             tmp_cat_id := cats_a_shop[ floor(random() * array_length(cats_a_shop, 1) + 1) ];
+             tmp_amount := (random() * 150 + 20)::numeric(10,2);
+             tmp_desc := 'Acquisto';
+           END IF;
+           
+           INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description)
+           VALUES (user_a_id, NULL, NULL, tmp_cat_id, 'expense', tmp_amount, curr_date, tmp_desc);
+         END IF;
+       END;
+    END LOOP;
     
-    -- Personal Income
-    IF i % 5 = 0 THEN
-      INSERT INTO public.transactions (user_id, category_id, type, amount, date, description) 
-      VALUES (user_a_id, cat_a_salary, 'income', 2500.00, date_today - (i * 2), 'Salary Payment');
+    -- Monthly Salary Check (e.g. 27th of month)
+    IF EXTRACT(DAY FROM curr_date) = 27 THEN
+       INSERT INTO public.transactions (user_id, category_id, type, amount, date, description) 
+       VALUES (user_a_id, cat_id_salary, 'income', 2800.00, curr_date, 'Stipendio Mese');
     END IF;
-    
-    -- Investment
-    IF i % 8 = 0 THEN
-      INSERT INTO public.transactions (user_id, category_id, type, amount, date, description, context_id) 
-      VALUES (user_a_id, cat_a_invest, 'investment', 100.00, date_today - (i * 2), 'Bitcoin Buy', ctx_a_work);
-    END IF;
+
+    -- ------------------------------------------------------------------------
+    -- USER B TRANSACTIONS FOR TODAY
+    -- ------------------------------------------------------------------------
+    t := floor(random() * 4); -- 0-3
+    FOR i IN 1..t LOOP
+       tmp_cat_id := cats_b_gen[ floor(random() * array_length(cats_b_gen, 1) + 1) ];
+       tmp_amount := (random() * 100 + 10)::numeric(10,2);
+       
+       -- Occasional group expense paid by B
+       IF random() < 0.15 THEN
+          -- Group Main
+           tmp_cat_id := cats_grp_main[ floor(random() * array_length(cats_grp_main, 1) + 1) ];
+           INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description)
+           VALUES (user_b_id, group_main_id, mem_b_main, tmp_cat_id, 'expense', tmp_amount, curr_date, 'Spesa B per casa');
+       ELSE
+          -- Personal
+          INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description)
+          VALUES (user_b_id, NULL, NULL, tmp_cat_id, 'expense', tmp_amount, curr_date, 'Spesa Personale B');
+       END IF;
+    END LOOP;
+
+    curr_date := curr_date + 1;
   END LOOP;
   
-  -- 10. GENERATE 20 GROUP TRANSACTIONS FOR GROUP AB (Alice vs Bob)
-  FOR i IN 1..10 LOOP
-    -- Paid by Alice
-    INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description) 
-    VALUES (user_a_id, group_ab_id, member_a_ab_id, cat_ab_groceries, 'expense', (random() * 100 + 20)::numeric(10,2), date_today - (i * 3), 'Groceries A');
-    
-    -- Paid by Bob (Created by Bob, but inserted by script logic)
-    INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description) 
-    VALUES (user_b_id, group_ab_id, member_b_ab_id, cat_ab_groceries, 'expense', (random() * 100 + 20)::numeric(10,2), date_today - (i * 3 + 1), 'Groceries B');
-  END LOOP;
-  
-  -- 11. GENERATE 15 GROUP TRANSACTIONS FOR GROUP ABC (With Guest)
-  FOR i IN 1..5 LOOP
-    -- Paid by Guest Charlie
-    INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description, context_id) 
-    VALUES (user_a_id, group_abc_id, member_guest_abc_id, cat_abc_dinner, 'expense', (random() * 200 + 50)::numeric(10,2), date_today - (i * 5), 'Dinner paid by Charlie', ctx_a_trip);
-    
-    -- Paid by Alice
-    INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description) 
-    VALUES (user_a_id, group_abc_id, member_a_abc_id, cat_abc_trip, 'expense', 50.00, date_today - (i * 5 + 2), 'Ticket A');
-    
-    -- Paid by Bob
-    INSERT INTO public.transactions (user_id, group_id, paid_by_member_id, category_id, type, amount, date, description) 
-    VALUES (user_b_id, group_abc_id, member_b_abc_id, cat_abc_trip, 'expense', 50.00, date_today - (i * 5 + 2), 'Ticket B');
-  END LOOP;
-
+  RAISE NOTICE 'Seed Data Generation Completed Successfully.';
 END $$;
