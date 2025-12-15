@@ -39,7 +39,7 @@ export function SwipeableItem({
         [-100, 0, 100],
         [
             "rgb(239 68 68)", // Red for delete (left)
-            "rgb(255 255 255)", // White (center)
+            "rgba(0, 0, 0, 0)", // Transparent (center) - adapts to light/dark mode
             "rgb(59 130 246)", // Blue for edit (right)
         ]
     );
