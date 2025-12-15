@@ -187,9 +187,9 @@ export function DashboardChartCard({
                                         <Wallet className="h-8 w-8 text-muted-foreground/50" />
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                        <h3 className="font-medium text-foreground">{t("dashboard_empty_title")}</h3>
+                                        <h3 className="font-medium text-foreground">{t("dashboard_chart_empty_title")}</h3>
                                         <p className="text-sm text-muted-foreground max-w-[220px]">
-                                            {t("dashboard_empty_subtitle")}
+                                            {t("dashboard_chart_empty_subtitle")}
                                         </p>
                                     </div>
                                 </div>

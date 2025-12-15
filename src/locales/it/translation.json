@@ -112,6 +112,8 @@
   "no_data": "Nessun dato disponibile",
   "dashboard_empty_title": "Nessuna spesa",
   "dashboard_empty_subtitle": "Aggiungi una transazione per vedere i tuoi trend finanziari!",
+  "dashboard_chart_empty_title": "Nessun dato da mostrare",
+  "dashboard_chart_empty_subtitle": "Non ci sono transazioni per questo mese.",
   "cumulative_expenses": "Spese Cumulative",
   "cumulative_expenses_desc": "Confronto spese cumulative giornaliere",
   "monthly_expenses_trend": "Tendenza Spese Mensili",
