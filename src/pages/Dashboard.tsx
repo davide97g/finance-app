@@ -9,19 +9,28 @@ import {
   TransactionDialog,
   TransactionFormData,
 } from "@/components/TransactionDialog";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useCategories } from "@/hooks/useCategories";
+import { useGroups } from "@/hooks/useGroups";
+import { useContexts } from "@/hooks/useContexts";
 import { FlipCard, type SwipeDirection } from "@/components/ui/flip-card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthProvider";
-import { DashboardChartCard } from "@/components/dashboard/DashboardChartCard";
+import {
+  DashboardChartCard,
+  DashboardChartContent,
+  DashboardTransactionsContent,
+  DashboardBudgetContent,
+} from "@/components/dashboard/DashboardChartCard";
 import { DashboardStatCard } from "@/components/dashboard/DashboardStatCard";
 import { DashboardSummaryCards } from "@/components/dashboard/DashboardSummaryCards";
 
 export function Dashboard() {
   const { transactions, addTransaction } = useTransactions();
   const { categories } = useCategories();
+  const { groups } = useGroups();
+  const { contexts } = useContexts();
   const { settings } = useSettings();
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -88,17 +97,7 @@ export function Dashboard() {
     [transactions]
   );
 
-  // Detect desktop breakpoint for conditional flip behavior
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : false
-  );
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 768px)");
-    const handleChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
 
   // Mobile stats carousel state
   const [statsRotation, setStatsRotation] = useState(0);
@@ -218,6 +217,8 @@ export function Dashboard() {
     budgetRemaining,
     recentTransactions,
     categories,
+    groups,
+    contexts,
     transactions,
   };
 
@@ -251,28 +252,74 @@ export function Dashboard() {
       </div>
 
       {/* Chart and Summary Cards Layout */}
-      <div className="flex-1 min-h-0 grid gap-4 md:grid-cols-[1fr_auto]">
-        {/* Cumulative Expenses Chart - FlipCard with 3 states */}
-        {/* Desktop: vertical swipe + vertical flip (rotateX), Mobile: horizontal swipe + horizontal flip (rotateY) */}
+      {/* Mobile: Grid showing FlipCard for Chart/Tx and hidden summary cards */}
+      {/* Desktop: Grid showing Chart (left), Tx (right) and Summary cards (top) */}
+
+      {/* Mobile Layout */}
+      <div className="flex-1 min-h-0 md:hidden">
         <FlipCard
-          className="h-full md:h-[50vh] md:min-h-[400px]"
+          className="h-full"
           isFlipped={isChartFlipped}
           onSwipe={handleChartSwipe}
           rotation={chartRotation}
-          swipeAxis={isDesktop ? "vertical" : "horizontal"}
-          flipDirection={isDesktop ? "top" : "right"}
+          swipeAxis="horizontal"
+          flipDirection="right"
           disableGlobalClick
           frontContent={<DashboardChartCard index={chartFaceAIndex} {...chartCardProps} />}
           backContent={<DashboardChartCard index={chartFaceBIndex} {...chartCardProps} />}
         />
+      </div>
 
-        {/* Summary Cards - Hidden on mobile, stacked vertically on desktop */}
+      {/* Desktop Layout */}
+      <div className="hidden md:flex flex-col gap-6">
+        {/* Top Summary Cards */}
         <DashboardSummaryCards
           totalExpense={totalExpense}
           totalIncome={totalIncome}
           balance={balance}
           isStatsLoading={isStatsLoading}
+          monthlyBudget={monthlyBudget}
+          budgetUsedPercentage={budgetUsedPercentage}
+          isOverBudget={isOverBudget}
+          budgetRemaining={budgetRemaining}
         />
+
+        {/* Main Grid: Chart + Transactions */}
+        <div className="grid grid-cols-12 gap-6 h-[700px]">
+          {/* Main Chart + Budget (Left 1/2) */}
+          <div className="col-span-6 h-full min-h-0 flex flex-col gap-6">
+            <div className="flex-1 min-h-0">
+              <DashboardChartContent
+                dailyCumulativeExpenses={dailyCumulativeExpenses}
+                chartConfig={chartConfig}
+                isStatsLoading={isStatsLoading}
+              />
+            </div>
+            {/* Budget Card (if exists) */}
+            {monthlyBudget && (
+              <div className="shrink-0 h-[280px]">
+                <DashboardBudgetContent
+                  monthlyBudget={monthlyBudget}
+                  totalExpense={totalExpense}
+                  isOverBudget={isOverBudget}
+                  budgetUsedPercentage={budgetUsedPercentage}
+                  budgetRemaining={budgetRemaining}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Side Panel: Transactions (Right 1/2) */}
+          <div className="col-span-6 h-full min-h-0">
+            <DashboardTransactionsContent
+              recentTransactions={recentTransactions}
+              categories={categories}
+              groups={groups}
+              contexts={contexts}
+              transactions={transactions}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Floating Action Button */}

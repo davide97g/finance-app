@@ -14,6 +14,10 @@ interface DashboardSummaryCardsProps {
     totalIncome: number;
     balance: number;
     isStatsLoading: boolean;
+    monthlyBudget: number | null;
+    budgetUsedPercentage: number;
+    isOverBudget: boolean;
+    budgetRemaining: number;
 }
 
 export function DashboardSummaryCards({
@@ -21,6 +25,9 @@ export function DashboardSummaryCards({
     totalIncome,
     balance,
     isStatsLoading,
+    monthlyBudget,
+    isOverBudget,
+    budgetRemaining,
 }: DashboardSummaryCardsProps) {
     const { t } = useTranslation();
 
@@ -40,8 +47,11 @@ export function DashboardSummaryCards({
         );
     };
 
+    // Determine grid columns based on content
+    const gridCols = monthlyBudget ? "md:grid-cols-4" : "md:grid-cols-3";
+
     return (
-        <div className="hidden md:flex md:flex-col gap-4">
+        <div className={`hidden md:grid gap-4 ${gridCols}`}>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
@@ -96,6 +106,34 @@ export function DashboardSummaryCards({
                     </SmoothLoader>
                 </CardContent>
             </Card>
+            {monthlyBudget && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            {t("monthly_budget")}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <SmoothLoader
+                            isLoading={isStatsLoading}
+                            skeleton={<Skeleton className="h-8 w-28" />}
+                        >
+                            <div className="flex flex-col gap-1">
+                                <div className="text-2xl font-bold">
+                                    €{monthlyBudget}
+                                </div>
+                                <div className={`text-xs ${isOverBudget ? "text-red-500" : "text-muted-foreground"}`}>
+                                    {isOverBudget ? (
+                                        <span>+{Math.abs(budgetRemaining).toFixed(2)} {t("over")}</span>
+                                    ) : (
+                                        <span>{budgetRemaining.toFixed(2)} {t("remaining")}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </SmoothLoader>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }
