@@ -14,6 +14,7 @@ import {
     ChevronRight,
     Squirrel,
     Plus,
+    Settings2,
 } from "lucide-react";
 import {
     Dialog,
@@ -24,9 +25,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { WelcomeStep } from "./WelcomeStep";
+import { SetupStep } from "./steps/SetupStep";
 import { demoData, getDemoStats } from "@/lib/demoData";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile, useUpdateProfile } from "@/hooks/useProfiles";
+import { Theme } from "@/lib/types";
 
 interface WelcomeWizardProps {
     open: boolean;
@@ -42,6 +47,13 @@ const STEPS = [
         iconColor: "#f97316",
         titleKey: "welcome.step_welcome_title",
         descKey: "welcome.step_welcome_desc",
+    },
+    {
+        id: "setup",
+        icon: Settings2,
+        iconColor: "#8b5cf6",
+        titleKey: "welcome.step_setup_title",
+        descKey: "welcome.step_setup_desc",
     },
     {
         id: "dashboard",
@@ -139,10 +151,32 @@ const fireConfetti = () => {
 
 export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) {
     const { t, i18n } = useTranslation();
-    const { updateSettings } = useSettings();
+    const { settings, updateSettings } = useSettings();
+    const { user } = useAuth();
+    const profile = useProfile(user?.id);
+    const { updateProfile } = useUpdateProfile();
+
     const [currentStep, setCurrentStep] = useState(0);
     const [direction, setDirection] = useState<Direction>(1);
     const [demoTransactions, setDemoTransactions] = useState(demoData.transactions);
+
+    // Setup state
+    const [userName, setUserName] = useState("");
+    const [monthlyBudget, setMonthlyBudget] = useState("");
+
+    // Initialize state from existing data
+    useEffect(() => {
+        if (profile?.full_name) {
+            setUserName(profile.full_name);
+        }
+    }, [profile]);
+
+    useEffect(() => {
+        if (settings?.monthly_budget) {
+            setMonthlyBudget(settings.monthly_budget.toString());
+        }
+    }, [settings]);
+
     const constraintsRef = useRef<HTMLDivElement>(null);
 
     const isFirstStep = currentStep === 0;
@@ -158,13 +192,18 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
         }
     }, [open]);
 
-    const handleComplete = useCallback(() => {
+    const handleComplete = useCallback(async () => {
+        // Save profile name
+        if (user && userName) {
+            await updateProfile({ full_name: userName });
+        }
+
         fireConfetti();
         // Small delay to let confetti start before closing
         setTimeout(() => {
             onComplete();
         }, 300);
-    }, [onComplete]);
+    }, [onComplete, user, userName, updateProfile]);
 
     const goNext = useCallback(() => {
         if (isLastStep) {
@@ -183,8 +222,12 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
     }, [isFirstStep]);
 
     const handleSkip = useCallback(() => {
+        // Save current name anyway if set
+        if (user && userName.trim()) {
+            updateProfile({ full_name: userName });
+        }
         onSkip();
-    }, [onSkip]);
+    }, [onSkip, user, userName, updateProfile]);
 
     // Swipe gesture handler
     const handleDragEnd = useCallback(
@@ -393,6 +436,31 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                             </div>
                         ))}
                     </div>
+                );
+
+            case "setup":
+                return (
+                    <WelcomeStep
+                        icon={currentStepData.icon}
+                        iconColor={currentStepData.iconColor}
+                        title={t(currentStepData.titleKey)}
+                        description={t(currentStepData.descKey)}
+                    >
+                        <SetupStep
+                            userName={userName}
+                            setUserName={setUserName}
+                            monthlyBudget={monthlyBudget}
+                            setMonthlyBudget={(val) => {
+                                setMonthlyBudget(val);
+                                const numVal = parseFloat(val);
+                                if (!isNaN(numVal)) {
+                                    updateSettings({ monthly_budget: numVal });
+                                }
+                            }}
+                            currentTheme={settings?.theme as Theme || 'light'}
+                            setTheme={(val) => updateSettings({ theme: val })}
+                        />
+                    </WelcomeStep>
                 );
 
             default:

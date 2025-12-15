@@ -679,6 +679,17 @@
     "step_statistics_title": "Statistiche Dettagliate",
     "step_statistics_desc": "Esplora statistiche mensili e annuali con grafici eleganti e monitoraggio del budget.",
     "step_offline_title": "Funziona Offline",
-    "step_offline_desc": "Usa l'app anche senza internet. I tuoi dati si sincronizzano automaticamente quando torni online."
+    "step_offline_desc": "Usa l'app anche senza internet. I tuoi dati si sincronizzano automaticamente quando torni online.",
+    "step_setup_title": "Configurazione",
+    "step_setup_desc": "Personalizza la tua esperienza",
+    "whats_your_name": "Come possiamo chiamarti?",
+    "your_name": "Il tuo nome",
+    "monthly_budget": "Budget Mensile",
+    "budget_placeholder": "es. 1000",
+    "select_theme": "Seleziona Tema",
+    "start_fresh": "Inizia da zero",
+    "load_demo": "Carica Dati Demo",
+    "ready_to_start": "Pronto a partire?",
+    "add_demo_transaction": "Aggiungi Transazione Demo"
   }
 }
