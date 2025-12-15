@@ -84,7 +84,7 @@ export function Dashboard() {
 
   // Recent transactions - memoized to avoid filtering on every render
   const recentTransactions = useMemo(
-    () => transactions?.filter((t) => !t.deleted_at).slice(0, 5),
+    () => transactions?.filter((t) => !t.deleted_at).slice(0, 25),
     [transactions]
   );
 

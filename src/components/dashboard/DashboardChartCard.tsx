@@ -19,6 +19,9 @@ import { ContentLoader } from "@/components/ui/content-loader";
 import { TransactionList } from "@/components/TransactionList";
 import { Transaction, Category } from "@/lib/db";
 import { useTranslation } from "react-i18next";
+import { useMobile } from "@/hooks/useMobile";
+import { DESKTOP_ROW_HEIGHT, MOBILE_ROW_HEIGHT, MOBILE_HEADER_HEIGHT } from "@/components/TransactionList";
+import { useState, useEffect, useRef } from "react";
 
 interface DashboardChartCardProps {
     index: number;
@@ -40,6 +43,8 @@ interface DashboardChartCardProps {
     transactions: Transaction[] | undefined;
 }
 
+
+
 export function DashboardChartCard({
     index,
     chartViewsCount,
@@ -57,6 +62,71 @@ export function DashboardChartCard({
 }: DashboardChartCardProps) {
     const { t } = useTranslation();
     const now = new Date();
+    const isMobile = useMobile();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [visibleCount, setVisibleCount] = useState(5);
+
+    useEffect(() => {
+        const calculateVisibleTransactions = () => {
+            if (!containerRef.current || !recentTransactions) return;
+
+            const totalHeight = containerRef.current.clientHeight;
+            let currentHeight = 0;
+            let count = 0;
+
+            if (isMobile) {
+                // Mobile: List of items with interspersed date headers
+                // No main header, just sticky date headers
+                let lastDate = "";
+
+                for (const transaction of recentTransactions) {
+                    let itemHeight = MOBILE_ROW_HEIGHT;
+
+                    // If date changes, add header height
+                    if (transaction.date !== lastDate) {
+                        itemHeight += MOBILE_HEADER_HEIGHT;
+                        lastDate = transaction.date;
+                    }
+
+                    if (currentHeight + itemHeight > totalHeight) {
+                        break;
+                    }
+
+                    currentHeight += itemHeight;
+                    count++;
+                }
+            } else {
+                // Desktop: Table with fixed header
+                // Header (49px) + Container Border (2px)
+                const tableHeaderHeight = 51;
+                currentHeight += tableHeaderHeight;
+
+                for (const _ of recentTransactions) {
+                    if (currentHeight + DESKTOP_ROW_HEIGHT > totalHeight) {
+                        break;
+                    }
+                    currentHeight += DESKTOP_ROW_HEIGHT;
+                    count++;
+                }
+            }
+
+            // Always show at least one transaction if available
+            setVisibleCount(Math.max(1, count));
+        };
+
+        // Initial calculation
+        calculateVisibleTransactions();
+
+        const observer = new ResizeObserver(() => {
+            calculateVisibleTransactions();
+        });
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [isMobile, recentTransactions]);
 
     const dotIndicators = (
         <div className="flex md:flex-col gap-1.5 ml-auto">
@@ -170,6 +240,9 @@ export function DashboardChartCard({
                                                 type="monotone"
                                                 fill="url(#cumulativeGradient)"
                                                 stroke="var(--color-cumulative)"
+                                                animationBegin={100}
+                                                animationDuration={1200}
+                                                animationEasing="ease-out"
                                             />
                                             <Area
                                                 dataKey="projection"
@@ -177,6 +250,9 @@ export function DashboardChartCard({
                                                 fill="url(#projectionGradient)"
                                                 stroke="var(--color-projection)"
                                                 strokeDasharray="5 5"
+                                                animationBegin={100}
+                                                animationDuration={1200}
+                                                animationEasing="ease-out"
                                             />
                                         </AreaChart>
                                     </ChartContainer>
@@ -224,10 +300,10 @@ export function DashboardChartCard({
                         </div>
                         {dotIndicators}
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden">
-                        <div className="space-y-2">
+                    <CardContent className="flex-1 overflow-hidden min-h-0">
+                        <div ref={containerRef} className="h-full w-full">
                             <TransactionList
-                                transactions={recentTransactions}
+                                transactions={recentTransactions?.slice(0, visibleCount)}
                                 categories={categories}
                                 showActions={false}
                                 isLoading={transactions === undefined}
