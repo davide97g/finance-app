@@ -440,27 +440,20 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
 
             case "setup":
                 return (
-                    <WelcomeStep
-                        icon={currentStepData.icon}
-                        iconColor={currentStepData.iconColor}
-                        title={t(currentStepData.titleKey)}
-                        description={t(currentStepData.descKey)}
-                    >
-                        <SetupStep
-                            userName={userName}
-                            setUserName={setUserName}
-                            monthlyBudget={monthlyBudget}
-                            setMonthlyBudget={(val) => {
-                                setMonthlyBudget(val);
-                                const numVal = parseFloat(val);
-                                if (!isNaN(numVal)) {
-                                    updateSettings({ monthly_budget: numVal });
-                                }
-                            }}
-                            currentTheme={settings?.theme as Theme || 'light'}
-                            setTheme={(val) => updateSettings({ theme: val })}
-                        />
-                    </WelcomeStep>
+                    <SetupStep
+                        userName={userName}
+                        setUserName={setUserName}
+                        monthlyBudget={monthlyBudget}
+                        setMonthlyBudget={(val) => {
+                            setMonthlyBudget(val);
+                            const numVal = parseFloat(val);
+                            if (!isNaN(numVal)) {
+                                updateSettings({ monthly_budget: numVal });
+                            }
+                        }}
+                        currentTheme={settings?.theme as Theme || 'light'}
+                        setTheme={(val) => updateSettings({ theme: val })}
+                    />
                 );
 
             default:

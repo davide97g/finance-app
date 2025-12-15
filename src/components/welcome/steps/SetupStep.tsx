@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { User, Wallet, Check } from "lucide-react";
+import { User, Wallet, Sun, Moon, Monitor } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -85,32 +85,47 @@ export function SetupStep({
                     {t("welcome.select_theme")}
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
-                    {[
-                        { value: "light", label: t("light"), color: "bg-white border-zinc-200" },
-                        { value: "dark", label: t("dark"), color: "bg-zinc-950 border-zinc-800" },
-                        { value: "system", label: t("system"), color: "bg-gradient-to-br from-white to-zinc-950 border-zinc-400" },
-                    ].map((mode) => (
-                        <Button
-                            key={mode.value}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setTheme(mode.value as Theme)}
-                            className={cn(
-                                "relative h-14 border-2 flex flex-col gap-1 items-center justify-center hover:bg-accent/50",
-                                currentTheme === mode.value
-                                    ? "border-primary bg-primary/5 text-primary"
-                                    : "border-muted bg-transparent text-muted-foreground"
-                            )}
-                        >
-                            <div className={cn("w-full h-2 rounded-full opacity-50", mode.color)} />
-                            <span className="text-[10px] sm:text-xs capitalize">{mode.label}</span>
-                            {currentTheme === mode.value && (
-                                <div className="absolute top-1 right-1 text-primary">
-                                    <Check className="w-3 h-3" />
-                                </div>
-                            )}
-                        </Button>
-                    ))}
+                    <Button
+                        variant="outline"
+                        onClick={() => setTheme("light")}
+                        className={cn(
+                            "h-16 flex flex-col gap-1 items-center justify-center border-2 transition-all px-0",
+                            currentTheme === "light"
+                                ? "border-orange-500 bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
+                                : "border-muted hover:border-orange-200 hover:bg-orange-50/50 dark:hover:bg-orange-950/10"
+                        )}
+                    >
+                        <Sun className={cn("h-5 w-5", currentTheme === "light" ? "text-orange-500 fill-orange-500" : "text-muted-foreground")} />
+                        <span className="font-medium text-[10px]">{t("light")}</span>
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        onClick={() => setTheme("dark")}
+                        className={cn(
+                            "h-16 flex flex-col gap-1 items-center justify-center border-2 transition-all px-0",
+                            currentTheme === "dark"
+                                ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400"
+                                : "border-muted hover:border-indigo-200 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/10"
+                        )}
+                    >
+                        <Moon className={cn("h-5 w-5", currentTheme === "dark" ? "text-indigo-500 fill-indigo-500" : "text-muted-foreground")} />
+                        <span className="font-medium text-[10px]">{t("dark")}</span>
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        onClick={() => setTheme("system")}
+                        className={cn(
+                            "h-16 flex flex-col gap-1 items-center justify-center border-2 transition-all px-0",
+                            currentTheme === "system"
+                                ? "border-primary bg-primary/5 text-primary"
+                                : "border-muted hover:bg-accent/50"
+                        )}
+                    >
+                        <Monitor className={cn("h-5 w-5", currentTheme === "system" ? "text-primary" : "text-muted-foreground")} />
+                        <span className="font-medium text-[10px]">{t("system")}</span>
+                    </Button>
                 </div>
             </motion.div>
         </div>
