@@ -44,6 +44,9 @@ export function SwipeableItem({
         ]
     );
 
+    const editScale = useTransform(x, [50, threshold], [0.8, 1.2]);
+    const deleteScale = useTransform(x, [-50, -threshold], [0.8, 1.2]);
+
     const handleDragEnd = (_: any, info: PanInfo) => {
         if (!enabled) return;
         // If we only have one action, we prevent swiping in the other direction by checking velocity/direction
@@ -91,7 +94,7 @@ export function SwipeableItem({
                     <div className="flex items-center text-white font-medium">
                         {onEdit && (
                             <motion.div
-                                style={{ scale: useTransform(x, [50, threshold], [0.8, 1.2]) }}
+                                style={{ scale: editScale }}
                                 className="flex items-center"
                             >
                                 <Edit className="h-5 w-5 mr-2" />
@@ -102,7 +105,7 @@ export function SwipeableItem({
                     <div className="flex items-center text-white font-medium">
                         {onDelete && (
                             <motion.div
-                                style={{ scale: useTransform(x, [-50, -threshold], [0.8, 1.2]) }}
+                                style={{ scale: deleteScale }}
                                 className="flex items-center"
                             >
                                 {deleteLabel || t("delete")}
