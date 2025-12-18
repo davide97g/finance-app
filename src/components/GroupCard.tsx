@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SwipeableItem } from "@/components/ui/SwipeableItem";
+import { SyncStatusBadge } from "@/components/SyncStatus";
 
 interface GroupCardProps {
   group: GroupWithMembers;
@@ -74,7 +75,7 @@ export function GroupCard({
                 </CardDescription>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
               {/* Desktop Edit/Delete buttons */}
               {group.isCreator && (
                 <div className="hidden sm:flex items-center gap-1">
@@ -107,6 +108,7 @@ export function GroupCard({
               <Badge variant="secondary">
                 {group.members.length} {t("members")}
               </Badge>
+              <SyncStatusBadge isPending={group.pendingSync === 1} />
             </div>
           </div>
         </CardHeader>
