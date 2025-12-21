@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useTranslation } from "react-i18next";
 import { useCategories } from "@/hooks/useCategories";
@@ -15,27 +15,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Plus, EyeOff, Eye, Users } from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, EyeOff, Eye, Search, FilterX } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { CategoryDetailDrawer } from "@/components/CategoryDetailDrawer";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import type { Category } from "@/lib/db";
-
-// Extracted components
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { CategoryMobileList } from "@/components/categories/CategoryMobileList";
 import { CategoryDesktopTable } from "@/components/categories/CategoryDesktopTable";
 import { CategoryBudgetDialog } from "@/components/categories/CategoryBudgetDialog";
 import { CategoryMigrationDialog } from "@/components/categories/CategoryMigrationDialog";
+
+import { CategoryFormValues } from "@/lib/schemas";
+import type { Category } from "@/lib/db";
 
 export function CategoriesPage() {
   const { t } = useTranslation();
@@ -43,7 +43,7 @@ export function CategoriesPage() {
   // Filter State - must be defined before hook calls
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<
     string | null | undefined
-  >(null);
+  >(undefined); // Default to undefined (All) instead of null (Personal) to match other filters
 
   const {
     categories,
@@ -92,56 +92,31 @@ export function CategoriesPage() {
 
   // Filter State
   const [showInactive, setShowInactive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   // Expanded categories state for mobile collapse/expand
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(
     new Set()
   );
 
-  // Conflict Resolution State
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
   const [conflictData, setConflictData] = useState<{
     action: "delete" | "deactivate";
     targetId: string;
     childrenCount: number;
     parentName?: string;
+    pendingData?: CategoryFormValues;
   } | null>(null);
 
-  const [activeSection, setActiveSection] = useState("main");
+  const [initialData, setInitialData] = useState<CategoryFormValues | null>(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    color: "#000000",
-    type: "expense" as "income" | "expense" | "investment",
-    icon: "",
-    parent_id: "",
-    active: true,
-    budget: "",
-    group_id: "",
-  });
-
-  // Reset parent_id when group_id changes
-  useEffect(() => {
-    if (formData.name || formData.icon) {
-      setFormData((prev) => ({
-        ...prev,
-        parent_id: "",
-      }));
-    }
-  }, [formData.group_id]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (data: CategoryFormValues) => {
     if (!user) return;
-
-    if (!formData.icon) {
-      alert(t("icon_required"));
-      return;
-    }
 
     if (editingId) {
       // Check for deactivation conflict
-      if (!formData.active) {
+      if (!data.active) {
         const hasChildren = categories?.some(
           (c) => c.parent_id === editingId && !c.deleted_at
         );
@@ -159,25 +134,28 @@ export function CategoriesPage() {
                 (c) => c.parent_id === editingId && !c.deleted_at
               ).length || 0,
             parentName: parentCategory?.name,
+            pendingData: data,
           });
           setConflictDialogOpen(true);
+          // Keep form open
           return;
         }
       }
 
       await updateCategory(editingId, {
-        name: formData.name,
-        color: formData.color,
-        type: formData.type,
-        icon: formData.icon,
-        parent_id: formData.parent_id || undefined,
-        active: formData.active ? 1 : 0,
-        group_id: formData.group_id || undefined,
+        name: data.name,
+        color: data.color || "#000000",
+        type: data.type,
+        icon: data.icon || "",
+        parent_id: data.parent_id || undefined,
+        active: data.active ? 1 : 0,
+        group_id: data.group_id || undefined,
       });
 
-      if (formData.type === "expense" && formData.budget) {
-        await setCategoryBudget(editingId, parseFloat(formData.budget));
-      } else if (formData.type === "expense" && !formData.budget) {
+      if (data.type === "expense" && data.budget) {
+        // Budget comes as number from schema (coerced) but might be undefined/0
+        await setCategoryBudget(editingId, data.budget);
+      } else if (data.type === "expense" && !data.budget) {
         await removeCategoryBudget(editingId);
       }
     } else {
@@ -187,36 +165,23 @@ export function CategoriesPage() {
         ...({
           id: newCategoryId,
           user_id: user.id,
-          name: formData.name,
-          color: formData.color,
-          type: formData.type,
-          icon: formData.icon,
-          parent_id: formData.parent_id || undefined,
-          active: formData.active ? 1 : 0,
-          group_id: formData.group_id || undefined,
+          name: data.name,
+          color: data.color || "#000000",
+          type: data.type,
+          icon: data.icon || "",
+          parent_id: data.parent_id || undefined,
+          active: data.active ? 1 : 0,
+          group_id: data.group_id || undefined,
         } as any),
       });
 
-      if (formData.type === "expense" && formData.budget) {
-        await setCategoryBudget(newCategoryId, parseFloat(formData.budget));
+      if (data.type === "expense" && data.budget) {
+        await setCategoryBudget(newCategoryId, data.budget);
       }
     }
     setIsOpen(false);
     setEditingId(null);
-    resetFormData();
-  };
-
-  const resetFormData = () => {
-    setFormData({
-      name: "",
-      color: "#000000",
-      type: "expense",
-      icon: "",
-      parent_id: "",
-      active: true,
-      budget: "",
-      group_id: "",
-    });
+    setInitialData(null);
   };
 
   const handleEdit = (category: any) => {
@@ -224,33 +189,22 @@ export function CategoriesPage() {
     const categoryBudget =
       category.type === "expense" ? getBudgetForCategory(category.id) : null;
 
-    setFormData({
+    setInitialData({
       name: category.name,
       color: category.color,
       type: category.type,
       icon: category.icon || "",
-      parent_id: category.parent_id || "",
+      parent_id: category.parent_id || null, // Ensure null if undefined/empty
       active: category.active !== 0,
-      budget: categoryBudget ? categoryBudget.amount.toString() : "",
-      group_id: category.group_id || "",
+      budget: categoryBudget ? categoryBudget.amount : undefined,
+      group_id: category.group_id || null,
     });
-
-    if (
-      !!category.group_id ||
-      (categoryBudget && categoryBudget.amount > 0) ||
-      category.active === 0
-    ) {
-      setActiveSection("more");
-    } else {
-      setActiveSection("main");
-    }
     setIsOpen(true);
   };
 
   const openNew = () => {
     setEditingId(null);
-    resetFormData();
-    setActiveSection("main");
+    setInitialData(null);
     setIsOpen(true);
   };
 
@@ -318,27 +272,55 @@ export function CategoriesPage() {
   const handleConflictResolve = async () => {
     if (!conflictData) return;
 
-    const targetCategory = categories?.find(
-      (c) => c.id === conflictData.targetId
-    );
-    const newParentId = targetCategory?.parent_id;
-
-    await reparentChildren(conflictData.targetId, newParentId);
-
     if (conflictData.action === "delete") {
+      const targetCategory = categories?.find(
+        (c) => c.id === conflictData.targetId
+      );
+      const newParentId = targetCategory?.parent_id;
+
+      await reparentChildren(conflictData.targetId, newParentId);
       await deleteCategory(conflictData.targetId);
-    } else if (conflictData.action === "deactivate") {
-      await updateCategory(conflictData.targetId, {
-        name: formData.name,
-        color: formData.color,
-        type: formData.type,
-        icon: formData.icon,
-        parent_id: formData.parent_id || undefined,
-        active: 0,
-      });
+
       setIsOpen(false);
       setEditingId(null);
-      resetFormData();
+      setInitialData(null);
+    } else if (conflictData.action === "deactivate") {
+      // Use pendingData if available, otherwise fallback (though pendingData should be there)
+      const dataToSave = conflictData.pendingData;
+      if (dataToSave) {
+        await updateCategory(conflictData.targetId, {
+          name: dataToSave.name,
+          color: dataToSave.color || "#000000",
+          type: dataToSave.type,
+          icon: dataToSave.icon || "",
+          parent_id: dataToSave.parent_id || undefined,
+          active: 0, // Force deactivation
+          group_id: dataToSave.group_id || undefined,
+        });
+
+        if (dataToSave.type === "expense" && dataToSave.budget) {
+          await setCategoryBudget(conflictData.targetId, dataToSave.budget);
+        }
+      } else {
+        const targetCategory = categories?.find(
+          (c) => c.id === conflictData.targetId
+        );
+        if (targetCategory) {
+          await updateCategory(conflictData.targetId, {
+            name: targetCategory.name,
+            color: targetCategory.color,
+            type: targetCategory.type,
+            icon: targetCategory.icon,
+            parent_id: targetCategory.parent_id || undefined,
+            active: 0, // Force deactivation
+            group_id: targetCategory.group_id || undefined,
+          });
+        }
+      }
+
+      setIsOpen(false);
+      setEditingId(null);
+      setInitialData(null);
     }
 
     setConflictDialogOpen(false);
@@ -396,9 +378,31 @@ export function CategoriesPage() {
   // Filter categories based on showInactive state
   const filteredCategories = useMemo(() => {
     if (!categories) return [];
-    if (showInactive) return categories;
-    return categories.filter((c) => c.active !== 0);
-  }, [categories, showInactive]);
+
+    return categories.filter((c) => {
+      // inactive check
+      if (!showInactive && c.active === 0) return false;
+
+      // search check
+      if (searchQuery && !c.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // type check
+      if (typeFilter !== "all" && c.type !== typeFilter) {
+        return false;
+      }
+
+      // group check (already handled by hook? No, hook filters primarily for data fetching optimization/separation 
+      // but if we want strictly visual filtering here on top of what hook provides:
+      // excessive because hook `useCategories(selectedGroupFilter)` already does it?
+      // Let's verify hook usage.
+      // `useCategories(selectedGroupFilter)` is called. So `categories` already respect the group filter!
+      // So we don't filter by group here again.
+
+      return true;
+    });
+  }, [categories, showInactive, searchQuery, typeFilter]);
 
   // Sort categories: Active first, then Alphabetical
   const sortedCategories = useMemo(() => {
@@ -491,88 +495,94 @@ export function CategoriesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t("categories")}</h1>
-        <div className="flex items-center gap-2">
-          {/* Show Inactive Toggle */}
+        <Button
+          onClick={openNew}
+          size="icon"
+          className="md:w-auto md:px-4 md:h-10"
+        >
+          <Plus className="h-4 w-4 md:mr-2" />
+          <span className="hidden md:inline">{t("add_category")}</span>
+        </Button>
+      </div>
+
+
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t("search_categories") || "Search..."}
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+          {/* Type Filter */}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder={t("type")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("all_types") || "All"}</SelectItem>
+              <SelectItem value="expense">{t("expense")}</SelectItem>
+              <SelectItem value="income">{t("income")}</SelectItem>
+              <SelectItem value="investment">{t("investment")}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Group Filter (Replacing DropdownMenu) */}
+          {groups.length > 0 && (
+            <Select
+              value={selectedGroupFilter === undefined ? "all" : selectedGroupFilter === null ? "personal" : selectedGroupFilter}
+              onValueChange={(val) => setSelectedGroupFilter(val === "all" ? undefined : val === "personal" ? null : val)}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder={t("group")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("all_categories")}</SelectItem>
+                <SelectItem value="personal">{t("personal_categories")}</SelectItem>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Inactive Toggle as Button */}
           <Button
             variant="outline"
             size="icon"
             onClick={() => setShowInactive(!showInactive)}
-            className={`transition-colors md:w-auto md:px-4 md:h-10 ${showInactive
+            className={`${showInactive
               ? "bg-primary/10 text-primary border-primary/20"
               : ""
               }`}
+            title={t("show_inactive")}
           >
             {showInactive ? (
-              <Eye className="h-4 w-4 md:mr-2" />
+              <Eye className="h-4 w-4" />
             ) : (
-              <EyeOff className="h-4 w-4 md:mr-2" />
+              <EyeOff className="h-4 w-4" />
             )}
-            <span className="hidden md:inline">
-              {t("show_inactive")}
-            </span>
           </Button>
 
-          {/* Group Filter Dropdown */}
-          {groups.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex gap-2 px-3">
-                  <Users className="h-4 w-4" />
-                  <span className="hidden md:inline">
-                    {selectedGroupFilter === undefined
-                      ? t("all_categories")
-                      : selectedGroupFilter === null
-                        ? t("personal_categories")
-                        : groups.find((g) => g.id === selectedGroupFilter)
-                          ?.name || t("group")}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>{t("filter_by")}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup
-                  value={
-                    selectedGroupFilter === undefined
-                      ? "all"
-                      : selectedGroupFilter === null
-                        ? "personal"
-                        : selectedGroupFilter
-                  }
-                  onValueChange={(value) =>
-                    setSelectedGroupFilter(
-                      value === "all"
-                        ? undefined
-                        : value === "personal"
-                          ? null
-                          : value
-                    )
-                  }
-                >
-                  <DropdownMenuRadioItem value="all">
-                    {t("all_categories")}
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="personal">
-                    {t("personal_categories")}
-                  </DropdownMenuRadioItem>
-                  {groups.map((group) => (
-                    <DropdownMenuRadioItem key={group.id} value={group.id}>
-                      {group.name}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {(searchQuery || typeFilter !== "all" || selectedGroupFilter !== undefined || showInactive) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setSearchQuery("");
+                setTypeFilter("all");
+                setSelectedGroupFilter(undefined);
+                setShowInactive(false);
+              }}
+              title={t("clear_filters")}
+            >
+              <FilterX className="h-4 w-4" />
+            </Button>
           )}
-
-          <Button
-            onClick={openNew}
-            size="icon"
-            className="md:w-auto md:px-4 md:h-10"
-          >
-            <Plus className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">{t("add_category")}</span>
-          </Button>
         </div>
       </div>
 
@@ -610,10 +620,7 @@ export function CategoriesPage() {
         open={isOpen}
         onOpenChange={setIsOpen}
         editingId={editingId}
-        formData={formData}
-        setFormData={setFormData}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
+        initialData={initialData}
         groups={groups}
         onSubmit={handleSubmit}
       />
