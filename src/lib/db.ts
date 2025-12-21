@@ -88,6 +88,8 @@ export interface Transaction {
   year_month: string;
   /** User-provided description */
   description: string;
+  /** Link to RecurringTransaction if generated automatically */
+  recurring_transaction_id?: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
   /** 1 if changes pending sync, 0 otherwise (number for IndexedDB indexing) */
@@ -322,7 +324,7 @@ export class AppDatabase extends Dexie {
       group_members:
         "id, group_id, user_id, guest_name, is_guest, pendingSync, removed_at",
       transactions:
-        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at",
+        "id, user_id, group_id, paid_by_member_id, recurring_transaction_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at, [group_id+year_month], [type+year_month], [category_id+year_month]",
       categories: "id, user_id, group_id, name, type, pendingSync, deleted_at",
       contexts: "id, user_id, pendingSync, deleted_at",
       recurring_transactions:
