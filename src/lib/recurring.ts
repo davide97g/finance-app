@@ -74,6 +74,7 @@ export async function processRecurringTransactions(): Promise<number> {
                 date: dateStr,
                 year_month: dateStr.substring(0, 7),
                 description: rt.description || `Recurring: ${rt.frequency}`,
+                recurring_transaction_id: rt.id,
                 pendingSync: 1,
                 deleted_at: null,
             });

@@ -58,6 +58,11 @@ import { StatsBurnRateCard } from "@/components/statistics/StatsBurnRateCard";
 import { StatsContextAnalytics } from "@/components/statistics/StatsContextAnalytics";
 import { StatsCategoryDistribution } from "@/components/statistics/StatsCategoryDistribution";
 import { StatsExpenseBreakdown } from "@/components/statistics/StatsExpenseBreakdown";
+import { StatsContextTrends } from "@/components/statistics/StatsContextTrends";
+import { StatsRecurringSplit } from "@/components/statistics/StatsRecurringSplit";
+import { StatsGroupBalances } from "@/components/statistics/StatsGroupBalances";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/db";
 
 export function StatisticsPage() {
   const { t, i18n } = useTranslation();
@@ -68,6 +73,7 @@ export function StatisticsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { groups, isLoading: isGroupsLoading } = useGroups();
+  const contexts = useLiveQuery(() => db.contexts.toArray());
 
   // State for filters
   const [selectedMonth, setSelectedMonth] = useState(format(now, "yyyy-MM"));
@@ -132,6 +138,9 @@ export function StatisticsPage() {
     categoryComparison,
     monthlyExpensesByHierarchy,
     yearlyExpensesByHierarchy,
+    monthlyContextTrends,
+    monthlyRecurringSplit,
+    groupBalances,
   } = useStatistics({
     selectedMonth,
     selectedYear,
@@ -1378,6 +1387,31 @@ export function StatisticsPage() {
 
         {/* Context Analytics - using extracted component */}
         <StatsContextAnalytics contextStats={contextStats} />
+
+        {/* Recurring vs One-off Chart - Yearly Only */}
+        {activeTab === "yearly" && (
+          <StatsRecurringSplit
+            data={monthlyRecurringSplit}
+            isLoading={isLoading}
+          />
+        )}
+
+        {/* Group Balances - Only if group selected */}
+        {selectedGroupId && groupBalances.length > 0 && (
+          <StatsGroupBalances
+            data={groupBalances}
+            isLoading={isLoading}
+          />
+        )}
+
+        {/* Context Trend Chart - Yearly Only */}
+        {activeTab === "yearly" && (
+          <StatsContextTrends
+            data={monthlyContextTrends}
+            contexts={contexts}
+            isLoading={isLoading}
+          />
+        )}
 
         {/* Burn Rate / Spending Projection Card - Yearly */}
         {activeTab === "yearly" && settings?.monthly_budget && settings.monthly_budget > 0 && (
