@@ -37,6 +37,7 @@ import { GroupCard } from "@/components/GroupCard";
 import { ManageMembersDrawer } from "@/components/ManageMembersDrawer";
 import { GroupBalanceDrawer } from "@/components/GroupBalanceDrawer";
 import { GroupFormDialog } from "@/components/groups/GroupFormDialog";
+import { GroupDesktopTable } from "@/components/groups/GroupDesktopTable";
 import { GroupFormValues } from "@/lib/schemas";
 
 
@@ -215,7 +216,7 @@ export function GroupsPage() {
         )}
       </div>
 
-      {/* Groups Grid */}
+      {/* Groups Content */}
       {filteredGroups.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -227,20 +228,36 @@ export function GroupsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredGroups.map((group) => (
-            <GroupCard
-              key={group.id}
-              group={group}
-              onEdit={openEditGroup}
-              onDelete={(g) => setDeletingGroup(g)}
-              onView={(g) => navigate(`/groups/${g.id}`)}
-              onBalance={handleViewBalance}
-              onMembers={openManageMembers}
-              onStatistics={handleViewStatistics}
-            />
-          ))}
-        </div>
+        <>
+          {/* Mobile Grid View */}
+          <div className="md:hidden grid gap-4 grid-cols-1">
+            {filteredGroups.map((group) => (
+              <GroupCard
+                key={group.id}
+                group={group}
+                onEdit={openEditGroup}
+                onDelete={(g) => setDeletingGroup(g)}
+                onView={(g) => navigate(`/groups/${g.id}`)}
+                onBalance={handleViewBalance}
+                onMembers={openManageMembers}
+                onStatistics={handleViewStatistics}
+              />
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <GroupDesktopTable
+            groups={filteredGroups}
+            onEdit={openEditGroup}
+            onDelete={(g) => setDeletingGroup(g)}
+            onView={(g) => navigate(`/groups/${g.id}`)}
+            onBalance={handleViewBalance}
+            onMembers={openManageMembers}
+            onStatistics={handleViewStatistics}
+            isLoading={!groups}
+            t={t}
+          />
+        </>
       )}
 
       {/* Edit/Create Group Dialog */}

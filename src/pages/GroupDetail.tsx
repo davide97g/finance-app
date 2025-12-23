@@ -285,7 +285,7 @@ export function GroupDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="transactions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 dark:bg-primary/20">
           <TabsTrigger value="transactions">{t("transactions")}</TabsTrigger>
           <TabsTrigger value="categories">{t("categories")}</TabsTrigger>
         </TabsList>

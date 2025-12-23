@@ -293,7 +293,7 @@ export function StatisticsPage() {
           startTransition(() => setActiveTab(value as "monthly" | "yearly"))
         }
       >
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsList className="grid w-full grid-cols-2 mb-4 dark:bg-primary/20">
           <TabsTrigger value="monthly">{t("monthly_statistics")}</TabsTrigger>
           <TabsTrigger value="yearly">{t("yearly_statistics")}</TabsTrigger>
         </TabsList>
