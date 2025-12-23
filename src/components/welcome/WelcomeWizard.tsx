@@ -299,7 +299,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
         switch (stepId) {
             case "dashboard":
                 return (
-                    <div className="bg-muted/50 rounded-xl p-4 text-left space-y-2">
+                    <div className="bg-muted/50 dark:bg-muted/20 border border-transparent dark:border-border/50 rounded-xl p-4 text-left space-y-2">
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">{t("total_expenses")}</span>
                             <span className="font-semibold text-destructive">
@@ -321,7 +321,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
 
             case "transactions":
                 return (
-                    <div className="bg-muted/50 rounded-xl p-3 space-y-2 max-h-[200px] overflow-hidden flex flex-col">
+                    <div className="bg-muted/50 dark:bg-muted/20 border border-transparent dark:border-border/50 rounded-xl p-3 space-y-2 max-h-[200px] overflow-hidden flex flex-col">
                         <div className="space-y-2 overflow-y-auto pr-1">
                             <AnimatePresence initial={false} mode="popLayout">
                                 {demoTransactions.slice(0, 4).map((tx) => (
@@ -377,7 +377,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                         {demoData.contexts.map((ctx) => (
                             <div
                                 key={ctx.id}
-                                className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-lg"
+                                className="flex items-center gap-2 px-4 py-2 bg-muted/50 dark:bg-muted/20 border border-transparent dark:border-border/50 rounded-lg"
                             >
                                 <span className="text-xl">{ctx.name}</span>
                                 <span className="text-sm text-muted-foreground">{ctx.description}</span>
@@ -388,7 +388,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
 
             case "groups":
                 return (
-                    <div className="bg-muted/50 rounded-xl p-4 text-left space-y-4">
+                    <div className="bg-muted/50 dark:bg-muted/20 border border-transparent dark:border-border/50 rounded-xl p-4 text-left space-y-4">
                         {/* Header & Balance */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">

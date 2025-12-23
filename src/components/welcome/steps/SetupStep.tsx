@@ -45,7 +45,7 @@ export function SetupStep({
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
                         placeholder={t("welcome.your_name")}
-                        className="pl-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary"
+                        className="pl-9 bg-muted/50 dark:bg-muted/20 border border-transparent dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary"
                         autoComplete="off"
                     />
                 </div>
@@ -69,7 +69,7 @@ export function SetupStep({
                         value={monthlyBudget}
                         onChange={(e) => setMonthlyBudget(e.target.value)}
                         placeholder={t("welcome.budget_placeholder")}
-                        className="pl-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary"
+                        className="pl-9 bg-muted/50 dark:bg-muted/20 border border-transparent dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary"
                     />
                 </div>
             </motion.div>
