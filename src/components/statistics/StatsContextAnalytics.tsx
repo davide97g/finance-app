@@ -57,23 +57,23 @@ export function StatsContextAnalytics({
 
                         {/* Stats row */}
                         <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="text-center p-2 bg-muted rounded">
-                                <div className="text-muted-foreground text-xs">
+                            <div className="text-center p-2 rounded bg-muted/50 dark:bg-muted/20 border border-border/50">
+                                <div className="text-muted-foreground text-xs font-medium">
                                     {t("transactions")}
                                 </div>
-                                <div className="font-medium">{ctx.transactionCount}</div>
+                                <div className="font-semibold mt-0.5">{ctx.transactionCount}</div>
                             </div>
-                            <div className="text-center p-2 bg-muted rounded">
-                                <div className="text-muted-foreground text-xs">
+                            <div className="text-center p-2 rounded bg-muted/50 dark:bg-muted/20 border border-border/50">
+                                <div className="text-muted-foreground text-xs font-medium">
                                     {t("average")}
                                 </div>
-                                <div className="font-medium">€{Number(ctx.avgPerTransaction).toFixed(2)}</div>
+                                <div className="font-semibold mt-0.5">€{Number(ctx.avgPerTransaction).toFixed(2)}</div>
                             </div>
-                            <div className="text-center p-2 bg-muted rounded">
-                                <div className="text-muted-foreground text-xs">
+                            <div className="text-center p-2 rounded bg-muted/50 dark:bg-muted/20 border border-border/50">
+                                <div className="text-muted-foreground text-xs font-medium">
                                     {t("top_category")}
                                 </div>
-                                <div className="font-medium truncate">
+                                <div className="font-semibold mt-0.5 truncate px-1">
                                     {ctx.topCategory || "-"}
                                 </div>
                             </div>
@@ -94,7 +94,7 @@ export function StatsContextAnalytics({
                                             {cat.name}
                                         </span>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-16 h-1.5 bg-muted rounded overflow-hidden">
+                                            <div className="w-16 h-1.5 rounded overflow-hidden bg-muted/50 dark:bg-muted/20">
                                                 <div
                                                     className="h-full bg-primary rounded"
                                                     style={{ width: `${cat.percentage}%` }}
