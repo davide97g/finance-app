@@ -93,7 +93,7 @@ export function MobileCategoryRow({
               <>
                 {onToggleExpand ? (
                   <div
-                    className="flex items-center gap-0.5 shrink-0 cursor-pointer p-1 -m-1"
+                    className="flex items-center gap-0.5 shrink-0 cursor-pointer p-2 -m-2"
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleExpand();
@@ -113,7 +113,7 @@ export function MobileCategoryRow({
                         damping: 20,
                       }}
                     >
-                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </motion.div>
                   </div>
                 ) : (
