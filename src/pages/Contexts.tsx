@@ -88,7 +88,7 @@ export function ContextsPage() {
   const [selectedContext, setSelectedContext] = useState<Context | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const navigate = useNavigate();
+
 
   const handleOpenDetail = (context: Context) => {
     setSelectedContext(context);
