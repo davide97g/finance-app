@@ -144,7 +144,7 @@ export function useCategories(groupId?: string | null) {
     syncManager.schedulePush();
   };
 
-  const deleteCategoryData = async (id: string) => {
+  const deleteCategoryTransactions = async (id: string) => {
     await db.transactions.where("category_id").equals(id).modify({
       deleted_at: new Date().toISOString(),
       pendingSync: 1,
@@ -154,7 +154,11 @@ export function useCategories(groupId?: string | null) {
       deleted_at: new Date().toISOString(),
       pendingSync: 1,
     });
+    syncManager.schedulePush();
+  };
 
+  const deleteCategoryData = async (id: string) => {
+    await deleteCategoryTransactions(id);
     await deleteCategory(id);
   };
 
@@ -164,6 +168,7 @@ export function useCategories(groupId?: string | null) {
     updateCategory,
     deleteCategory,
     deleteCategoryData,
+    deleteCategoryTransactions,
     reparentChildren,
     migrateTransactions,
   };

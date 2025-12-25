@@ -66,7 +66,7 @@ export function CategoriesPage() {
     deleteCategory,
     reparentChildren,
     migrateTransactions,
-    deleteCategoryData,
+    deleteCategoryTransactions,
   } = useCategories(selectedGroupFilter);
 
   const { groups } = useGroups();
@@ -223,36 +223,10 @@ export function CategoriesPage() {
     setIsOpen(true);
   };
 
-  const handleDeleteClick = (id: string) => {
-    const associatedTransactions = transactions?.filter(
-      (t) => t.category_id === id && !t.deleted_at
-    );
-    const transactionCount = associatedTransactions?.length || 0;
-
+  const checkChildrenAndProceedDelete = (id: string) => {
     const hasChildren = categories?.some(
       (c) => c.parent_id === id && !c.deleted_at
     );
-
-    // category fetch moved to inside DeleteConfirmDialog description logic if needed, or re-fetched there
-
-
-    const associatedRecurring = recurringTransactions?.filter(
-      (r) => r.category_id === id && !r.deleted_at
-    );
-    const recurringCount = associatedRecurring?.length || 0;
-
-    if (transactionCount > 0 || recurringCount > 0) {
-      setMigrationData({
-        oldCategoryId: id,
-        transactionCount,
-        recurringCount,
-      });
-      setMigrationDialogOpen(true);
-      return;
-    }
-
-    // Group warning moved to DeleteConfirmDialog description
-
 
     if (hasChildren) {
       const currentCategory = categories?.find((c) => c.id === id);
@@ -274,6 +248,30 @@ export function CategoriesPage() {
 
     setDeletingId(id);
     setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    const associatedTransactions = transactions?.filter(
+      (t) => t.category_id === id && !t.deleted_at
+    );
+    const transactionCount = associatedTransactions?.length || 0;
+
+    const associatedRecurring = recurringTransactions?.filter(
+      (r) => r.category_id === id && !r.deleted_at
+    );
+    const recurringCount = associatedRecurring?.length || 0;
+
+    if (transactionCount > 0 || recurringCount > 0) {
+      setMigrationData({
+        oldCategoryId: id,
+        transactionCount,
+        recurringCount,
+      });
+      setMigrationDialogOpen(true);
+      return;
+    }
+
+    checkChildrenAndProceedDelete(id);
   };
 
   const handleConfirmDelete = () => {
@@ -354,19 +352,25 @@ export function CategoriesPage() {
     if (!migrationData || !migrationTargetId) return;
 
     await migrateTransactions(migrationData.oldCategoryId, migrationTargetId);
-    await deleteCategory(migrationData.oldCategoryId);
 
     setMigrationDialogOpen(false);
     setMigrationData(null);
     setMigrationTargetId("");
+
+    // Resume to check for children
+    checkChildrenAndProceedDelete(migrationData.oldCategoryId);
   };
 
   const handleMigrationDeleteAll = async () => {
     if (!migrationData) return;
-    await deleteCategoryData(migrationData.oldCategoryId);
+    await deleteCategoryTransactions(migrationData.oldCategoryId);
+
     setMigrationDialogOpen(false);
     setMigrationData(null);
     setMigrationTargetId("");
+
+    // Resume to check for children
+    checkChildrenAndProceedDelete(migrationData.oldCategoryId);
   };
 
   // Budget handlers
