@@ -66,6 +66,7 @@ export function CategoriesPage() {
     deleteCategory,
     reparentChildren,
     migrateTransactions,
+    deleteCategoryData,
   } = useCategories(selectedGroupFilter);
 
   const { groups } = useGroups();
@@ -360,6 +361,14 @@ export function CategoriesPage() {
     setMigrationTargetId("");
   };
 
+  const handleMigrationDeleteAll = async () => {
+    if (!migrationData) return;
+    await deleteCategoryData(migrationData.oldCategoryId);
+    setMigrationDialogOpen(false);
+    setMigrationData(null);
+    setMigrationTargetId("");
+  };
+
   // Budget handlers
   const handleOpenBudgetDialog = (categoryId: string) => {
     const existingBudget = getBudgetForCategory(categoryId);
@@ -413,17 +422,35 @@ export function CategoriesPage() {
     });
   }, [categories, searchQuery, typeFilter, showInactive]);
 
-  // Sort categories: Active first, then Alphabetical
+  // Sort categories: Group (Personal first), then Active, then Alphabetical
   const sortedCategories = useMemo(() => {
     return [...filteredCategories].sort((a, b) => {
-      // 1. Sort by Active status (Active=1 first, Inactive=0 last)
+      // 1. Sort by Group
+      const aGroupId = a.group_id;
+      const bGroupId = b.group_id;
+
+      if (aGroupId !== bGroupId) {
+        // Personal categories (no group_id) come first
+        if (!aGroupId) return -1;
+        if (!bGroupId) return 1;
+
+        // Both belong to groups, sort by Group Name
+        const groupA = groups.find((g) => g.id === aGroupId);
+        const groupB = groups.find((g) => g.id === bGroupId);
+        const nameA = groupA?.name || "";
+        const nameB = groupB?.name || "";
+
+        return nameA.localeCompare(nameB);
+      }
+
+      // 2. Sort by Active status (Active=1 first, Inactive=0 last)
       if (a.active !== b.active) {
         return b.active - a.active;
       }
-      // 2. Sort by Name
+      // 3. Sort by Name
       return a.name.localeCompare(b.name);
     });
-  }, [filteredCategories]);
+  }, [filteredCategories, groups]);
 
   // Build a map of parent_id -> children for quick lookup
   const childrenMap = useMemo(() => {
@@ -693,7 +720,7 @@ export function CategoriesPage() {
       {/* Mobile View */}
       <CategoryMobileList
         categories={categories}
-        filteredCategories={filteredCategories}
+        filteredCategories={sortedCategories}
         expandedCategoryIds={expandedCategoryIds}
         setExpandedCategoryIds={setExpandedCategoryIds}
         groups={groups}
@@ -758,6 +785,7 @@ export function CategoriesPage() {
             <AlertDialogDescription>
               {t("subcategory_conflict_description", {
                 count: conflictData?.childrenCount,
+                action: t(conflictData?.action || "delete"),
                 parentName: conflictData?.parentName || t("root_category"),
               })}
             </AlertDialogDescription>
@@ -819,6 +847,7 @@ export function CategoriesPage() {
         setMigrationTargetId={setMigrationTargetId}
         categories={categories}
         onResolve={handleMigrationResolve}
+        onDeleteAll={handleMigrationDeleteAll}
       />
     </div>
   );
