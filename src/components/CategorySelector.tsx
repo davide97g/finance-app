@@ -248,7 +248,7 @@ export function CategorySelector({
             <div
               onClick={() => handleSelect(category.id)}
               className={cn(
-                "flex items-center w-full p-2 rounded-md cursor-pointer transition-colors h-10 bg-muted/30",
+                "flex items-center w-full p-2 rounded-md cursor-pointer transition-colors h-10 bg-muted/30 SelectParentOption",
                 "hover:bg-accent hover:text-accent-foreground",
                 value === category.id ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
               )}

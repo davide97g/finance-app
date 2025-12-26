@@ -69,7 +69,6 @@ export function useAutoGenerate() {
               date: dateStr,
               year_month: dateStr.substring(0, 7),
               description: rt.description,
-              recurring_transaction_id: rt.id,
               pendingSync: 1,
               deleted_at: null,
             });

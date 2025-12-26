@@ -145,7 +145,7 @@ export function useStatistics(params?: UseStatisticsParams) {
     monthlyIncome: [],
     monthlyInvestments: [],
     monthlyContextTrends: [],
-    monthlyRecurringSplit: [],
+
     groupBalances: [],
     monthlyBudgetHealth: [],
   });
@@ -415,10 +415,7 @@ export function useStatistics(params?: UseStatisticsParams) {
       ...d,
       period: getMonthNames()[d.monthIndex]
     })) : [],
-    monthlyRecurringSplit: workerResult.monthlyRecurringSplit ? workerResult.monthlyRecurringSplit.map(d => ({
-      ...d,
-      period: getMonthNames()[d.monthIndex]
-    })) : [],
+
     groupBalances: workerResult.groupBalances || [], // No mapping needed as it uses member IDs/names
 
     // Placeholders

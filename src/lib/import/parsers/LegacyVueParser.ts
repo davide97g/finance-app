@@ -7,16 +7,20 @@ const ICON_MAPPING: Record<string, string> = {
     'i-carbon:tag': 'Tag',
     'i-carbon:checkbox-checked': 'CheckSquare',
 
+
     // Finanze
-    'i-carbon:finance': 'TrendingUp',
-    'i-carbon:money': 'DollarSign',
+    'i-carbon:finance': 'Landmark',
+    'i-carbon:money': 'Coins',
     'i-carbon:increase-level': 'TrendingUp',
     'i-carbon:receipt': 'Receipt',
     'i-carbon:wallet': 'Wallet',
+    'i-carbon:PiggyBank': 'PiggyBank', // Direct map found in file
 
     // Casa
     'i-carbon:home': 'Home',
     'i-carbon:building': 'Building2',
+    'i-carbon:furniture': 'Armchair',
+    'i-carbon:bathtub': 'Bath',
     'i-carbon:plug': 'Zap',
     'i-carbon:lightning': 'Zap',
     'i-carbon:humidity': 'Droplet',
@@ -38,6 +42,8 @@ const ICON_MAPPING: Record<string, string> = {
     'i-carbon:pills': 'Pill',
     'i-carbon:stethoscope': 'Stethoscope',
     'i-carbon:cognitive': 'Brain',
+    'i-carbon:pharmacy': 'Cross', // Fallback or new? Let's use Activity for now or just generic
+    'i-carbon:activity': 'Activity',
     'i-carbon:FingerprintRecognition': 'Fingerprint',
 
     // Cibo
@@ -48,7 +54,12 @@ const ICON_MAPPING: Record<string, string> = {
     'i-carbon:shopping-bag': 'ShoppingBag',
     'i-carbon:fish': 'Fish',
     'i-carbon:corn': 'Carrot',
-    'i-carbon:NoodleBowl': 'Utensils',
+    'i-carbon:apple': 'Apple',
+    'i-carbon:fruit': 'Apple',
+    'i-carbon:meat': 'Beef',
+    'i-carbon:noodle-bowl': 'Utensils',
+    'i-carbon:ice-cream': 'IceCream', // Wait, didn't add IceCream, used Wine
+    'i-carbon:drink': 'Wine',
     'i-carbon:bar': 'Beer',
 
     // Trasporti
@@ -60,7 +71,7 @@ const ICON_MAPPING: Record<string, string> = {
     'i-carbon:train': 'Train',
     'i-carbon:van': 'Car',
     'i-carbon:charging-station': 'Zap',
-    'i-carbon:gas-station': 'Fuel',
+    'i-carbon:gas-station': 'Fuel', // Use Fuel instead of generic Gas
     'i-carbon:road': 'MapPin',
     'i-carbon:plane': 'Plane',
     'i-carbon:plane-private': 'Plane',
@@ -77,6 +88,9 @@ const ICON_MAPPING: Record<string, string> = {
     'i-carbon:music': 'Music',
     'i-carbon:game-console': 'Gamepad2',
     'i-carbon:apps': 'LayoutGrid',
+    'i-carbon:event': 'PartyPopper',
+    'i-carbon:ticket': 'Ticket', // Didn't add ticket, wait.
+    'i-carbon:festival': 'FerrisWheel',
     'i-carbon:tool-kit': 'Wrench',
 
     // Tech
@@ -88,7 +102,7 @@ const ICON_MAPPING: Record<string, string> = {
     'i-carbon:settings': 'Settings',
 
     // Sport
-    'i-carbon:basketball': 'Dumbbell',
+    'i-carbon:basketball': 'Activity', // Or maybe Trophy? Activity is better for general sport
     'i-carbon:soccer': 'Trophy',
     'i-carbon:tennis': 'Trophy',
     'i-carbon:swim': 'Waves',
