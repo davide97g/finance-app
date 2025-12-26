@@ -389,7 +389,7 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
     const monthlyContextTrends: any[] = [];
 
     // Data for Recurring vs One-off
-    const monthlyRecurringSplit: any[] = [];
+
 
     if (mode === "yearly" && yearlyTransactions) {
         const today = new Date();
@@ -406,8 +406,6 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
         // Map<MonthIndex, Map<ContextId, Amount>>
         const contextTrendMap = new Map<number, Map<string, number>>();
 
-        // Map for Recurring vs One-off
-        const splitMap = new Map<number, { recurring: number; oneOff: number }>();
 
         for (let i = 0; i <= 11; i++) {
             monthlyTrendMap.set(i, { income: 0, expense: 0 });
@@ -416,7 +414,7 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
             radarIncomeMap.set(i, 0);
             radarInvestmentsMap.set(i, 0);
             contextTrendMap.set(i, new Map());
-            splitMap.set(i, { recurring: 0, oneOff: 0 });
+
         }
 
         yearlyTransactions.forEach((t: Transaction) => {
@@ -435,12 +433,7 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
                     monthContexts.set(t.context_id, (monthContexts.get(t.context_id) || 0) + amount);
                 }
 
-                // Recurring vs One-off
-                if (t.recurring_transaction_id) {
-                    splitMap.get(monthIdx)!.recurring += amount;
-                } else {
-                    splitMap.get(monthIdx)!.oneOff += amount;
-                }
+
             }
             else if (t.type === "income") radarIncomeMap.set(monthIdx, radarIncomeMap.get(monthIdx)! + amount);
             else if (t.type === "investment") radarInvestmentsMap.set(monthIdx, radarInvestmentsMap.get(monthIdx)! + amount);
@@ -483,14 +476,6 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
                 contextEntry[contextId] = Math.round(amount * 100) / 100;
             });
             monthlyContextTrends.push(contextEntry);
-
-            // Format Recurring vs One-off
-            const entry = splitMap.get(i)!;
-            monthlyRecurringSplit.push({
-                monthIndex: i,
-                recurring: Math.round(entry.recurring * 100) / 100,
-                oneOff: Math.round(entry.oneOff * 100) / 100,
-            });
         }
 
         // Radar Arrays (All 12 months)
@@ -713,7 +698,7 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
             monthlyIncome,
             monthlyInvestments,
             monthlyContextTrends,
-            monthlyRecurringSplit,
+
             groupBalances,
             monthlyBudgetHealth
         },

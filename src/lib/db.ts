@@ -88,8 +88,6 @@ export interface Transaction {
   year_month: string;
   /** User-provided description */
   description: string;
-  /** Link to RecurringTransaction if generated automatically */
-  recurring_transaction_id?: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
   /** 1 if changes pending sync, 0 otherwise (number for IndexedDB indexing) */

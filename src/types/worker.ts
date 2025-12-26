@@ -37,7 +37,7 @@ export type StatisticsWorkerResponse = {
         monthlyIncome: any[];
         monthlyInvestments: any[];
         monthlyContextTrends: any[];
-        monthlyRecurringSplit: any[];
+
         groupBalances: any[];
         monthlyBudgetHealth: any[];
     };

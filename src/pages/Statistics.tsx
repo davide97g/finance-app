@@ -60,7 +60,6 @@ import { StatsContextAnalytics } from "@/components/statistics/StatsContextAnaly
 import { StatsCategoryDistribution } from "@/components/statistics/StatsCategoryDistribution";
 import { StatsExpenseBreakdown } from "@/components/statistics/StatsExpenseBreakdown";
 import { StatsContextTrends } from "@/components/statistics/StatsContextTrends";
-import { StatsRecurringSplit } from "@/components/statistics/StatsRecurringSplit";
 import { StatsGroupBalances } from "@/components/statistics/StatsGroupBalances";
 import { StatsBudgetHealth } from "@/components/statistics/StatsBudgetHealth";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -141,7 +140,6 @@ export function StatisticsPage() {
     monthlyExpensesByHierarchy,
     yearlyExpensesByHierarchy,
     monthlyContextTrends,
-    monthlyRecurringSplit,
     groupBalances,
     monthlyBudgetHealth,
   } = useStatistics({
@@ -1388,13 +1386,7 @@ export function StatisticsPage() {
         {/* Context Analytics - using extracted component */}
         <StatsContextAnalytics contextStats={contextStats} />
 
-        {/* Recurring vs One-off Chart - Yearly Only */}
-        {activeTab === "yearly" && (
-          <StatsRecurringSplit
-            data={monthlyRecurringSplit}
-            isLoading={isLoading}
-          />
-        )}
+
 
         {/* Group Balances - Only if group selected */}
         {selectedGroupId && groupBalances.length > 0 && (
