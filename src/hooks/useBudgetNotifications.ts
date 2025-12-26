@@ -38,7 +38,7 @@ export function useBudgetNotifications() {
 
     return transactions
       .filter(
-        (t) => t.user_id === user.id && t.type === "expense" && !t.deleted_at
+        (t) => t.type === "expense" && !t.deleted_at
       )
       .reduce((sum, t) => {
         let amount = t.amount;
