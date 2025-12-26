@@ -815,7 +815,7 @@ export function HelpSystemWrapper({
                                 transition={{ duration: 0.25, ease: "easeOut" }}
                                 className="absolute inset-0 flex flex-col"
                             >
-                                <ScrollArea className="flex-1 px-6 pb-8 pt-2">
+                                <ScrollArea className="flex-1 px-6 pb-8 pt-2" data-vaul-no-drag>
                                     <div className="pb-20">
                                         <div className="flex items-center gap-3 mb-6">
                                             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 shadow-sm text-primary">
@@ -838,7 +838,7 @@ export function HelpSystemWrapper({
                                 transition={{ duration: 0.2 }}
                                 className="absolute inset-0"
                             >
-                                <ScrollArea className="h-full px-5 pb-8 pt-2">
+                                <ScrollArea className="h-full px-5 pb-8 pt-2" data-vaul-no-drag>
                                     <div className="space-y-6 pb-20">
                                         {sections.map((section) => {
                                             const sectionTopics = section.topicIds
