@@ -265,8 +265,8 @@ export function Dashboard() {
           swipeAxis="horizontal"
           flipDirection="right"
           disableGlobalClick
-          frontContent={<DashboardChartCard index={chartFaceAIndex} {...chartCardProps} />}
-          backContent={<DashboardChartCard index={chartFaceBIndex} {...chartCardProps} />}
+          frontContent={<DashboardChartCard index={chartFaceAIndex} {...chartCardProps} dailyCumulativeExpenses={chartCardProps.dailyCumulativeExpenses.map(d => ({ ...d, day: d.day.toString() }))} />}
+          backContent={<DashboardChartCard index={chartFaceBIndex} {...chartCardProps} dailyCumulativeExpenses={chartCardProps.dailyCumulativeExpenses.map(d => ({ ...d, day: d.day.toString() }))} />}
         />
       </div>
 

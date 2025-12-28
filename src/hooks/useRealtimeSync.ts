@@ -38,6 +38,8 @@ const INITIAL_RETRY_DELAY = REALTIME_CONFIG.INITIAL_RETRY_DELAY;
 export function useRealtimeSync(enabled: boolean = true) {
   const { user } = useAuth();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const subscribeRef = useRef<(() => void) | null>(null);
+
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -53,7 +55,9 @@ export function useRealtimeSync(enabled: boolean = true) {
   const handleRealtimeEvent = useCallback(
     async (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
       const { eventType, table } = payload;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const newRecord = payload.new as Record<string, any> | null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const oldRecord = payload.old as Record<string, any> | null;
 
       console.log(
@@ -102,6 +106,7 @@ export function useRealtimeSync(enabled: boolean = true) {
             }
 
             // Calculate year_month for transactions if needed
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const recordToSave: Record<string, any> = {
               ...newRecord,
               pendingSync: 0,
@@ -202,7 +207,7 @@ export function useRealtimeSync(enabled: boolean = true) {
         );
       }
     },
-    []
+    [user?.id]
   );
 
   /**
@@ -259,7 +264,7 @@ export function useRealtimeSync(enabled: boolean = true) {
           retryTimeoutRef.current = setTimeout(async () => {
             await supabase.removeChannel(channel);
             channelRef.current = null;
-            subscribe();
+            if (subscribeRef.current) subscribeRef.current();
           }, delay);
         } else {
           console.error("[Realtime] Max retry attempts reached");
@@ -271,6 +276,15 @@ export function useRealtimeSync(enabled: boolean = true) {
 
     channelRef.current = channel;
   }, [user, handleRealtimeEvent]);
+
+  // Keep ref updated
+  useEffect(() => {
+    subscribeRef.current = subscribe;
+  }, [subscribe]);
+
+
+
+
 
   /**
    * Unsubscribe from Realtime
@@ -290,12 +304,13 @@ export function useRealtimeSync(enabled: boolean = true) {
       console.log("[Realtime] Unsubscribing...");
       const channel = channelRef.current;
       channelRef.current = null;
-      setIsConnected(false);
+      // Use setTimeout to avoid setState in effect warning if unmounting
+      setTimeout(() => setIsConnected(false), 0);
 
       // Use try-catch to handle cases where WebSocket is already closed
       try {
         await supabase.removeChannel(channel);
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors when WebSocket is already closed
         console.log(
           "[Realtime] Channel already closed or error during cleanup"

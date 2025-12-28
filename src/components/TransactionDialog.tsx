@@ -190,7 +190,7 @@ export function TransactionDialog({
     const handleFormSubmit = async (data: TransactionFormValues) => {
         // Ensure paid_by_member_id is set if group_id is set
         // If not set via select (e.g. quick add), default to current user's member ID
-        let finalData = { ...data };
+        const finalData = { ...data };
         if (finalData.group_id && !finalData.paid_by_member_id && groups && user?.id) {
             const group = groups.find(g => g.id === finalData.group_id);
             const member = group?.members.find(m => m.user_id === user.id);

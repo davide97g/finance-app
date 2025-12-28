@@ -193,12 +193,14 @@ export class SyncManager {
 
       this.lastSyncAt = new Date().toISOString();
       this.initialSyncComplete = true;
+      this.initialSyncComplete = true;
       console.log("[Sync] Sync completed successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Sync] Sync failed:", error);
 
       // Attempt to refresh session if 403 Forbidden
-      if (error?.message?.includes("403") || error?.status === 403 || error?.code === "PGRST301") {
+      const err = error as { message?: string; status?: number; code?: string };
+      if (err?.message?.includes("403") || err?.status === 403 || err?.code === "PGRST301") {
         console.log("[Sync] Encountered 403 error, attempting session refresh...");
         const refreshResult = await supabase.auth.refreshSession();
         if (refreshResult.error) {
@@ -264,11 +266,12 @@ export class SyncManager {
       console.log("[Sync] Pushing pending changes...");
       await this.pushPendingWithRetry(user.id);
       console.log("[Sync] Push completed");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Sync] Push failed:", error);
 
       // Attempt to refresh session if 403 Forbidden
-      if (error?.message?.includes("403") || error?.status === 403 || error?.code === "PGRST301") {
+      const err = error as { message?: string; status?: number; code?: string };
+      if (err?.message?.includes("403") || err?.status === 403 || err?.code === "PGRST301") {
         console.log("[Sync] Encountered 403 error during push, attempting session refresh...");
         const refreshResult = await supabase.auth.refreshSession();
         if (refreshResult.error) {
@@ -338,12 +341,14 @@ export class SyncManager {
 
       this.lastSyncAt = new Date().toISOString();
       this.initialSyncComplete = true;
+      this.initialSyncComplete = true;
       console.log("[Sync] Full sync completed successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Sync] Full sync failed:", error);
 
       // Attempt to refresh session if 403 Forbidden
-      if (error?.message?.includes("403") || error?.status === 403 || error?.code === "PGRST301") {
+      const err = error as { message?: string; status?: number; code?: string };
+      if (err?.message?.includes("403") || err?.status === 403 || err?.code === "PGRST301") {
         console.log("[Sync] Encountered 403 error during full sync, attempting session refresh...");
         const refreshResult = await supabase.auth.refreshSession();
         if (refreshResult.error) {
@@ -479,7 +484,7 @@ export class SyncManager {
       if (tableName === "transactions" || tableName === "recurring_transactions") {
         const originalCount = pendingItems.length;
         pendingItems = pendingItems.filter(
-          (item: any) => item.category_id !== UNCATEGORIZED_CATEGORY.ID
+          (item) => (item as Transaction | RecurringTransaction).category_id !== UNCATEGORIZED_CATEGORY.ID
         );
         const skippedCount = originalCount - pendingItems.length;
         if (skippedCount > 0) {
@@ -520,6 +525,7 @@ export class SyncManager {
         // Use .select() to get the updated server data immediately (including new sync_token)
         const { data, error } = await supabase
           .from(tableName)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .upsert(itemsToPush as any)
           .select();
 
@@ -531,6 +537,7 @@ export class SyncManager {
         if (data) {
           await db.transaction("rw", db.table(tableName), async () => {
             for (const serverItem of data) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const item = serverItem as any;
               // Prepare item for local storage (handles type conversions etc.)
               const localUpdate = this.prepareItemForLocal(item, tableName);
@@ -595,7 +602,7 @@ export class SyncManager {
     userId: string
   ): TablesInsert<T> {
     // Remove local-only fields
-    const itemCopy = { ...item } as any;
+    const itemCopy = { ...item } as Record<string, unknown>;
     delete itemCopy.pendingSync;
     delete itemCopy.year_month;
 
@@ -604,14 +611,17 @@ export class SyncManager {
       updated_at: new Date().toISOString(),
     };
 
+    // Cast to record to allow dynamic assignment
+    const itemWithUserId = pushItem as Record<string, unknown>;
+
     // Add user_id only if the table uses it (not groups)
     if (tableName !== "groups" && tableName !== "group_members") {
-      pushItem.user_id = userId;
+      itemWithUserId.user_id = userId;
     }
 
     // Cast to unknown first to avoid type overlap issues, then to TablesInsert<T>
     // This is safe because we're constructing a valid insert object based on the schema
-    return pushItem as unknown as TablesInsert<T>;
+    return itemWithUserId as unknown as TablesInsert<T>;
   }
 
   /**
@@ -665,7 +675,7 @@ export class SyncManager {
     const userSettings = await db.user_settings.get(userId);
     const lastSyncToken = userSettings?.last_sync_token || 0;
     let maxToken = lastSyncToken;
-    const newGroupTransactions: any[] = [];
+    const newGroupTransactions: Tables<"transactions">[] = [];
 
     for (const tableName of TABLES) {
       let page = 0;
@@ -726,11 +736,12 @@ export class SyncManager {
                 const membership = await db.group_members
                   .where("group_id")
                   .equals(item.group_id as string)
-                  .and((m: any) => m.user_id === userId && !m.removed_at)
+                  .and((m) => m.user_id === userId && !m.removed_at)
                   .first();
 
                 if (membership) {
-                  newGroupTransactions.push(item);
+                  // as unknown as Tables<"transactions"> is safe here because tableName is checked
+                  newGroupTransactions.push(item as unknown as Tables<"transactions">);
                 }
               }
 
@@ -766,7 +777,7 @@ export class SyncManager {
 
       // Show toast notification for new and modified group transactions  
       await this.showGroupTransactionToast(newGroupTransactions, "new");
-      const modifiedGroupTransactions: any[] = []; // Track modified separately if needed
+      const modifiedGroupTransactions: Tables<"transactions">[] = []; // Track modified separately if needed
       await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
 
       // Process recurring transactions
@@ -788,8 +799,8 @@ export class SyncManager {
    */
   private async pullAll(userId: string): Promise<void> {
     let maxToken = 0;
-    const newGroupTransactions: any[] = [];
-    const modifiedGroupTransactions: any[] = [];
+    const newGroupTransactions: Tables<"transactions">[] = [];
+    const modifiedGroupTransactions: Tables<"transactions">[] = [];
 
     for (const tableName of TABLES) {
       let page = 0;
@@ -849,16 +860,16 @@ export class SyncManager {
                 const membership = await db.group_members
                   .where("group_id")
                   .equals(item.group_id as string)
-                  .and((m: any) => m.user_id === userId && !m.removed_at)
+                  .and((m) => m.user_id === userId && !m.removed_at)
                   .first();
 
                 if (membership) {
                   // Check if this is a new or modified transaction
                   const existingTxn = await db.transactions.get(item.id);
                   if (existingTxn) {
-                    modifiedGroupTransactions.push(item);
+                    modifiedGroupTransactions.push(item as unknown as Tables<"transactions">);
                   } else {
-                    newGroupTransactions.push(item);
+                    newGroupTransactions.push(item as unknown as Tables<"transactions">);
                   }
                 }
               }
@@ -952,7 +963,7 @@ export class SyncManager {
     item: Tables<T>,
     tableName: T
   ): LocalTableMap[T] {
-    const localItem: any = { ...item, pendingSync: 0 };
+    const localItem = { ...item, pendingSync: 0 } as unknown as LocalTableMap[T] & { year_month?: string; active?: number };
 
     // Calculate year_month for transactions
     if (tableName === "transactions" && "date" in item && item.date) {
@@ -973,7 +984,7 @@ export class SyncManager {
    * If one transaction, show full details. If multiple, show summary.
    */
   private async showGroupTransactionToast(
-    transactions: any[],
+    transactions: Tables<"transactions">[],
     action: "new" | "modified" = "new"
   ): Promise<void> {
     if (transactions.length === 0) return;
@@ -987,11 +998,11 @@ export class SyncManager {
       // Get current user's membership to calculate their share
       const userId = (await supabase.auth.getUser()).data.user?.id;
       let userShare = 100; // Default to 100% if we can't find membership
-      if (userId) {
+      if (userId && txn.group_id) {
         const membership = await db.group_members
           .where("group_id")
-          .equals(txn.group_id)
-          .and((m: any) => m.user_id === userId && !m.removed_at)
+          .equals(txn.group_id!)
+          .and((m) => m.user_id === userId && !m.removed_at)
           .first();
         if (membership) {
           userShare = membership.share;
@@ -1004,8 +1015,9 @@ export class SyncManager {
 
       // Get payer name
       let payerName = "Someone";
-      if (txn.paid_by_member_id) {
-        const member = await db.group_members.get(txn.paid_by_member_id);
+      const payerId = txn.paid_by_member_id;
+      if (payerId) {
+        const member = await db.group_members.get(payerId);
         if (member) {
           if (member.is_guest) {
             payerName = member.guest_name || "Guest";
@@ -1060,6 +1072,7 @@ export class SyncManager {
       // Group transactions by group
       const groupedByGroup = new Map<string, number>();
       for (const txn of transactions) {
+        if (!txn.group_id) continue;
         const count = groupedByGroup.get(txn.group_id) || 0;
         groupedByGroup.set(txn.group_id, count + 1);
       }
@@ -1067,6 +1080,7 @@ export class SyncManager {
       // Get group names
       const groupSummaries: string[] = [];
       for (const [groupId, count] of groupedByGroup.entries()) {
+        if (!groupId) continue;
         const group = await db.groups.get(groupId);
         const groupName = group?.name || "Unknown";
         groupSummaries.push(`• ${groupName}: ${count}`);
@@ -1187,10 +1201,10 @@ export class SyncManager {
         user_id: data.user_id,
         currency: data.currency || "EUR",
         language: data.language || "en",
-        theme: (data.theme as any) || "light",
+        theme: (data.theme as "light" | "dark" | "system") || "light",
         accentColor: data.accent_color || "slate", // Map snake_case to camelCase
-        start_of_week: (data.start_of_week as any) || "monday",
-        default_view: (data.default_view as any) || "list",
+        start_of_week: (data.start_of_week as "monday" | "sunday") || "monday",
+        default_view: (data.default_view as "list" | "calendar") || "list",
         include_investments_in_expense_totals:
           data.include_investments_in_expense_totals || false,
         include_group_expenses: data.include_group_expenses || false,

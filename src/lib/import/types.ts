@@ -12,16 +12,53 @@ export interface ParsedTransaction {
     type?: "expense" | "income" | "investment"; // Often missing in CSVs
     group_id?: string; // For group expenses
     user_id?: string; // For checking ownership
-    raw_data?: any; // Original row/object for debugging
+    raw_data?: unknown; // Original row/object for debugging
 }
 
 // Assuming ParsedCategory, ParsedContext, ParsedRecurringTransaction are new types the user intends to introduce or already exist elsewhere.
 import { Category } from "@/lib/db";
 
-// For now, I'll define them as `any` to ensure the file remains syntactically correct.
-type ParsedCategory = { id: string; name: string; type: "income" | "expense" | "investment";[key: string]: any };
-type ParsedContext = any;
-type ParsedRecurringTransaction = any;
+export type ParsedCategory = {
+    id: string;
+    name: string;
+    type: "income" | "expense" | "investment";
+    icon?: string;
+    color: string;
+    parent_id?: string;
+    active?: number | boolean;
+    budget?: number;
+    // Legacy Vue fields
+    title?: string;
+    parentCategoryId?: string;
+    parentId?: string;
+    [key: string]: unknown
+};
+
+export type ParsedContext = {
+    id?: string;
+    name: string;
+    description?: string;
+    [key: string]: unknown;
+};
+
+export type ParsedRecurringTransaction = {
+    id?: string;
+    amount: string; // Often string from import
+    description: string;
+    frequency: string;
+    start_date: string;
+    end_date?: string;
+    category_id?: string;
+    context_id?: string;
+    type: "income" | "expense" | "investment";
+    active?: number;
+    // Legacy Vue fields
+    categoryId?: string;
+    nextOccurrence?: string;
+    startDate?: string;
+    isActive?: boolean;
+    [key: string]: unknown;
+};
 
 export interface PotentialMerge {
     imported: ParsedCategory;
@@ -30,10 +67,31 @@ export interface PotentialMerge {
 }
 
 export interface RecurringConflict {
-    imported: any; // Raw recurring object
-    existing: any; // Existing recurring object
+    imported: ParsedRecurringTransaction;
+    existing: { id: string; description: string; amount: number;[key: string]: unknown };
     score: number; // 0 = exact match
 }
+
+export type ParsedBudget = {
+    category_id: string;
+    amount: number;
+    period: "monthly" | "yearly";
+    [key: string]: unknown;
+};
+
+export type ParsedGroup = {
+    id: string;
+    name: string;
+    [key: string]: unknown;
+};
+
+export type ParsedGroupMember = {
+    id: string;
+    group_id: string;
+    user_id: string;
+    share?: number;
+    [key: string]: unknown;
+};
 
 export interface ParsedData {
     source: ImportSource; // Changed to use the updated ImportSource
@@ -41,9 +99,9 @@ export interface ParsedData {
     categories?: ParsedCategory[]; // Optional, as some sources might not have them
     recurring?: ParsedRecurringTransaction[];
     contexts?: ParsedContext[];
-    budgets?: any[];      // Used for full backups
-    groups?: any[];
-    group_members?: any[];
+    budgets?: ParsedBudget[];      // Used for full backups
+    groups?: ParsedGroup[];
+    group_members?: ParsedGroupMember[];
     metadata?: {
         totalItems: number;
         version?: string;

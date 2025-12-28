@@ -21,21 +21,21 @@ export type StatisticsWorkerRequest = {
 export type StatisticsWorkerResponse = {
     type: "STATS_RESULT";
     payload: {
-        monthlyStats: any;
-        yearlyStats: any;
+        monthlyStats: { income: number; expense: number; investment: number; byCategory: any[] };
+        yearlyStats: { income: number; expense: number; investment: number; byCategory: any[] };
         monthlyNetBalance: number;
         yearlyNetBalance: number;
-        monthlyCategoryPercentages: any[];
-        yearlyCategoryPercentages: any[];
+        monthlyCategoryPercentages: { name: string; value: number; color: string }[];
+        yearlyCategoryPercentages: { name: string; value: number; color: string }[];
         monthlyExpensesByHierarchy: any[];
         yearlyExpensesByHierarchy: any[];
-        monthlyTrendData: any[];
-        monthlyCashFlow: any[];
+        monthlyTrendData: { period: string; income: number; expense: number; balance: number; monthIndex: number }[];
+        monthlyCashFlow: { period: string; income: number; expense: number; monthIndex: number }[];
         contextStats: any[];
-        dailyCumulativeExpenses: any[];
-        monthlyExpenses: any[];
-        monthlyIncome: any[];
-        monthlyInvestments: any[];
+        dailyCumulativeExpenses: { day: number; cumulative: number }[];
+        monthlyExpenses: { month: string; value: number; monthIndex: number }[];
+        monthlyIncome: { month: string; value: number; monthIndex: number }[];
+        monthlyInvestments: { month: string; value: number; monthIndex: number }[];
         monthlyContextTrends: any[];
 
         groupBalances: any[];

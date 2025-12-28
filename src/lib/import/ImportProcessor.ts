@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { TablesInsert } from "@/types/supabase";
 import {
     ParsedData,
     PotentialMerge,
@@ -33,7 +34,7 @@ export type ImportProgressCallback = (current: number, total: number, status: st
 
 export class ImportProcessor {
     private userId: string;
-    private existingRecurring: any[] = []; // To be populated before conflict analysis
+    private existingRecurring: unknown[] = []; // To be populated before conflict analysis
 
     constructor(userId: string) {
         this.userId = userId;
@@ -120,7 +121,7 @@ export class ImportProcessor {
 
             // Check for potential duplicates
             // Logic: Same amount AND similar description
-            const match = this.existingRecurring.find(ex => {
+            const match = this.existingRecurring.find((ex: any) => {
                 const exDesc = normalizeString(ex.description);
                 const exAmount = ex.amount;
 
@@ -141,8 +142,8 @@ export class ImportProcessor {
             if (match) {
                 // Return as RecurringConflict structure
                 conflicts.push({
-                    imported: { ...importedRec, name: importedRec.description, id: importedRec.id || uuidv4() },
-                    existing: { id: match.id, name: match.description, color: "#888888" }, // Mock color/name for compatibility with resolver UI
+                    imported: { ...importedRec, name: importedRec.description, id: importedRec.id || uuidv4() } as any,
+                    existing: { id: (match as any).id, description: (match as any).description, amount: (match as any).amount } as any,
                     score: 0
                 });
             }
@@ -155,8 +156,8 @@ export class ImportProcessor {
         if (data.transactions) {
             groupTransactionCount = data.transactions.filter(t => {
                 // Check raw_data for common group fields from various sources (though mainly GoNuts/Turtlet)
-                const raw = t.raw_data || {};
-                return !!(raw.group_id || raw.groupId || t.raw_data?.groupId || t.raw_data?.group_id);
+                const raw = t.raw_data as any || {};
+                return !!(raw.group_id || raw.groupId || (t.raw_data as any)?.groupId || (t.raw_data as any)?.group_id);
             }).length;
         }
         return {
@@ -190,7 +191,7 @@ export class ImportProcessor {
         const existingContexts = await db.contexts.where('user_id').equals(this.userId).toArray();
         const existingContextsMap = new Map(existingContexts.map(c => [c.name, c.id]));
 
-        const contextsToInsert: any[] = [];
+        const contextsToInsert: (TablesInsert<"contexts"> & { pendingSync?: number })[] = [];
 
         // 1. Contexts
         if (data.contexts) {
@@ -210,7 +211,7 @@ export class ImportProcessor {
                         user_id: this.userId,
                         name: ctx.name,
                         description: ctx.description,
-                        active: 1,
+                        active: 1 as unknown as boolean,
                         deleted_at: null,
                         pendingSync: 1
                     });
@@ -225,7 +226,7 @@ export class ImportProcessor {
         const existingCategories = await db.categories.where('user_id').equals(this.userId).toArray();
         // Map Name -> ID (lowercase for case insensitive matching)
         const existingCategoriesMap = new Map(existingCategories.filter(c => !c.deleted_at).map(c => [c.name.toLowerCase(), c.id]));
-        const categoriesToInsert: any[] = [];
+        const categoriesToInsert: (TablesInsert<"categories"> & { pendingSync?: number })[] = [];
 
         // 2. Categories
         if (data.categories) {
@@ -268,7 +269,7 @@ export class ImportProcessor {
                         color: cat.color,
                         type: cat.type,
                         parent_id: cat.parent_id ? categoryIdMap.get(cat.parent_id) : undefined,
-                        active: cat.active !== undefined ? Number(cat.active) : 1,
+                        active: (cat.active !== undefined ? Number(cat.active) : 1) as unknown as boolean,
                         deleted_at: null,
                         pendingSync: 1
                     });
@@ -277,7 +278,7 @@ export class ImportProcessor {
             }
         }
 
-        const transactionsToInsert: any[] = [];
+        const transactionsToInsert: (TablesInsert<"transactions"> & { pendingSync?: number, year_month: string })[] = [];
 
         // 3. Transactions
         if (data.transactions) {
@@ -331,7 +332,7 @@ export class ImportProcessor {
                 transactionsToInsert.push({
                     id: uuidv4(),
                     user_id: this.userId,
-                    category_id: finalCatId,
+                    category_id: finalCatId!,
                     context_id: finalCtxId,
                     type: tx.type || 'expense',
                     amount: finalAmount,
@@ -347,14 +348,14 @@ export class ImportProcessor {
             }
         }
 
-        const recurringToInsert: any[] = [];
+        const recurringToInsert: (TablesInsert<"recurring_transactions"> & { pendingSync?: number })[] = [];
 
         // 4. Recurring
         if (data.recurring) {
             onProgress?.(currentStep, totalSteps, 'Processing Recurring...');
             for (const rec of data.recurring) {
                 currentStep++;
-                if (skippedRecurringIds?.has(rec.id)) continue;
+                if (skippedRecurringIds?.has(rec.id!)) continue;
 
                 const mappedId = rec.category_id ? categoryIdMap.get(rec.category_id) : undefined;
                 let finalCatId = mappedId;
@@ -371,10 +372,10 @@ export class ImportProcessor {
                     type: rec.type,
                     amount: parseFloat(rec.amount),
                     description: rec.description,
-                    frequency: rec.frequency,
+                    frequency: rec.frequency as "monthly" | "weekly" | "yearly",
                     start_date: rec.start_date,
                     end_date: rec.end_date,
-                    active: rec.active ?? 1,
+                    active: (rec.active !== undefined ? Number(rec.active) : 1) as unknown as boolean,
                     deleted_at: null,
                     pendingSync: 1
                 });
@@ -382,7 +383,7 @@ export class ImportProcessor {
             }
         }
 
-        const budgetsToInsert: any[] = [];
+        const budgetsToInsert: (TablesInsert<"category_budgets"> & { pendingSync?: number })[] = [];
 
         // 5. Category Budgets
         if (data.budgets) {
@@ -414,7 +415,7 @@ export class ImportProcessor {
                             pendingSync: 1,
                             created_at: new Date().toISOString(),
                             updated_at: new Date().toISOString()
-                        });
+                        } as any);
                         // Add to set to prevent duplicates within same file
                         existingBudgetsSet.add(budgetKey);
                     }
@@ -426,11 +427,11 @@ export class ImportProcessor {
         onProgress?.(totalSteps, totalSteps, 'Saving to database...');
 
         await db.transaction('rw', [db.contexts, db.categories, db.transactions, db.recurring_transactions, db.category_budgets], async () => {
-            if (contextsToInsert.length) await db.contexts.bulkPut(contextsToInsert);
-            if (categoriesToInsert.length) await db.categories.bulkPut(categoriesToInsert);
-            if (transactionsToInsert.length) await db.transactions.bulkPut(transactionsToInsert);
-            if (recurringToInsert.length) await db.recurring_transactions.bulkPut(recurringToInsert);
-            if (budgetsToInsert.length) await db.category_budgets.bulkPut(budgetsToInsert);
+            if (contextsToInsert.length) await db.contexts.bulkPut(contextsToInsert as any[]);
+            if (categoriesToInsert.length) await db.categories.bulkPut(categoriesToInsert as any[]);
+            if (transactionsToInsert.length) await db.transactions.bulkPut(transactionsToInsert as any[]);
+            if (recurringToInsert.length) await db.recurring_transactions.bulkPut(recurringToInsert as any[]);
+            if (budgetsToInsert.length) await db.category_budgets.bulkPut(budgetsToInsert as any[]);
         });
 
         return { categories: importedCategories, transactions: importedTransactions, recurring: importedRecurring, orphanCount, skippedCount: (data.transactions?.length || 0) - importedTransactions };
@@ -455,6 +456,7 @@ export class ImportProcessor {
         let orphanCount = 0;
 
         const categoryIdMap = new Map<string, string>();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const vueCategoriesMap = new Map<string, any>();
 
         // Pre-fill map with user validated merges
@@ -484,8 +486,8 @@ export class ImportProcessor {
             return "expense";
         };
 
-        const categoriesToInsert: any[] = [];
-        const budgetsToInsert: any[] = [];
+        const categoriesToInsert: (TablesInsert<"categories"> & { pendingSync?: number })[] = [];
+        const budgetsToInsert: (TablesInsert<"category_budgets"> & { pendingSync?: number })[] = [];
 
         // Load existing categories for dedupe
         const existingCategories = await db.categories.where('user_id').equals(this.userId).toArray();
@@ -510,7 +512,7 @@ export class ImportProcessor {
                 if (categoryIdMap.has(vueCat.id)) continue; // Already mapped (via merge)
 
                 // Check exact match (Auto-merge)
-                const existingId = existingCategoriesMap.get(vueCat.title.toLowerCase());
+                const existingId = existingCategoriesMap.get((vueCat.title || "").toLowerCase());
                 if (existingId) {
                     categoryIdMap.set(vueCat.id, existingId);
                     // DEBUG: Uncomment to trace auto-merge
@@ -571,12 +573,12 @@ export class ImportProcessor {
                 categoriesToInsert.push({
                     id: mappedId,
                     user_id: this.userId,
-                    name: vueCat.title,
+                    name: vueCat.title!, // Cast as string because we filtered undefined above/in title check
                     icon: validateIcon(vueCat.icon),
                     color: categoryColor,
                     type: categoryType,
                     parent_id: newParentId,
-                    active: vueCat.active ? 1 : 0,
+                    active: (vueCat.active ? 1 : 0) as unknown as boolean,
                     deleted_at: null,
                     pendingSync: 1
                 });
@@ -607,12 +609,12 @@ export class ImportProcessor {
                         pendingSync: 1,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
-                    });
+                    } as any);
                 }
             }
         }
 
-        const transactionsToInsert: any[] = [];
+        const transactionsToInsert: (TablesInsert<"transactions"> & { pendingSync?: number, year_month: string })[] = [];
 
         // Transactions
         if (data.transactions) {
@@ -663,7 +665,7 @@ export class ImportProcessor {
             }
         }
 
-        const recurringToInsert: any[] = [];
+        const recurringToInsert: (TablesInsert<"recurring_transactions"> & { pendingSync?: number })[] = [];
 
         // Recurring
         if (data.recurring) {
@@ -694,9 +696,9 @@ export class ImportProcessor {
                     type: type,
                     amount: parseFloat(vueRec.amount),
                     description: vueRec.description || "",
-                    frequency: frequency,
-                    start_date: (vueRec.nextOccurrence || vueRec.startDate).split("T")[0],
-                    active: vueRec.isActive ? 1 : 0,
+                    frequency: frequency as "monthly" | "weekly" | "yearly",
+                    start_date: (vueRec.nextOccurrence || vueRec.startDate || "").split("T")[0],
+                    active: (vueRec.isActive ? 1 : 0) as unknown as boolean,
                     deleted_at: null,
                     pendingSync: 1
                 });
@@ -708,10 +710,10 @@ export class ImportProcessor {
         onProgress?.(totalSteps, totalSteps, 'Saving to database...');
 
         await db.transaction('rw', [db.categories, db.transactions, db.recurring_transactions, db.category_budgets], async () => {
-            if (categoriesToInsert.length) await db.categories.bulkPut(categoriesToInsert);
-            if (transactionsToInsert.length) await db.transactions.bulkPut(transactionsToInsert);
-            if (recurringToInsert.length) await db.recurring_transactions.bulkPut(recurringToInsert);
-            if (budgetsToInsert.length) await db.category_budgets.bulkPut(budgetsToInsert);
+            if (categoriesToInsert.length) await db.categories.bulkPut(categoriesToInsert as any[]); // Dexie might complain about strict types
+            if (transactionsToInsert.length) await db.transactions.bulkPut(transactionsToInsert as any[]);
+            if (recurringToInsert.length) await db.recurring_transactions.bulkPut(recurringToInsert as any[]);
+            if (budgetsToInsert.length) await db.category_budgets.bulkPut(budgetsToInsert as any[]);
         });
 
         return { categories: importedCategories, transactions: importedTransactions, recurring: importedRecurring, orphanCount };

@@ -28,8 +28,8 @@ describe('ImportConflictResolver', () => {
 
     const mockRecurringConflicts: RecurringConflict[] = [
         {
-            imported: { id: 'rec-1', name: 'Netflix', amount: '10' } as any,
-            existing: { id: 'ex-rec-1', name: 'Netflix', color: '#000000' } as any,
+            imported: { id: 'rec-1', description: 'Netflix', amount: '10' } as any,
+            existing: { id: 'ex-rec-1', description: 'Netflix', color: '#000000', amount: 10 } as any,
             score: 0
         }
     ];

@@ -411,7 +411,7 @@ export function StatisticsPage() {
 
               {/* Category Distribution - Hybrid Component */}
               <StatsCategoryDistribution
-                categoryData={currentCategoryPercentages}
+                categoryData={currentCategoryPercentages.map(c => ({ ...c, amount: c.value, fill: c.color }))}
                 isLoading={isLoading}
               />
 
@@ -932,7 +932,7 @@ export function StatisticsPage() {
             <div className="grid gap-4 md:grid-cols-2 min-w-0">
               {/* Category Distribution - Hybrid Component (Yearly) */}
               <StatsCategoryDistribution
-                categoryData={yearlyCategoryPercentages}
+                categoryData={yearlyCategoryPercentages.map(c => ({ ...c, amount: c.value, fill: c.color }))}
                 isLoading={false}
               />
 

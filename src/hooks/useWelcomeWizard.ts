@@ -45,18 +45,17 @@ function dispatchSyncEvent(isOpen: boolean) {
 }
 
 export function useWelcomeWizard() {
-    const [state, setState] = useState<WelcomeWizardState>(defaultState);
-    const [isOpen, setIsOpen] = useState(false);
+    const [state, setState] = useState<WelcomeWizardState>(() => getStoredState());
+    const [isOpen, setIsOpen] = useState(() => {
+        const s = getStoredState();
+        return !s.completed && !s.skipped;
+    });
 
     // Load state on mount and listen for sync events
     useEffect(() => {
-        const stored = getStoredState();
-        setState(stored);
+        // setState(stored); // Removed: handled in initializer
 
-        // Show wizard if not completed or skipped
-        if (!stored.completed && !stored.skipped) {
-            setIsOpen(true);
-        }
+
 
         // Listen for sync events from other instances
         const handleSync = (event: Event) => {

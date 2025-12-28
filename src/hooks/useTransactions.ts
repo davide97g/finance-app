@@ -25,6 +25,7 @@ export function useTransactions(
 
   // Single unified query that handles all filtering in one operation
   const transactions = useLiveQuery(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let collection: any;
 
     if (yearMonth) {

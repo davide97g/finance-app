@@ -269,7 +269,7 @@ export function useStatistics(params?: UseStatisticsParams) {
         trend: "neutral"
       }
     }
-  }, [workerResult.monthlyStats, previousMonthTransactions, mode, getEffectiveAmount]);
+  }, [workerResult.monthlyStats, previousMonthTransactions, mode, getEffectiveAmount, transactions]);
 
   const previousYearTransactions = useLiveQuery(
     () =>
@@ -333,7 +333,7 @@ export function useStatistics(params?: UseStatisticsParams) {
         trend: "neutral"
       }
     }
-  }, [workerResult.yearlyStats, previousYearTransactions, mode, getEffectiveAmount]);
+  }, [workerResult.yearlyStats, previousYearTransactions, mode, getEffectiveAmount, yearlyTransactions]);
 
   const burnRate = useMemo(() => {
     const [yearStr, monthStr] = currentMonth.split("-");
