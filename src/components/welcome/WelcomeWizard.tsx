@@ -475,7 +475,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                             <p className="text-sm text-muted-foreground">{t("help.user_guide_desc")}</p>
                         </div>
 
-                        <HelpSystemWrapper>
+                        <HelpSystemWrapper triggerAsChild>
                             <Button size="lg" className="w-full gap-2 group">
                                 <HelpCircle className="w-5 h-5" />
                                 {t("help.open_user_guide")}
