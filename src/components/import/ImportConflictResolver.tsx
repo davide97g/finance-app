@@ -30,7 +30,7 @@ export function ImportConflictResolver({
 
     // RECURRING: Checked = Skip (Don't import)
     const [selectedForSkip, setSelectedForSkip] = useState<Set<string>>(
-        new Set(recurringConflicts.map((c) => c.imported.id))
+        new Set(recurringConflicts.map((c) => c.imported.id!).filter(Boolean) as string[])
     );
 
     const toggleMerge = (importedId: string) => {
@@ -108,7 +108,7 @@ export function ImportConflictResolver({
                                                         {conflict.existing.name}
                                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: conflict.existing.color }} />
                                                     </span>
-                                                    <Badge variant="outline" className="mt-1 text-xs text-muted-foreground w-fit">Existing</Badge>
+                                                    <Badge variant="outline" className="mt-1 text-xs text-muted-foreground w-fit">{t("badge_existing")}</Badge>
                                                 </div>
                                             </div>
                                             <div className="ml-6 pl-6 border-l flex flex-col gap-2 items-center min-w-[120px]">
@@ -128,12 +128,12 @@ export function ImportConflictResolver({
                             <div className="space-y-4 py-4">
                                 {recurringConflicts.length === 0 && <div className="text-center p-8 text-muted-foreground">{t("import.status_no_recurring_conflicts", "No recurring conflicts found.")}</div>}
                                 {recurringConflicts.map((conflict) => {
-                                    const isSkipped = selectedForSkip.has(conflict.imported.id);
+                                    const isSkipped = selectedForSkip.has(conflict.imported.id!);
                                     return (
                                         <div key={conflict.imported.id} className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isSkipped ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800" : "bg-card border-border"} `}>
                                             <div className="flex-1 grid grid-cols-[1fr,auto,1fr] items-center gap-4">
                                                 <div className="flex flex-col items-end text-right">
-                                                    <span className="font-medium truncate max-w-[200px]">{conflict.imported.name}</span>
+                                                    <span className="font-medium truncate max-w-[200px]">{conflict.imported.description}</span>
                                                     <span className="text-sm font-mono">{conflict.imported.amount}€</span>
                                                     <Badge variant="outline" className="mt-1 text-xs text-muted-foreground w-fit">{t("import.badge_incoming", "Incoming")}</Badge>
                                                 </div>
@@ -143,7 +143,7 @@ export function ImportConflictResolver({
                                                 </div>
                                                 <div className="flex flex-col items-start">
                                                     <span className="font-medium flex items-center gap-2 truncate max-w-[200px]">
-                                                        {conflict.existing.name}
+                                                        {conflict.existing.description}
                                                     </span>
                                                     <span className="text-sm font-mono text-muted-foreground">{conflict.imported.amount}€</span>
                                                     <Badge variant="outline" className="mt-1 text-xs text-muted-foreground w-fit">{t("import.badge_existing", "Existing")}</Badge>
@@ -152,14 +152,14 @@ export function ImportConflictResolver({
                                             <div className="ml-6 pl-6 border-l flex flex-col gap-2 items-center min-w-[140px]">
                                                 {isSkipped ? (
                                                     <div className="text-center">
-                                                        <Button variant="secondary" size="sm" className="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300" onClick={() => toggleSkip(conflict.imported.id)}>
+                                                        <Button variant="secondary" size="sm" className="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300" onClick={() => toggleSkip(conflict.imported.id!)}>
                                                             <X className="w-4 h-4 mr-1" /> {t("import.action_skipped", "Skipped")}
                                                         </Button>
                                                         <p className="text-[10px] text-muted-foreground mt-1">{t("import.status_will_not_import", "Will not be imported")}</p>
                                                     </div>
                                                 ) : (
                                                     <div className="text-center">
-                                                        <Button variant="outline" size="sm" className="w-full" onClick={() => toggleSkip(conflict.imported.id)}>
+                                                        <Button variant="outline" size="sm" className="w-full" onClick={() => toggleSkip(conflict.imported.id!)}>
                                                             <Check className="w-4 h-4 mr-1" /> {t("import.action_import_new", "Import New")}
                                                         </Button>
                                                         <p className="text-[10px] text-muted-foreground mt-1">{t("import.status_will_create_duplicate", "Will create duplicate")}</p>

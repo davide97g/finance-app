@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 
 export function useMediaQuery(query: string) {
-    const [value, setValue] = useState(false);
+    const [value, setValue] = useState(() => {
+        if (typeof window !== "undefined") {
+            return window.matchMedia(query).matches;
+        }
+        return false;
+    });
 
     useEffect(() => {
         function onChange(event: MediaQueryListEvent) {
@@ -10,7 +15,7 @@ export function useMediaQuery(query: string) {
 
         const result = window.matchMedia(query);
         result.addEventListener("change", onChange);
-        setValue(result.matches);
+        // setValue(result.matches); // Handled in lazy init
 
         return () => result.removeEventListener("change", onChange);
     }, [query]);

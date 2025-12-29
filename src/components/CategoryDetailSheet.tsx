@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Edit, Trash2, Target, FolderTree } from "lucide-react";
+import { createElement } from "react";
 
 interface CategoryBudgetInfo {
   amount: number;
@@ -69,7 +70,7 @@ export function CategoryDetailSheet({
           className="h-14 w-14 rounded-full flex items-center justify-center text-white shrink-0"
           style={{ backgroundColor: category.color }}
         >
-          {IconComp && <IconComp className="h-7 w-7" />}
+          {IconComp && createElement(IconComp, { className: "h-7 w-7" })}
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-xl font-semibold truncate">{category.name}</h3>
@@ -158,13 +159,12 @@ export function CategoryDetailSheet({
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full transition-all ${
-                        budgetInfo.percentage > 100
-                          ? "bg-destructive"
-                          : budgetInfo.percentage > 80
+                      className={`h-full transition-all ${budgetInfo.percentage > 100
+                        ? "bg-destructive"
+                        : budgetInfo.percentage > 80
                           ? "bg-yellow-500"
                           : "bg-primary"
-                      }`}
+                        }`}
                       style={{
                         width: `${Math.min(budgetInfo.percentage, 100)}%`,
                       }}

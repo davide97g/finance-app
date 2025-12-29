@@ -176,14 +176,18 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
 
     // Initialize state from existing data
     useEffect(() => {
-        if (profile?.full_name) {
-            setUserName(profile.full_name);
+        // Only sync if profile name is different and we haven't typed yet (or just initial sync)
+        if (profile?.full_name && profile.full_name !== userName) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setUserName((prev) => prev ? prev : (profile.full_name || ""));
         }
-    }, [profile]);
+    }, [profile, userName]);
 
     useEffect(() => {
         if (settings?.monthly_budget) {
-            setMonthlyBudget(settings.monthly_budget.toString());
+            const budgetStr = settings.monthly_budget.toString();
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setMonthlyBudget(prev => prev ? prev : budgetStr);
         }
     }, [settings]);
 
@@ -196,6 +200,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
     // Reset state when dialog opens
     useEffect(() => {
         if (open) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCurrentStep(0);
             setDirection(1);
             setDemoTransactions(demoData.transactions);
@@ -475,7 +480,7 @@ export function WelcomeWizard({ open, onComplete, onSkip }: WelcomeWizardProps) 
                             <p className="text-sm text-muted-foreground">{t("help.user_guide_desc")}</p>
                         </div>
 
-                        <HelpSystemWrapper>
+                        <HelpSystemWrapper triggerAsChild>
                             <Button size="lg" className="w-full gap-2 group">
                                 <HelpCircle className="w-5 h-5" />
                                 {t("help.open_user_guide")}

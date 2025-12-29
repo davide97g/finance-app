@@ -21,6 +21,7 @@ export class AntigravityBackupParser implements TransactionParser {
         const data = JSON.parse(content);
 
         // Transform transactions to normalized format
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transactions: ParsedTransaction[] = (data.transactions || []).map((t: any) => ({
             id: t.id,
             date: t.date,

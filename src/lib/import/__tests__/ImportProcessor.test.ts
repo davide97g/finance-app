@@ -1,6 +1,7 @@
 import { ImportProcessor } from '../ImportProcessor';
 import { db } from '../../db';
 import { UNCATEGORIZED_CATEGORY } from '../../constants';
+import { ParsedData } from '../types';
 
 // Mock uuid
 jest.mock('uuid', () => ({
@@ -81,7 +82,7 @@ describe('ImportProcessor', () => {
                 })
             });
 
-            const data: any = { categories: importedCategories };
+            const data = { categories: importedCategories } as unknown as ParsedData;
             const conflicts = await processor.analyzeCategoryConflicts(data);
 
             expect(conflicts).toHaveLength(1);
@@ -103,7 +104,7 @@ describe('ImportProcessor', () => {
                 })
             });
 
-            const data: any = { categories: importedCategories };
+            const data = { categories: importedCategories } as unknown as ParsedData;
             const conflicts = await processor.analyzeCategoryConflicts(data);
 
             expect(conflicts).toHaveLength(0);
@@ -112,7 +113,7 @@ describe('ImportProcessor', () => {
 
     describe('process (Standard Import)', () => {
         it('should import categories and transactions correctly', async () => {
-            const data: any = {
+            const data = {
                 source: 'standard',
                 categories: [
                     { id: 'cat-1', name: 'Food' }
@@ -120,7 +121,7 @@ describe('ImportProcessor', () => {
                 transactions: [
                     { id: 'tx-1', amount: -50, description: 'Lunch', category_id: 'cat-1', date: '2023-01-01' }
                 ]
-            };
+            } as unknown as ParsedData;
 
             // Mock Category Check: No existing category named Food
             // Pass 1 (ID resolution)
@@ -156,12 +157,12 @@ describe('ImportProcessor', () => {
         });
 
         it('should use fallback category with reserved ID if category_id missing', async () => {
-            const data: any = {
+            const data = {
                 source: 'standard',
                 transactions: [
                     { id: 'tx-1', amount: -10, description: 'Mystery', date: '2023-01-01' }
                 ]
-            };
+            } as unknown as ParsedData;
 
             // Fallback lookup by reserved ID - category doesn't exist yet
             (db.categories.get as jest.Mock).mockResolvedValue(null);
@@ -182,14 +183,14 @@ describe('ImportProcessor', () => {
         });
 
         it('should respect active status from imported category', async () => {
-            const data: any = {
+            const data = {
                 source: 'standard',
                 categories: [
                     { id: 'cat-active', name: 'Active Cat', active: 1 },
                     { id: 'cat-inactive', name: 'Inactive Cat', active: 0 }
                 ],
                 transactions: []
-            };
+            } as unknown as ParsedData;
 
             // Mock checks
             (db.categories.where as jest.Mock).mockReturnValue({
@@ -215,7 +216,7 @@ describe('ImportProcessor', () => {
         });
 
         it('should import category budgets', async () => {
-            const data: any = {
+            const data = {
                 source: 'standard',
                 categories: [
                     { id: 'cat-1', name: 'Budgeted Cat' }
@@ -224,7 +225,7 @@ describe('ImportProcessor', () => {
                     { category_id: 'cat-1', amount: 500, period: 'monthly' }
                 ],
                 transactions: []
-            };
+            } as unknown as ParsedData;
 
             // Mock checks
             (db.categories.where as jest.Mock).mockReturnValue({
@@ -265,7 +266,7 @@ describe('ImportProcessor', () => {
         });
 
         it('should import group transaction share correctly', async () => {
-            const data: any = {
+            const data = {
                 source: 'standard',
                 userId: 'export-user-1',
                 categories: [
@@ -289,7 +290,7 @@ describe('ImportProcessor', () => {
                         date: '2023-01-01'
                     }
                 ]
-            };
+            } as unknown as ParsedData;
 
             // Mock checks
             (db.categories.where as jest.Mock).mockReturnValue({
@@ -322,7 +323,7 @@ describe('ImportProcessor', () => {
         it('should correctly preserve parent-child relationships for categories', async () => {
             // This test reproduces the bug where "Carburante" ends up as root instead of child of "Trasporto"
             // The order in the array matters - Carburante comes BEFORE Trasporto
-            const data: any = {
+            const data = {
                 source: 'legacy_vue',
                 categories: [
                     // Child category comes before parent in array (same order as JSON export)
@@ -357,7 +358,7 @@ describe('ImportProcessor', () => {
                     }
                 ],
                 transactions: []
-            };
+            } as unknown as ParsedData;
 
             // Mock empty DB (fresh import)
             (db.categories.where as jest.Mock).mockReturnValue({
@@ -376,9 +377,10 @@ describe('ImportProcessor', () => {
             const insertedCategories = bulkPutCalls[0][0];
 
             // Find our test categories
-            const carburante = insertedCategories.find((c: any) => c.name === 'Carburante');
-            const trasporto = insertedCategories.find((c: any) => c.name === 'Trasporto');
-            const carburanteMito = insertedCategories.find((c: any) => c.name === 'Carburante Mito');
+            // Find our test categories
+            const carburante = insertedCategories.find((c: { name: string }) => c.name === 'Carburante');
+            const trasporto = insertedCategories.find((c: { name: string }) => c.name === 'Trasporto');
+            const carburanteMito = insertedCategories.find((c: { name: string }) => c.name === 'Carburante Mito');
 
             expect(carburante).toBeDefined();
             expect(trasporto).toBeDefined();
@@ -396,7 +398,7 @@ describe('ImportProcessor', () => {
 
         it('should correctly handle multi-level hierarchies with 3+ levels', async () => {
             // Test 3-level hierarchy: Expenses (ROOT) -> Trasporto -> Carburante -> Carburante Mito
-            const data: any = {
+            const data = {
                 source: 'legacy_vue',
                 categories: [
                     // Level 3 (deepest) - comes first
@@ -428,7 +430,7 @@ describe('ImportProcessor', () => {
                     }
                 ],
                 transactions: []
-            };
+            } as unknown as ParsedData;
 
             (db.categories.where as jest.Mock).mockReturnValue({
                 equals: jest.fn().mockReturnValue({
@@ -442,9 +444,9 @@ describe('ImportProcessor', () => {
             const bulkPutCalls = (db.categories.bulkPut as jest.Mock).mock.calls;
             const insertedCategories = bulkPutCalls[0][0];
 
-            const carburante = insertedCategories.find((c: any) => c.name === 'Carburante');
-            const trasporto = insertedCategories.find((c: any) => c.name === 'Trasporto');
-            const carburanteMito = insertedCategories.find((c: any) => c.name === 'Carburante Mito');
+            const carburante = insertedCategories.find((c: { name: string }) => c.name === 'Carburante');
+            const trasporto = insertedCategories.find((c: { name: string }) => c.name === 'Trasporto');
+            const carburanteMito = insertedCategories.find((c: { name: string }) => c.name === 'Carburante Mito');
 
             // Build hierarchy chains and verify
             console.log('[TEST] Hierarchy chain verification:');

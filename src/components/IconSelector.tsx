@@ -45,10 +45,11 @@ export function IconSelector({ value, onChange }: IconSelectorProps) {
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between"
+            data-testid="icon-trigger"
         >
             <div className="flex items-center gap-2">
                 {SelectedIcon ? (
-                    <SelectedIcon className="h-4 w-4" />
+                    React.createElement(SelectedIcon, { className: "h-4 w-4" })
                 ) : (
                     <span className="text-muted-foreground">{t("select_icon") || "Select Icon"}</span>
                 )}
@@ -69,6 +70,7 @@ export function IconSelector({ value, onChange }: IconSelectorProps) {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-8"
+                    data-testid="icon-search"
                 />
             </div>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[300px] overflow-y-auto p-1">
@@ -86,6 +88,7 @@ export function IconSelector({ value, onChange }: IconSelectorProps) {
                                 "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors hover:bg-accent",
                                 isSelected && "bg-accent ring-2 ring-primary"
                             )}
+                            data-testid={`icon-option-${item.name}`}
                         >
                             <Icon className="h-6 w-6" />
                             <span className="text-[10px] truncate w-full text-center">

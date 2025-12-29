@@ -5,6 +5,7 @@ import { Tag, Users, AlertCircle } from "lucide-react";
 import { SyncStatusBadge } from "./SyncStatus";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
 import { SwipeableItem } from "@/components/ui/SwipeableItem";
+import { createElement } from "react";
 
 interface MobileTransactionRowProps {
   transaction: Transaction;
@@ -97,7 +98,7 @@ export function MobileTransactionRow({
           aria-hidden="true"
         >
           {IconComp ? (
-            <IconComp className="h-5 w-5" />
+            createElement(IconComp, { className: "h-5 w-5" })
           ) : (
             <div className="h-5 w-5 rounded-full bg-muted" />
           )}

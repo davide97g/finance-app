@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { SwipeableItem } from "@/components/ui/SwipeableItem";
+import { createElement } from "react";
 
 interface MobileCategoryRowProps {
   category: Category;
@@ -71,7 +72,7 @@ export function MobileCategoryRow({
           }}
         >
           {IconComp ? (
-            <IconComp className="h-5 w-5" />
+            createElement(IconComp, { className: "h-5 w-5" })
           ) : (
             <div className="h-5 w-5 rounded-full bg-muted" />
           )}

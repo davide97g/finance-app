@@ -59,6 +59,7 @@ export class RevolutParser implements TransactionParser {
                         const isIt = fields.includes('Prodotto');
                         const map = isIt ? this.knownHeaders.it : this.knownHeaders.en;
 
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         for (const row of results.data as any[]) {
                             // 1. Filter Status
                             // Note: In the provided IT file, the column is "State" (English key) but values might be localized? 
@@ -90,7 +91,7 @@ export class RevolutParser implements TransactionParser {
                             // Revolut CSV: "Importo" usually includes sign. "-10.00".
                             // "Costo" (Fee) is usually "0.00".
                             const amountRaw = row[map.amount];
-                            let amount = this.parseNumber(amountRaw);
+                            const amount = this.parseNumber(amountRaw);
                             // const fee = this.parseNumber(feeRaw); // Unused
 
                             // In Revolut export, Amount is usually net of fees? Or inclusive?
@@ -131,7 +132,7 @@ export class RevolutParser implements TransactionParser {
                         reject(e);
                     }
                 },
-                error: (err: any) => reject(err)
+                error: (err: unknown) => reject(err)
             });
         });
     }

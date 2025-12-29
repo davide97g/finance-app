@@ -7,6 +7,7 @@ export default {
         '^@/(.*)$': '<rootDir>/src/$1',
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
         '^uuid$': '<rootDir>/src/__mocks__/uuid.ts',
+        '\\?worker$': '<rootDir>/src/__mocks__/workerMock.ts',
     },
     setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
     collectCoverageFrom: [
@@ -38,6 +39,7 @@ export default {
                 },
                 esModuleInterop: true,
             },
+            isolatedModules: true,
         }],
     },
     transformIgnorePatterns: [

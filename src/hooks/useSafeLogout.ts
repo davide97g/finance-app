@@ -9,18 +9,18 @@ export function useSafeLogout() {
     const navigate = useNavigate();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+    const performLogout = useCallback(async () => {
+        await signOut();
+        navigate("/auth");
+    }, [signOut, navigate]);
+
     const requestLogout = useCallback((requireConfirmation = false) => {
         if (pendingCount > 0 || requireConfirmation) {
             setIsDialogOpen(true);
         } else {
             performLogout();
         }
-    }, [pendingCount]);
-
-    const performLogout = async () => {
-        await signOut();
-        navigate("/auth");
-    };
+    }, [pendingCount, performLogout]);
 
     const confirmLogout = async () => {
         await performLogout();

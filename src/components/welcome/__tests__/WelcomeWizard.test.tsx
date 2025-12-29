@@ -98,6 +98,8 @@ describe("WelcomeWizard", () => {
         fireEvent.click(nextBtn);
         // Step 8 -> 9 (Offline)
         fireEvent.click(nextBtn);
+        // Step 9 -> 10 (Help Promo)
+        fireEvent.click(nextBtn);
 
         // Now button should be "Finish"
         await waitFor(() => {

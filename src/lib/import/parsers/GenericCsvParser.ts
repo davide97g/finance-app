@@ -1,11 +1,12 @@
 
 import Papa from 'papaparse';
-import { TransactionParser, ParsedData, ParsedTransaction, ImportOptions } from '../types';
+import { TransactionParser, ParsedData, ParsedTransaction, ImportOptions, ParsedCategory } from '../types';
 
 export class GenericCsvParser implements TransactionParser {
     name = "Generic CSV Import";
     fileExtensions = ["csv"];
 
+     
     async canParse(file: File, _content: string): Promise<boolean> {
         return file.name.toLowerCase().endsWith('.csv');
     }
@@ -24,18 +25,18 @@ export class GenericCsvParser implements TransactionParser {
                 complete: (results) => {
                     try {
                         const parsedCategoriesMap = new Map<string, string>(); // Name -> ID
-                        const categories: any[] = [];
-
+                        const categories: ParsedCategory[] = [];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const transactions: ParsedTransaction[] = results.data.map((row: any) => {
-                            let dateVal = row[csvMapping.dateColumn];
-                            let amountVal = row[csvMapping.amountColumn];
-                            let descVal = row[csvMapping.descriptionColumn];
+                            const dateVal = row[csvMapping.dateColumn];
+                            const amountVal = row[csvMapping.amountColumn];
+                            const descVal = row[csvMapping.descriptionColumn];
 
                             // Basic cleaning
-                            let feeVal = csvMapping.feeColumn ? row[csvMapping.feeColumn] : '0';
+                            const feeVal = csvMapping.feeColumn ? row[csvMapping.feeColumn] : '0';
 
                             // Clean number helper
-                            const cleanNumber = (val: any) => {
+                            const cleanNumber = (val: unknown) => {
                                 if (typeof val === 'number') return val;
                                 if (typeof val === 'string') {
                                     return parseFloat(val.replace(/[^0-9.-]/g, ''));
@@ -109,7 +110,7 @@ export class GenericCsvParser implements TransactionParser {
                         reject(e);
                     }
                 },
-                error: (error: any) => {
+                error: (error: unknown) => {
                     reject(error);
                 }
             });

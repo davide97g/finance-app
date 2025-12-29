@@ -5,10 +5,12 @@ export class IntesaSanpaoloParser implements TransactionParser {
     name = "Intesa Sanpaolo Import";
     fileExtensions = ["xlsx"];
 
+     
     async canParse(file: File, _content: string): Promise<boolean> {
         return file.name.toLowerCase().endsWith('.xlsx');
     }
 
+     
     async parse(file: File, _content: string, _options?: ImportOptions): Promise<ParsedData> {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -41,6 +43,7 @@ export class IntesaSanpaoloParser implements TransactionParser {
                         sheet['!ref'] = newRef;
                     }
 
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
                     // Find header row
@@ -110,7 +113,7 @@ export class IntesaSanpaoloParser implements TransactionParser {
 
                         // Parse Amount
                         const rawAmount = row[colMap.amount];
-                        let amount = typeof rawAmount === 'number' ? rawAmount : parseFloat(rawAmount);
+                        const amount = typeof rawAmount === 'number' ? rawAmount : parseFloat(rawAmount);
                         // Intesa expenses are negative. ImportProcessor expects positive amount usually? 
                         // Wait, previous Revolut parser returns negative for expense. 
                         // ImportProcessor line 267: `const normalizedAmount = Math.abs(tx.amount);`

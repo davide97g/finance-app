@@ -72,7 +72,6 @@ export function useContexts() {
     // Prepare updates for validation (which expects number for active)
     const updatesForValidation = { ...updates };
     if (typeof updates.active === 'boolean') {
-      // @ts-ignore
       updatesForValidation.active = updates.active ? 1 : 0;
     }
 
@@ -81,7 +80,7 @@ export function useContexts() {
 
     // Convert active boolean to number safely (if validation passed through boolean? no schema enforces number)
     const { active, description, ...rest } = validatedUpdates;
-    const finalUpdates: any = { ...rest };
+    const finalUpdates: Partial<Context> = { ...rest };
     if (active !== undefined) {
       finalUpdates.active = active; // validatedData active is already number from schema
     }
@@ -103,7 +102,7 @@ export function useContexts() {
       await db.transactions
         .where("context_id")
         .equals(id)
-        .modify({ context_id: null as any, pendingSync: 1 });
+        .modify({ context_id: null as unknown as string, pendingSync: 1 });
 
       // 2. Soft delete context
       await db.contexts.update(id, {
