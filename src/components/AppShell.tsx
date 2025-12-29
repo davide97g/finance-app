@@ -44,7 +44,7 @@ function AppHeader() {
           )}
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 mt-1">
             <Squirrel className="size-5 text-primary" />
-            <h1 className="font-semibold text-lg">{t("app_title")} <span className="text-[10px] opacity-30">V7</span></h1>
+            <h1 className="font-semibold text-lg">{t("app_title")} <span className="text-[10px] opacity-30">V8</span></h1>
           </div>
           {/* Pending Changes Indicator */}
           <div className="ml-auto">
@@ -76,11 +76,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <SidebarInset className="pt-0">
         <AppHeader />
-        <div className="flex-1 p-4 md:p-8 pt-4 min-h-0">
+        <div className="flex-1 p-4 md:p-8 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] min-h-0">
           <div className="mx-auto max-w-6xl space-y-6 min-w-0">
             {children}
-            {/* Safe area spacer to ensure content is never cut off/hidden behind home indicator */}
-            <div className="h-24 w-full shrink-0" aria-hidden="true" />
           </div>
         </div>
       </SidebarInset>
