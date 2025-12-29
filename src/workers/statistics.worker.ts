@@ -658,19 +658,29 @@ ctx.onmessage = (event: MessageEvent<StatisticsWorkerRequest>) => {
         for (let day = 1; day <= daysInMonth; day++) {
             cumulative += dailyTotals.get(day) || 0;
 
-            const projection =
-                day >= currentDay
-                    ? cumulativeAtCurrentDay + dailyAverage * (day - currentDay)
+            // Only include days up to currentDay for actual cumulative data
+            // For future days, only include projection (cumulative stays undefined/not rendered)
+            if (day <= currentDay) {
+                // Current or past days: show actual cumulative, plus projection starting at currentDay
+                const projection = day === currentDay
+                    ? cumulativeAtCurrentDay
                     : undefined;
 
-            const cumulativeValue =
-                day <= currentDay ? Math.round(cumulative * 100) / 100 : undefined;
+                dailyCumulativeExpenses.push({
+                    day: day.toString(),
+                    cumulative: Math.round(cumulative * 100) / 100,
+                    projection: projection !== undefined ? Math.round(projection * 100) / 100 : undefined,
+                });
+            } else {
+                // Future days: only show projection, no cumulative
+                const projection = cumulativeAtCurrentDay + dailyAverage * (day - currentDay);
 
-            dailyCumulativeExpenses.push({
-                day: day.toString(),
-                cumulative: cumulativeValue,
-                projection: projection !== undefined ? Math.round(projection * 100) / 100 : undefined,
-            });
+                dailyCumulativeExpenses.push({
+                    day: day.toString(),
+                    cumulative: undefined,
+                    projection: Math.round(projection * 100) / 100,
+                });
+            }
         }
     }
 
