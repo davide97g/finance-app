@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Badge } from "@/components/ui/badge";
+import { createElement } from "react";
 
 interface RecurringTransactionDetailDrawerProps {
   transaction: RecurringTransaction | null;
@@ -121,7 +122,7 @@ export function RecurringTransactionDetailDrawer({
                 }}
               >
                 {IconComp ? (
-                  <IconComp className="h-8 w-8" />
+                  createElement(IconComp, { className: "h-8 w-8" })
                 ) : (
                   <div className="h-8 w-8 rounded-full bg-muted" />
                 )}

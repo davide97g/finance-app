@@ -20,6 +20,7 @@ import { Tag, Users, FolderTree, Target, RefreshCw, Cloud, Edit, Trash2 } from "
 import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { createElement } from "react";
 
 interface CategoryBudgetInfo {
   amount: number;
@@ -85,7 +86,7 @@ export function CategoryDetailDrawer({
             }}
           >
             {IconComp ? (
-              <IconComp className="h-8 w-8" />
+              createElement(IconComp, { className: "h-8 w-8" })
             ) : (
               <div className="h-8 w-8 rounded-full bg-muted" />
             )}

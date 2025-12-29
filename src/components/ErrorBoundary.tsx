@@ -14,6 +14,7 @@ import { withTranslation, WithTranslation } from "react-i18next";
 // Check if we're in development mode
 const isDev =
   typeof import.meta !== "undefined"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? (import.meta as any).env?.DEV
     : process.env.NODE_ENV === "development";
 
@@ -50,6 +51,7 @@ interface ErrorBoundaryState {
  *   <DashboardContent />
  * </ErrorBoundary>
  */
+
 export class ErrorBoundaryClass extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
@@ -95,7 +97,7 @@ export class ErrorBoundaryClass extends Component<
 
   render(): ReactNode {
     const { hasError, error, errorInfo } = this.state;
-    const { children, fallback, section, minimal } = this.props;
+    const { children, fallback, section, minimal, t } = this.props;
 
     if (!hasError) {
       return children;
@@ -153,7 +155,7 @@ export class ErrorBoundaryClass extends Component<
                 {errorInfo?.componentStack && (
                   <details className="mt-2">
                     <summary className="text-xs cursor-pointer text-muted-foreground">
-                      Stack trace
+                      {t("stack_trace")}
                     </summary>
                     <pre className="text-xs mt-2 overflow-auto max-h-32 text-muted-foreground">
                       {errorInfo.componentStack}
@@ -197,6 +199,7 @@ export class ErrorBoundaryClass extends Component<
 
 
 // Export both the wrapped and unwrapped component
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ErrorBoundaryWithTranslation = withTranslation()(ErrorBoundaryClass as any);
 export { ErrorBoundaryWithTranslation as ErrorBoundary };
 
@@ -206,6 +209,7 @@ export { ErrorBoundaryWithTranslation as ErrorBoundary };
  * @example
  * const SafeDashboard = withErrorBoundary(Dashboard, { section: 'Dashboard', minimal: true });
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function withErrorBoundary<P extends object>(
   WrappedComponent: React.ComponentType<P>,
   errorBoundaryProps?: Omit<ErrorBoundaryProps, "children" | "t" | "i18n" | "tReady">
@@ -239,6 +243,7 @@ export function withErrorBoundary<P extends object>(
  *   }
  * };
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useErrorHandler(): (error: Error) => void {
   const [, setError] = React.useState<Error | null>(null);
 

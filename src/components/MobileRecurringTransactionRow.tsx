@@ -15,6 +15,7 @@ import {
   format,
   startOfDay,
 } from "date-fns";
+import { createElement } from "react";
 
 interface MobileRecurringTransactionRowProps {
   transaction: RecurringTransaction;
@@ -109,7 +110,7 @@ export function MobileRecurringTransactionRow({
             }}
           >
             {IconComp ? (
-              <IconComp className="h-5 w-5" />
+              createElement(IconComp, { className: "h-5 w-5" })
             ) : (
               <div className="h-5 w-5 rounded-full bg-muted" />
             )}

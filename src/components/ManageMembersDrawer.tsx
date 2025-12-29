@@ -49,6 +49,107 @@ interface ManageMembersDrawerProps {
     onOpenChange: (open: boolean) => void;
 }
 
+// --- Sub-components (Helpers) ---
+
+const MemberAvatarPlaceholder = ({ name, isGuest }: { name: string; isGuest: boolean }) => {
+    const initials = name.substring(0, 2).toUpperCase() || "??";
+    // Simple deterministic color generation or static colors
+    const bgColor = isGuest ? "bg-orange-100 text-orange-600" : "bg-primary/10 text-primary";
+
+    return (
+        <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${bgColor}`}>
+            {initials}
+        </div>
+    );
+};
+
+interface AddMemberFormProps {
+    t: (key: string) => string;
+    newMemberId: string;
+    setNewMemberId: (val: string) => void;
+    handleAddMember: () => void;
+    copiedId: boolean;
+    copyMyId: () => void;
+    newGuestName: string;
+    setNewGuestName: (val: string) => void;
+    handleAddGuest: () => void;
+}
+
+const AddMemberForm = ({
+    t,
+    newMemberId,
+    setNewMemberId,
+    handleAddMember,
+    copiedId,
+    copyMyId,
+    newGuestName,
+    setNewGuestName,
+    handleAddGuest
+}: AddMemberFormProps) => (
+    <div className="space-y-4 p-4">
+        <Tabs defaultValue="invite" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="invite">{t("invite_user")}</TabsTrigger>
+                <TabsTrigger value="guest">{t("add_guest")}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="invite" className="space-y-4 pt-4">
+                <div className="bg-muted/50 p-3 rounded-md text-xs text-muted-foreground flex items-center justify-between border">
+                    <span>{t("share_id_hint")}</span>
+                    <Button variant="ghost" size="sm" onClick={copyMyId} className="h-6 text-[10px] px-2 ml-2">
+                        {copiedId ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                        {t("my_id")}
+                    </Button>
+                </div>
+                <div className="space-y-2">
+                    <Input
+                        placeholder={t("enter_user_id")}
+                        value={newMemberId}
+                        onChange={(e) => setNewMemberId(e.target.value)}
+                    />
+                    <Button onClick={handleAddMember} disabled={!newMemberId} className="w-full">
+                        {t("send_invite")}
+                    </Button>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="guest" className="space-y-4 pt-4">
+                <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md border">
+                    {t("guest_hint")}
+                </p>
+                <div className="space-y-2">
+                    <Input
+                        placeholder={t("guest_name")}
+                        value={newGuestName}
+                        onChange={(e) => setNewGuestName(e.target.value)}
+                    />
+                    <Button onClick={handleAddGuest} disabled={!newGuestName} className="w-full">
+                        {t("create_guest")}
+                    </Button>
+                </div>
+            </TabsContent>
+        </Tabs>
+    </div>
+);
+
+// Header for Mobile
+const MobileHeader = ({ view, t, group, isShareValid, totalShare }: { view: "list" | "add", t: (key: string) => string, group: GroupWithMembers, isShareValid: boolean, totalShare: number }) => (
+    <DrawerHeader className="text-left border-b pb-4">
+        <div className="flex justify-between items-start">
+            <div>
+                <DrawerTitle>{view === "add" ? t("add_member") : t("manage_members")}</DrawerTitle>
+                <DrawerDescription className="mt-1">{group.name}</DrawerDescription>
+            </div>
+            {!isShareValid && view === "list" && (
+                <Badge variant="destructive" className="flex gap-1 animate-pulse">
+                    <AlertTriangle className="h-3 w-3" />
+                    {totalShare.toFixed(0)}%
+                </Badge>
+            )}
+        </div>
+    </DrawerHeader>
+);
+
 export function ManageMembersDrawer({
     group,
     open,
@@ -135,86 +236,9 @@ export function ManageMembersDrawer({
         }
     };
 
-    // --- Sub-components (Helpers) ---
-
-    const MemberAvatarPlaceholder = ({ name, isGuest }: { name: string; isGuest: boolean }) => {
-        const initials = name.substring(0, 2).toUpperCase() || "??";
-        // Simple deterministic color generation or static colors
-        const bgColor = isGuest ? "bg-orange-100 text-orange-600" : "bg-primary/10 text-primary";
-
-        return (
-            <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${bgColor}`}>
-                {initials}
-            </div>
-        );
-    };
-
-    const AddMemberForm = () => (
-        <div className="space-y-4 p-4">
-            <Tabs defaultValue="invite" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="invite">{t("invite_user")}</TabsTrigger>
-                    <TabsTrigger value="guest">{t("add_guest")}</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="invite" className="space-y-4 pt-4">
-                    <div className="bg-muted/50 p-3 rounded-md text-xs text-muted-foreground flex items-center justify-between border">
-                        <span>{t("share_id_hint")}</span>
-                        <Button variant="ghost" size="sm" onClick={copyMyId} className="h-6 text-[10px] px-2 ml-2">
-                            {copiedId ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-                            {t("my_id")}
-                        </Button>
-                    </div>
-                    <div className="space-y-2">
-                        <Input
-                            placeholder={t("enter_user_id")}
-                            value={newMemberId}
-                            onChange={(e) => setNewMemberId(e.target.value)}
-                        />
-                        <Button onClick={handleAddMember} disabled={!newMemberId} className="w-full">
-                            {t("send_invite")}
-                        </Button>
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="guest" className="space-y-4 pt-4">
-                    <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md border">
-                        {t("guest_hint")}
-                    </p>
-                    <div className="space-y-2">
-                        <Input
-                            placeholder={t("guest_name")}
-                            value={newGuestName}
-                            onChange={(e) => setNewGuestName(e.target.value)}
-                        />
-                        <Button onClick={handleAddGuest} disabled={!newGuestName} className="w-full">
-                            {t("create_guest")}
-                        </Button>
-                    </div>
-                </TabsContent>
-            </Tabs>
-        </div>
-    );
+    // --- Sub-components (Helpers) --- removed as they are extracted
 
     // --- Mobile View ---
-
-    // Header for Mobile
-    const MobileHeader = () => (
-        <DrawerHeader className="text-left border-b pb-4">
-            <div className="flex justify-between items-start">
-                <div>
-                    <DrawerTitle>{view === "add" ? t("add_member") : t("manage_members")}</DrawerTitle>
-                    <DrawerDescription className="mt-1">{group.name}</DrawerDescription>
-                </div>
-                {!isShareValid && view === "list" && (
-                    <Badge variant="destructive" className="flex gap-1 animate-pulse">
-                        <AlertTriangle className="h-3 w-3" />
-                        {totalShare.toFixed(0)}%
-                    </Badge>
-                )}
-            </div>
-        </DrawerHeader>
-    );
 
     if (isMobile) {
         return (
@@ -226,7 +250,7 @@ export function ManageMembersDrawer({
                 }}
             >
                 <DrawerContent className="h-[90vh] flex flex-col">
-                    <MobileHeader />
+                    <MobileHeader view={view} t={t} group={group} isShareValid={isShareValid} totalShare={totalShare} />
 
                     <div className="flex-1 overflow-y-auto">
                         {view === "list" ? (
@@ -292,7 +316,17 @@ export function ManageMembersDrawer({
                                 })}
                             </div>
                         ) : (
-                            <AddMemberForm />
+                            <AddMemberForm
+                                t={t}
+                                newMemberId={newMemberId}
+                                setNewMemberId={setNewMemberId}
+                                handleAddMember={handleAddMember}
+                                copiedId={copiedId}
+                                copyMyId={copyMyId}
+                                newGuestName={newGuestName}
+                                setNewGuestName={setNewGuestName}
+                                handleAddGuest={handleAddGuest}
+                            />
                         )}
                     </div>
 
@@ -431,7 +465,17 @@ export function ManageMembersDrawer({
                                     {t("back_to_list")}
                                 </Button>
                             </div>
-                            <AddMemberForm />
+                            <AddMemberForm
+                                t={t}
+                                newMemberId={newMemberId}
+                                setNewMemberId={setNewMemberId}
+                                handleAddMember={handleAddMember}
+                                copiedId={copiedId}
+                                copyMyId={copyMyId}
+                                newGuestName={newGuestName}
+                                setNewGuestName={setNewGuestName}
+                                handleAddGuest={handleAddGuest}
+                            />
                         </div>
                     )}
                 </div>
