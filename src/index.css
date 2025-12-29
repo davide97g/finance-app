@@ -349,18 +349,21 @@
 
   /* Root container - safe areas handled by individual components for fixed positioning compatibility */
   /* Root container - safe areas handled by individual components for fixed positioning compatibility */
+  /* Root container - safe areas handled by individual components for fixed positioning compatibility */
   #root {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100vh;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: auto;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 
-    /* DEBUG: Temporary border to visualize the bottom edge */
-    border-bottom: 5px solid red;
+    /* DEBUG: Temporary border to visualize the bottom edge - GREEN for V5 */
+    border-bottom: 5px solid #00ff00;
     box-sizing: border-box;
   }
 
@@ -369,7 +372,7 @@
     padding: 0;
     margin: 0;
     width: 100%;
-    height: 100vh;
+    height: 100%;
     position: fixed;
     inset: 0;
     overflow: hidden;
