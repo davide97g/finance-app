@@ -38,7 +38,7 @@ global.IntersectionObserver = class IntersectionObserver {
         return [];
     }
     unobserve() { }
-} as any;
+} as unknown as typeof IntersectionObserver;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -46,13 +46,13 @@ global.ResizeObserver = class ResizeObserver {
     disconnect() { }
     observe() { }
     unobserve() { }
-} as any;
+} as unknown as typeof ResizeObserver;
 
 // Suppress act() warnings in tests
 // These warnings are expected when testing hooks with async effects
 const originalError = console.error;
 beforeAll(() => {
-    console.error = (...args: any[]) => {
+    console.error = (...args: unknown[]) => {
         if (
             typeof args[0] === 'string' &&
             args[0].includes('Warning: An update to') &&
