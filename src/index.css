@@ -359,8 +359,7 @@
     flex-direction: column;
     overflow: hidden;
 
-    /* DEBUG: Temporary border to visualize the bottom edge - BLUE for V6 */
-    border-bottom: 5px solid #0000ff;
+    /* Debug border removed for production */
     box-sizing: border-box;
   }
 
