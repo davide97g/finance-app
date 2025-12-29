@@ -347,17 +347,11 @@
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
   }
 
-  /* iOS Safari initial load fix: -webkit-fill-available is more reliable on first render */
-  html {
-    height: -webkit-fill-available;
-  }
-
   /* Root container - safe areas handled by individual components for fixed positioning compatibility */
   #root {
     min-height: 100vh;
     min-height: 100dvh;
-    min-height: -webkit-fill-available;
-    /* iOS Safari fallback for initial load */
+    /* Dynamic viewport height for mobile browsers */
   }
 }
 
