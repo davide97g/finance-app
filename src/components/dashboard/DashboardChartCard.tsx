@@ -30,7 +30,7 @@ interface DashboardChartCardProps {
     chartViewsCount: number;
     dailyCumulativeExpenses: Array<{
         day: string;
-        cumulative: number;
+        cumulative?: number;
         projection?: number;
     }>;
     chartConfig: ChartConfig;
@@ -61,7 +61,7 @@ export function DashboardChartContent({
 }: {
     dailyCumulativeExpenses: Array<{
         day: string;
-        cumulative: number;
+        cumulative?: number;
         projection?: number;
     }>;
     chartConfig: ChartConfig;
@@ -170,6 +170,7 @@ export function DashboardChartContent({
                                         type="monotone"
                                         fill="url(#cumulativeGradient)"
                                         stroke="var(--color-cumulative)"
+                                        connectNulls={false}
                                         animationBegin={100}
                                         animationDuration={1200}
                                         animationEasing="ease-out"

@@ -299,8 +299,8 @@ export function Dashboard() {
           swipeAxis="horizontal"
           flipDirection="right"
           disableGlobalClick
-          frontContent={<DashboardChartCard index={chartFaceAIndex} {...chartCardProps} dailyCumulativeExpenses={chartCardProps.dailyCumulativeExpenses.map(d => ({ ...d, cumulative: d.cumulative ?? 0, day: d.day.toString() }))} />}
-          backContent={<DashboardChartCard index={chartFaceBIndex} {...chartCardProps} dailyCumulativeExpenses={chartCardProps.dailyCumulativeExpenses.map(d => ({ ...d, cumulative: d.cumulative ?? 0, day: d.day.toString() }))} />}
+          frontContent={<DashboardChartCard index={chartFaceAIndex} {...chartCardProps} dailyCumulativeExpenses={chartCardProps.dailyCumulativeExpenses.map(d => ({ ...d, day: d.day.toString() }))} />}
+          backContent={<DashboardChartCard index={chartFaceBIndex} {...chartCardProps} dailyCumulativeExpenses={chartCardProps.dailyCumulativeExpenses.map(d => ({ ...d, day: d.day.toString() }))} />}
         />
       </div>
 
@@ -324,7 +324,7 @@ export function Dashboard() {
           <div className="col-span-6 h-full min-h-0 flex flex-col gap-6">
             <div className="flex-1 min-h-0">
               <DashboardChartContent
-                dailyCumulativeExpenses={dailyCumulativeExpenses.map(d => ({ ...d, cumulative: d.cumulative ?? 0 }))}
+                dailyCumulativeExpenses={dailyCumulativeExpenses}
                 chartConfig={chartConfig}
                 isStatsLoading={isStatsLoading}
               />
