@@ -21,7 +21,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMobile } from "@/hooks/useMobile";
 import { useSettings } from "@/hooks/useSettings";
-import { generateRevolutLinks } from "@/lib/revolutUtils";
+import {
+  calculateAmountPerPerson,
+  generateRevolutLinks,
+} from "@/lib/revolutUtils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Check,
@@ -106,10 +109,16 @@ export const SplitExpenseDialog = ({
       description.trim() !== ""
     ) {
       try {
-        // Generate both web and app links with total amount (not divided)
+        // Calculate amount per person
+        const amountPerPerson = calculateAmountPerPerson(
+          totalAmount,
+          numberOfPeople
+        );
+
+        // Generate both web and app links with amount per person
         const links = generateRevolutLinks(
           revolutUsername,
-          totalAmount,
+          amountPerPerson,
           description
         );
         setPaymentLinks(links);
@@ -293,6 +302,16 @@ export const SplitExpenseDialog = ({
                           ? t("person") || "Person"
                           : t("people") || "People"}
                       </span>
+                    </div>
+                    <div className="text-xs sm:text-sm opacity-90 mt-1 pt-1 border-t border-white/20">
+                      {t("amount_per_person") ||
+                        t("per_person") ||
+                        "Per person"}
+                      : €
+                      {calculateAmountPerPerson(
+                        totalAmount,
+                        numberOfPeople
+                      ).toFixed(2)}
                     </div>
                   </div>
                   <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-white/20 backdrop-blur-sm shrink-0 ml-2 sm:ml-4">
