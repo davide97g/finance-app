@@ -217,7 +217,7 @@ export const ProfilePictureManager = () => {
                     {avatarType === "photo" && previewUrl ? (
                         <AvatarImage src={previewUrl} alt={t("profile_picture", { defaultValue: "Profile picture" })} />
                     ) : null}
-                    <AvatarFallback className="text-lg font-semibold">
+                    <AvatarFallback className="text-lg">
                         {initials}
                     </AvatarFallback>
                 </Avatar>

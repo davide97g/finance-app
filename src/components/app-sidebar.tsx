@@ -114,7 +114,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                         {profile?.avatar_type === "photo" && profile?.avatar_url ? (
                                             <AvatarImage src={profile.avatar_url} alt={profile?.full_name || user?.email || "User"} />
                                         ) : null}
-                                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                        <AvatarFallback className="text-xs">
                                             {generateInitials(profile?.full_name, user?.email || profile?.email)}
                                         </AvatarFallback>
                                     </Avatar>
