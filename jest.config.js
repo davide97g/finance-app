@@ -1,60 +1,61 @@
 export default {
-    preset: 'ts-jest',
-    testEnvironment: 'jsdom',
-    roots: ['<rootDir>/src'],
-    testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
-    moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1',
-        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-        '^uuid$': '<rootDir>/src/__mocks__/uuid.ts',
-        '\\?worker$': '<rootDir>/src/__mocks__/workerMock.ts',
+  preset: "ts-jest",
+  testEnvironment: "jsdom",
+  roots: ["<rootDir>/src"],
+  testMatch: ["**/__tests__/**/*.ts?(x)", "**/?(*.)+(spec|test).ts?(x)"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "^uuid$": "<rootDir>/src/__mocks__/uuid.ts",
+    "\\?worker$": "<rootDir>/src/__mocks__/workerMock.ts",
+  },
+  setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
+  collectCoverageFrom: [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/main.tsx",
+    "!src/vite-env.d.ts",
+    "!src/**/*.stories.tsx",
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
     },
-    setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-    collectCoverageFrom: [
-        'src/**/*.{ts,tsx}',
-        '!src/**/*.d.ts',
-        '!src/main.tsx',
-        '!src/vite-env.d.ts',
-        '!src/**/*.stories.tsx',
-    ],
-    coverageThreshold: {
-        global: {
-            branches: 70,
-            functions: 70,
-            lines: 70,
-            statements: 70,
+  },
+  transform: {
+    "^.+\\.[tj]sx?$": [
+      "ts-jest",
+      {
+        tsconfig: {
+          jsx: "react-jsx",
+          module: "esnext",
+          moduleResolution: "bundler",
+          resolveJsonModule: true,
+          allowJs: true,
+          baseUrl: ".",
+          paths: {
+            "@/*": ["./src/*"],
+          },
+          esModuleInterop: true,
         },
-    },
-    transform: {
-        '^.+\\.[tj]sx?$': ['ts-jest', {
-            tsconfig: {
-                jsx: 'react-jsx',
-                module: 'esnext',
-                moduleResolution: 'bundler',
-                resolveJsonModule: true,
-                allowJs: true,
-                baseUrl: '.',
-                paths: {
-                    '@/*': ['./src/*']
-                },
-                esModuleInterop: true,
-            },
-            isolatedModules: true,
-        }],
-    },
-    transformIgnorePatterns: [
-        'node_modules/(?!(uuid)/)'
+        isolatedModules: true,
+      },
     ],
-    moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-    testEnvironmentOptions: {
-        customExportConditions: [''],
+  },
+  transformIgnorePatterns: ["node_modules/(?!(uuid)/)"],
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
+  testEnvironmentOptions: {
+    customExportConditions: [""],
+  },
+  globals: {
+    "import.meta": {
+      env: {
+        VITE_SUPABASE_URL: "https://test.supabase.co",
+        VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: "test-anon-key",
+      },
     },
-    globals: {
-        'import.meta': {
-            env: {
-                VITE_SUPABASE_URL: 'https://test.supabase.co',
-                VITE_SUPABASE_ANON_KEY: 'test-anon-key',
-            },
-        },
-    },
+  },
 };
