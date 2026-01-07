@@ -1344,6 +1344,8 @@ export class SyncManager {
         user_mode:
           (data.user_mode as "default" | "simplified" | "advanced") ||
           "default",
+        revolut_username: data.revolut_username || null,
+        joint_account_partner_id: data.joint_account_partner_id || null,
         last_sync_token: localSettings?.last_sync_token || 0, // Preserve local sync token
         updated_at: data.updated_at || undefined,
       };

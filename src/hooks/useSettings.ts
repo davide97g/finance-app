@@ -109,6 +109,7 @@ export function useSettings() {
         category_sorting_days: settingsToSync.category_sorting_days ?? 30,
         user_mode: settingsToSync.user_mode ?? "default",
         revolut_username: settingsToSync.revolut_username ?? null,
+        joint_account_partner_id: settingsToSync.joint_account_partner_id ?? null,
       };
 
       supabase

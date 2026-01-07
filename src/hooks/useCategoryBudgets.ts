@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { getCategoryBudgetInputSchema, validate } from "../lib/validation";
 import { useTranslation } from "react-i18next";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Extended budget type with spending calculations and category info.
@@ -68,25 +69,37 @@ export function useCategoryBudgets(
   const currentMonth = selectedMonth || format(now, "yyyy-MM");
   const currentYear = selectedYear || format(now, "yyyy");
 
-  // Get all category budgets
+  // Get all category budgets (including partner's if joint account)
   const categoryBudgets = useLiveQuery(
-    () =>
-      user
-        ? db.category_budgets
-          .filter((b) => b.user_id === user.id && !b.deleted_at)
-          .toArray()
-        : [],
+    async () => {
+      if (!user) return [];
+      
+      const partnerId = await getJointAccountPartnerId(user.id);
+      const userIds = partnerId ? [user.id, partnerId] : [user.id];
+      
+      const budgets = await db.category_budgets
+        .filter((b) => userIds.includes(b.user_id) && !b.deleted_at)
+        .toArray();
+      
+      return budgets;
+    },
     [user?.id]
   );
 
-  // Get categories for enrichment
+  // Get categories for enrichment (including partner's if joint account)
   const categories = useLiveQuery(
-    () =>
-      user
-        ? db.categories
-          .filter((c) => c.user_id === user.id && !c.deleted_at)
-          .toArray()
-        : [],
+    async () => {
+      if (!user) return [];
+      
+      const partnerId = await getJointAccountPartnerId(user.id);
+      const userIds = partnerId ? [user.id, partnerId] : [user.id];
+      
+      const cats = await db.categories
+        .filter((c) => userIds.includes(c.user_id) && !c.deleted_at && !c.group_id)
+        .toArray();
+      
+      return cats;
+    },
     [user?.id]
   );
 

@@ -5,6 +5,8 @@ import { format, subMonths } from "date-fns";
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import StatsWorker from "../workers/statistics.worker?worker";
 import { StatisticsWorkerRequest, StatisticsWorkerResponse, DailyCumulativeData, CategoryComparisonData, MonthlyCumulativeData } from "../types/worker";
+import { useAuth } from "../contexts/AuthProvider";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Parameters for configuring the statistics hook.
@@ -37,6 +39,7 @@ export function useStatistics(params?: UseStatisticsParams) {
   const currentYear = params?.selectedYear || format(now, "yyyy");
   const mode = params?.mode || "monthly";
   const userId = params?.userId;
+  const { user } = useAuth();
 
   const { t } = useTranslation();
 
@@ -69,43 +72,99 @@ export function useStatistics(params?: UseStatisticsParams) {
 
   // --- Data Fetching (Main Thread) ---
   const transactions = useLiveQuery(
-    () =>
-      mode === "monthly"
-        ? db.transactions.where("year_month").equals(currentMonth).toArray()
-          .then(txs => params?.groupId
-            ? txs.filter(t => t.group_id === params.groupId)
-            : txs)
-        : Promise.resolve([] as Transaction[]),
-    [currentMonth, mode, params?.groupId]
+    async () => {
+      if (mode !== "monthly") return [] as Transaction[];
+      
+      const txs = await db.transactions.where("year_month").equals(currentMonth).toArray();
+      
+      // Include partner's transactions if joint account is active
+      if (user && !params?.groupId) {
+        const partnerId = await getJointAccountPartnerId(user.id);
+        if (partnerId) {
+          // Filter to include only personal transactions from both users
+          const filtered = txs.filter(t => !t.group_id && (t.user_id === user.id || t.user_id === partnerId));
+          return params?.groupId ? filtered.filter(t => t.group_id === params.groupId) : filtered;
+        }
+      }
+      
+      return params?.groupId ? txs.filter(t => t.group_id === params.groupId) : txs;
+    },
+    [currentMonth, mode, params?.groupId, user?.id]
   );
 
   const yearlyTransactions = useLiveQuery(
-    () =>
-      mode === "yearly"
-        ? db.transactions
-          .where("year_month")
-          .between(`${currentYear}-01`, `${currentYear}-12`, true, true)
-          .toArray()
-          .then(txs => params?.groupId
-            ? txs.filter(t => t.group_id === params.groupId)
-            : txs)
-        : Promise.resolve([] as Transaction[]),
-    [currentYear, mode, params?.groupId]
+    async () => {
+      if (mode !== "yearly") return [] as Transaction[];
+      
+      const txs = await db.transactions
+        .where("year_month")
+        .between(`${currentYear}-01`, `${currentYear}-12`, true, true)
+        .toArray();
+      
+      // Include partner's transactions if joint account is active
+      if (user && !params?.groupId) {
+        const partnerId = await getJointAccountPartnerId(user.id);
+        if (partnerId) {
+          // Filter to include only personal transactions from both users
+          const filtered = txs.filter(t => !t.group_id && (t.user_id === user.id || t.user_id === partnerId));
+          return params?.groupId ? filtered.filter(t => t.group_id === params.groupId) : filtered;
+        }
+      }
+      
+      return params?.groupId ? txs.filter(t => t.group_id === params.groupId) : txs;
+    },
+    [currentYear, mode, params?.groupId, user?.id]
   );
 
   const previousMonthTransactions = useLiveQuery(
-    () =>
-      mode === "monthly"
-        ? db.transactions.where("year_month").equals(previousMonth).toArray()
-          .then(txs => params?.groupId
-            ? txs.filter(t => t.group_id === params.groupId)
-            : txs)
-        : Promise.resolve([] as Transaction[]),
-    [previousMonth, mode, params?.groupId]
+    async () => {
+      if (mode !== "monthly") return [] as Transaction[];
+      
+      const txs = await db.transactions.where("year_month").equals(previousMonth).toArray();
+      
+      // Include partner's transactions if joint account is active
+      if (user && !params?.groupId) {
+        const partnerId = await getJointAccountPartnerId(user.id);
+        if (partnerId) {
+          // Filter to include only personal transactions from both users
+          const filtered = txs.filter(t => !t.group_id && (t.user_id === user.id || t.user_id === partnerId));
+          return params?.groupId ? filtered.filter(t => t.group_id === params.groupId) : filtered;
+        }
+      }
+      
+      return params?.groupId ? txs.filter(t => t.group_id === params.groupId) : txs;
+    },
+    [previousMonth, mode, params?.groupId, user?.id]
   );
 
-  const categories = useLiveQuery(() => db.categories.toArray());
-  const contexts = useLiveQuery(() => db.contexts.toArray());
+  const categories = useLiveQuery(async () => {
+    const cats = await db.categories.toArray();
+    
+    // Include partner's categories if joint account is active
+    if (user) {
+      const partnerId = await getJointAccountPartnerId(user.id);
+      if (partnerId) {
+        // Include personal categories from both users
+        return cats.filter(c => !c.deleted_at && (!c.group_id && (c.user_id === user.id || c.user_id === partnerId) || c.group_id));
+      }
+    }
+    
+    return cats.filter(c => !c.deleted_at);
+  }, [user?.id]);
+  
+  const contexts = useLiveQuery(async () => {
+    const ctxs = await db.contexts.toArray();
+    
+    // Include partner's contexts if joint account is active
+    if (user) {
+      const partnerId = await getJointAccountPartnerId(user.id);
+      if (partnerId) {
+        return ctxs.filter(c => !c.deleted_at && (c.user_id === user.id || c.user_id === partnerId));
+      }
+    }
+    
+    return ctxs.filter(c => !c.deleted_at);
+  }, [user?.id]);
 
   const groupMemberships = useLiveQuery(
     () => userId ? db.group_members.where("user_id").equals(userId).toArray() : Promise.resolve([] as GroupMember[]),

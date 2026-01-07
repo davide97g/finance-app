@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { updateCategoryUsageStats } from "../lib/categoryUsage";
 import { useAuth } from "../contexts/AuthProvider";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Hook for managing transactions with optional filtering.
@@ -28,6 +29,12 @@ export function useTransactions(
 
   // Single unified query that handles all filtering in one operation
   const transactions = useLiveQuery(async () => {
+    if (!user) return [];
+
+    // Get joint account partner ID if configured
+    const partnerId = await getJointAccountPartnerId(user.id);
+    const userIds = partnerId ? [user.id, partnerId] : [user.id];
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let collection: any;
 
@@ -55,12 +62,21 @@ export function useTransactions(
     // (e.g. if we queried by yearMonth, or if we want personal only)
     if (groupId !== undefined) {
       if (groupId === null) {
-        // Return only personal transactions
-        results = results.filter((tOrG) => !tOrG.group_id);
+        // Return only personal transactions (from current user or partner if joint account)
+        results = results.filter(
+          (tOrG) => !tOrG.group_id && userIds.includes(tOrG.user_id)
+        );
       } else if (yearMonth) {
         // If we queried by yearMonth, we still need to filter by group
         results = results.filter((tOrG) => tOrG.group_id === groupId);
       }
+    } else {
+      // If no group filter specified (groupId === undefined), include all transactions
+      // but filter personal transactions to only include joint account partners
+      // Group transactions are included as-is
+      results = results.filter(
+        (t) => t.group_id !== null || userIds.includes(t.user_id)
+      );
     }
 
     // Apply limit if needed (and not already applied effectively)
@@ -75,7 +91,7 @@ export function useTransactions(
     );
 
     return results;
-  }, [limit, yearMonth, groupId]);
+  }, [limit, yearMonth, groupId, user?.id]);
 
   const addTransaction = async (
     transaction: Omit<

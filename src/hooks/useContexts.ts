@@ -8,6 +8,8 @@ import {
   validate,
 } from "../lib/validation";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../contexts/AuthProvider";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Hook for managing transaction contexts (e.g., "Work", "Personal", "Vacation").
@@ -35,9 +37,24 @@ import { useTranslation } from "react-i18next";
  */
 export function useContexts() {
   const { t } = useTranslation();
-  const contexts = useLiveQuery(() => db.contexts.toArray());
+  const { user } = useAuth();
+  const contexts = useLiveQuery(async () => {
+    const ctxs = await db.contexts.toArray();
+    
+    // Get joint account partner ID if configured
+    if (user) {
+      const partnerId = await getJointAccountPartnerId(user.id);
+      const userIds = partnerId ? [user.id, partnerId] : [user.id];
+      
+      // Filter to include contexts from both users if joint account
+      return ctxs.filter((c) => !c.deleted_at && userIds.includes(c.user_id));
+    }
+    
+    // Fallback if no user
+    return ctxs.filter((c) => !c.deleted_at);
+  }, [user?.id]);
 
-  const activeContexts = contexts?.filter((c) => !c.deleted_at) || [];
+  const activeContexts = contexts || [];
 
   const addContext = async (
     context: Omit<

@@ -9,6 +9,8 @@ import {
 } from "../lib/validation";
 import { useTranslation } from "react-i18next";
 import { UNCATEGORIZED_CATEGORY } from "../lib/constants";
+import { useAuth } from "../contexts/AuthProvider";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Hook for managing expense/income categories with hierarchical support.
@@ -44,27 +46,47 @@ import { UNCATEGORIZED_CATEGORY } from "../lib/constants";
  */
 export function useCategories(groupId?: string | null) {
   const { t } = useTranslation();
-  const categories = useLiveQuery(() => db.categories.toArray());
+  const { user } = useAuth();
+  const categories = useLiveQuery(async () => {
+    const cats = await db.categories.toArray();
+    
+    // Get joint account partner ID if configured
+    if (user) {
+      const partnerId = await getJointAccountPartnerId(user.id);
+      const userIds = partnerId ? [user.id, partnerId] : [user.id];
+      
+      // Filter out deleted items, the local-only placeholder, and optionally by group
+      return cats.filter((c) => {
+        if (c.deleted_at) return false;
 
-  // Filter out deleted items, the local-only placeholder, and optionally by group
-  const filteredCategories =
-    categories?.filter((c) => {
+        // Exclude local-only "Uncategorized" placeholder category
+        if (c.id === UNCATEGORIZED_CATEGORY.ID) return false;
+
+        if (groupId === undefined) {
+          // Return all categories (no group_id filter)
+          // For personal categories, include both users' categories if joint account
+          return c.group_id !== null || userIds.includes(c.user_id);
+        } else if (groupId === null) {
+          // Return only personal categories (from current user or partner if joint account)
+          return !c.group_id && userIds.includes(c.user_id);
+        } else {
+          // Return only categories for specific group (no personal)
+          return c.group_id === groupId;
+        }
+      });
+    }
+    
+    // Fallback if no user
+    return cats.filter((c) => {
       if (c.deleted_at) return false;
-
-      // Exclude local-only "Uncategorized" placeholder category
       if (c.id === UNCATEGORIZED_CATEGORY.ID) return false;
+      if (groupId === undefined) return true;
+      if (groupId === null) return !c.group_id;
+      return c.group_id === groupId;
+    });
+  }, [groupId, user?.id]);
 
-      if (groupId === undefined) {
-        // Return all categories (no group_id filter)
-        return true;
-      } else if (groupId === null) {
-        // Return only personal categories
-        return !c.group_id;
-      } else {
-        // Return only categories for specific group (no personal)
-        return c.group_id === groupId;
-      }
-    }) || [];
+  const filteredCategories = categories || [];
 
   const addCategory = async (
     category: Omit<Category, "id" | "sync_token" | "pendingSync" | "deleted_at">

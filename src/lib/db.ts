@@ -232,6 +232,8 @@ export interface Setting {
   user_mode?: "default" | "simplified" | "advanced";
   /** Revolut username for payment links */
   revolut_username?: string | null;
+  /** Joint account partner user ID (bidirectional sharing) */
+  joint_account_partner_id?: string | null;
   /** Last settings update timestamp (ISO 8601) */
   updated_at?: string;
 }

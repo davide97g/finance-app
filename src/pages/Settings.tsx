@@ -35,10 +35,12 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
+import { useProfile } from "@/hooks/useProfiles";
 import { useSettings } from "@/hooks/useSettings";
 import { useWelcomeWizard } from "@/hooks/useWelcomeWizard";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { validatePartnerId } from "@/lib/jointAccount";
 import { safeSync, syncManager } from "@/lib/sync";
 import { THEME_COLORS } from "@/lib/theme-colors";
 import { cn, getLocalDate } from "@/lib/utils";
@@ -49,6 +51,7 @@ import {
   Compass,
   Database,
   Download,
+  Link2,
   Monitor,
   Moon,
   Palette,
@@ -56,6 +59,7 @@ import {
   Sun,
   Trash2,
   Upload,
+  Users,
   Wrench,
   X,
 } from "lucide-react";
@@ -64,6 +68,72 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+
+// Helper component for displaying linked joint account
+const JointAccountLinked = ({
+  partnerId,
+  onUnlink,
+}: {
+  partnerId: string;
+  onUnlink: () => Promise<void>;
+}) => {
+  const { t } = useTranslation();
+  const partnerProfile = useProfile(partnerId);
+  const [unlinking, setUnlinking] = useState(false);
+
+  const handleUnlink = async () => {
+    setUnlinking(true);
+    try {
+      await onUnlink();
+    } finally {
+      setUnlinking(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 shrink-0">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">
+              {partnerProfile?.full_name ||
+                partnerProfile?.email ||
+                partnerId.slice(0, 8) + "..."}
+            </p>
+            {partnerProfile?.email && (
+              <p className="text-xs text-muted-foreground truncate">
+                {partnerProfile.email}
+              </p>
+            )}
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleUnlink}
+          disabled={unlinking}
+          className="shrink-0"
+        >
+          {unlinking ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <X className="h-4 w-4 mr-1" />
+              {t("unlink") || "Unlink"}
+            </>
+          )}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {t("joint_account_linked_note") ||
+          "Your accounts are linked. All transactions, categories, and contexts are shared in real-time."}
+      </p>
+    </div>
+  );
+};
 
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
@@ -80,6 +150,9 @@ export function SettingsPage() {
   const [exportingData, setExportingData] = useState(false);
   const [isImportWizardOpen, setIsImportWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("appearance");
+  const [partnerIdInput, setPartnerIdInput] = useState("");
+  const [validatingPartner, setValidatingPartner] = useState(false);
+  const [partnerError, setPartnerError] = useState<string | null>(null);
 
   // Welcome wizard hook for "Review Tutorial" button
   const welcomeWizard = useWelcomeWizard();
@@ -766,6 +839,128 @@ export function SettingsPage() {
                     "Enter your Revolut username to generate payment links when splitting expenses"}
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Joint Account */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                {t("joint_account") || "Joint Account"}
+              </CardTitle>
+              <CardDescription>
+                {t("joint_account_desc") ||
+                  "Link your account with a partner to share all transactions, categories, and contexts in real-time"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {settings.joint_account_partner_id ? (
+                <JointAccountLinked
+                  partnerId={settings.joint_account_partner_id}
+                  onUnlink={async () => {
+                    await updateSettings({
+                      joint_account_partner_id: null,
+                    });
+                    setPartnerIdInput("");
+                    setPartnerError(null);
+                    toast.success(
+                      t("joint_account_unlinked") ||
+                        "Joint account unlinked successfully"
+                    );
+                  }}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="partner-id">
+                    {t("partner_user_id") || "Partner User ID"}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="partner-id"
+                      value={partnerIdInput}
+                      onChange={(e) => {
+                        setPartnerIdInput(e.target.value.trim());
+                        setPartnerError(null);
+                      }}
+                      className="h-12 touch-manipulation flex-1"
+                      placeholder={
+                        t("partner_user_id_placeholder") ||
+                        "Enter partner's user ID (UUID)"
+                      }
+                      disabled={validatingPartner}
+                    />
+                    <Button
+                      onClick={async () => {
+                        if (!user) return;
+                        if (!partnerIdInput.trim()) {
+                          setPartnerError(
+                            t("partner_id_required") ||
+                              "Please enter a partner user ID"
+                          );
+                          return;
+                        }
+
+                        setValidatingPartner(true);
+                        setPartnerError(null);
+
+                        const validation = await validatePartnerId(
+                          partnerIdInput.trim(),
+                          user.id
+                        );
+
+                        if (!validation.valid) {
+                          setPartnerError(
+                            validation.error || "Invalid partner"
+                          );
+                          setValidatingPartner(false);
+                          return;
+                        }
+
+                        try {
+                          await updateSettings({
+                            joint_account_partner_id: partnerIdInput.trim(),
+                          });
+                          setPartnerIdInput("");
+                          toast.success(
+                            t("joint_account_linked") ||
+                              "Joint account linked successfully! Both accounts will now share data."
+                          );
+                          // Trigger a sync to fetch partner's data
+                          await safeSync("jointAccountLinked");
+                        } catch (error) {
+                          console.error(
+                            "[Settings] Failed to link joint account:",
+                            error
+                          );
+                          setPartnerError(
+                            t("joint_account_link_error") ||
+                              "Failed to link joint account. Please try again."
+                          );
+                        } finally {
+                          setValidatingPartner(false);
+                        }
+                      }}
+                      disabled={validatingPartner || !partnerIdInput.trim()}
+                      className="h-12 touch-manipulation"
+                    >
+                      {validatingPartner ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Link2 className="h-4 w-4 mr-2" />
+                      )}
+                      {t("link_account") || "Link Account"}
+                    </Button>
+                  </div>
+                  {partnerError && (
+                    <p className="text-xs text-destructive">{partnerError}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t("joint_account_note") ||
+                      "Enter your partner's user ID to link accounts. Both accounts will share all transactions, categories, and contexts. Real-time updates will sync automatically."}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

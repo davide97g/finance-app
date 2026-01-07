@@ -504,6 +504,7 @@ export interface Database {
           user_id: string;
           user_mode: string | null;
           revolut_username: string | null;
+          joint_account_partner_id: string | null;
         };
         Insert: {
           accent_color?: string | null;
