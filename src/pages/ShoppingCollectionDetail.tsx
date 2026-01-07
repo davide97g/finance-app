@@ -11,9 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useShoppingCollections } from "@/hooks/useShoppingCollections";
 import { useShoppingLists } from "@/hooks/useShoppingLists";
-import { ArrowLeft, Edit, List, Plus, Search, Trash2 } from "lucide-react";
+import { db } from "@/lib/db";
+import { cn } from "@/lib/utils";
+import { Edit, List, Plus, Search, Trash2, Share2, Users } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -52,6 +56,43 @@ export function ShoppingCollectionDetailPage() {
       l.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [lists, searchQuery]);
+
+  // Get items for all lists in the collection for preview
+  const allListItems = useLiveQuery(async () => {
+    if (!collectionId || !lists) return new Map();
+    
+    const listIds = lists.map((l) => l.id);
+    const listItems = await db.shopping_list_items
+      .filter((li) => listIds.includes(li.list_id) && !li.deleted_at)
+      .toArray();
+    
+    const allItems = await db.shopping_items.toArray();
+    const itemMap = new Map(allItems.map((i) => [i.id, i]));
+    
+    // Group items by list_id with checked state
+    const itemsByList = new Map<string, Array<{ name: string; checked: boolean }>>();
+    
+    for (const listItem of listItems) {
+      const item = itemMap.get(listItem.item_id);
+      if (!item || item.deleted_at) continue;
+      
+      const existing = itemsByList.get(listItem.list_id) || [];
+      existing.push({ name: item.name, checked: listItem.checked });
+      itemsByList.set(listItem.list_id, existing);
+    }
+    
+    // Sort items: unchecked first, then alphabetically
+    for (const [listId, items] of itemsByList.entries()) {
+      items.sort((a, b) => {
+        if (a.checked !== b.checked) {
+          return a.checked ? 1 : -1; // unchecked first
+        }
+        return a.name.localeCompare(b.name);
+      });
+    }
+    
+    return itemsByList;
+  }, [collectionId, lists]);
 
   const handleCreateList = async () => {
     if (!collectionId || !newListName.trim()) {
@@ -116,31 +157,116 @@ export function ShoppingCollectionDetailPage() {
     setEditListName(list.name);
   };
 
+  const handleShareCollection = async () => {
+    if (!collectionId) return;
+    const shareUrl = `${window.location.origin}/shopping-lists/${collectionId}`;
+    
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: collection?.name || "",
+          text: t("share_collection_text") || `Check out my shopping collection: ${collection?.name || ""}`,
+          url: shareUrl,
+        });
+        toast.success(t("collection_shared") || "Collection shared");
+        return;
+      } catch (err) {
+        // User cancelled or share failed, fall through to clipboard
+        if ((err as Error).name !== "AbortError") {
+          console.error("Share failed:", err);
+        }
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success(t("link_copied") || "Link copied to clipboard");
+    } catch (err) {
+      console.error("Copy failed:", err);
+      toast.error(t("error.copy_failed") || "Failed to copy link");
+    }
+  };
+
+  const handleShareList = async (list: { id: string; name: string }) => {
+    if (!collectionId) return;
+    const shareUrl = `${window.location.origin}/shopping-lists/${collectionId}/lists/${list.id}`;
+    
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: list.name,
+          text: t("share_list_text") || `Check out my shopping list: ${list.name}`,
+          url: shareUrl,
+        });
+        toast.success(t("list_shared") || "List shared");
+        return;
+      } catch (err) {
+        // User cancelled or share failed, fall through to clipboard
+        if ((err as Error).name !== "AbortError") {
+          console.error("Share failed:", err);
+        }
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success(t("link_copied") || "Link copied to clipboard");
+    } catch (err) {
+      console.error("Copy failed:", err);
+      toast.error(t("error.copy_failed") || "Failed to copy link");
+    }
+  };
+
   if (!collection) {
     return <ContentLoader variant="card" count={3} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/shopping-lists")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{collection.name}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t("shopping_collection_description") ||
-              "Manage lists in this collection"}
-          </p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">{collection.name}</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
+              <p className="text-sm sm:text-base text-muted-foreground">
+                {t("shopping_collection_description") ||
+                  "Manage lists in this collection"}
+              </p>
+              {collection.members && collection.members.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {collection.members.length}{" "}
+                    {collection.members.length === 1
+                      ? t("member") || "member"
+                      : t("members") || "members"}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t("create_list") || "Create List"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            onClick={handleShareCollection}
+            className="gap-2 w-full sm:w-auto"
+          >
+            <Share2 className="h-4 w-4" />
+            {t("share") || "Share"}
+          </Button>
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t("create_list") || "Create List"}
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
@@ -174,42 +300,113 @@ export function ShoppingCollectionDetailPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredLists.map((list) => (
             <Card
               key={list.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20"
               onClick={() =>
                 navigate(`/shopping-lists/${collectionId}/lists/${list.id}`)
               }
             >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{list.name}</CardTitle>
-                  <div className="flex gap-1">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base sm:text-lg font-semibold leading-tight pr-2 break-words">
+                    {list.name}
+                  </CardTitle>
+                  <div className="flex gap-1 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 min-size-override"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShareList(list);
+                      }}
+                      title={t("share_list") || "Share list"}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 min-size-override"
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditList(list);
                       }}
+                      title={t("edit_list") || "Edit list"}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 min-size-override"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeletingList(list);
                       }}
+                      title={t("delete_list") || "Delete list"}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
+              <CardContent className="pt-0 space-y-3">
+                {allListItems && allListItems.get(list.id) && allListItems.get(list.id)!.length > 0 ? (
+                  <>
+                    {/* Progress Bar */}
+                    {(() => {
+                      const items = allListItems.get(list.id)!;
+                      const totalItems = items.length;
+                      const checkedItems = items.filter((item) => item.checked).length;
+                      const progress = totalItems > 0 ? (checkedItems / totalItems) * 100 : 0;
+                      
+                      return (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              {checkedItems} / {totalItems} {t("items_checked") || "items checked"}
+                            </span>
+                            <span className="font-medium text-muted-foreground">
+                              {progress.toFixed(0)}%
+                            </span>
+                          </div>
+                          <Progress value={progress} className="h-2" />
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Item Preview */}
+                    <div className="space-y-1">
+                      {allListItems.get(list.id)!.slice(0, 3).map((item, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            "text-xs truncate",
+                            item.checked
+                              ? "text-muted-foreground line-through"
+                              : "text-foreground"
+                          )}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                      {allListItems.get(list.id)!.length > 3 && (
+                        <div className="text-xs text-muted-foreground font-medium">
+                          + {allListItems.get(list.id)!.length - 3} {t("more") || "more"}...
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    {t("no_items") || "No items yet"}
+                  </div>
+                )}
+              </CardContent>
             </Card>
           ))}
         </div>

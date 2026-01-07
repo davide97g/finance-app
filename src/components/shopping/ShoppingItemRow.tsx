@@ -17,12 +17,12 @@ export function ShoppingItemRow({
 }: ShoppingItemRowProps) {
   return (
     <SwipeableItem onDelete={onDelete} onClick={onToggle}>
-      <div className="bg-card p-3 rounded-lg border shadow-sm flex items-center gap-3 cursor-pointer active:bg-muted/50 focus:outline-none">
+      <div className="bg-card p-2.5 rounded-lg border shadow-sm flex items-center gap-2 cursor-pointer active:bg-muted/50 focus:outline-none">
         <Checkbox
           checked={listItem.checked}
           onCheckedChange={onToggle}
           onClick={(e) => e.stopPropagation()}
-          className="shrink-0"
+          className="shrink-0 h-5 w-5 [&_svg]:h-3.5 [&_svg]:w-3.5"
         />
         <span
           className={cn(

@@ -75,9 +75,15 @@ export function ShoppingItemAutocomplete({
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === "Enter" && highlightedIndex >= 0) {
+    } else if (e.key === "Enter") {
       e.preventDefault();
-      handleSelect(filteredItems[highlightedIndex].name);
+      if (highlightedIndex >= 0 && filteredItems[highlightedIndex]) {
+        // If a suggestion is highlighted, select it
+        handleSelect(filteredItems[highlightedIndex].name);
+      } else if (searchTerm.trim().length > 0) {
+        // If no suggestion is highlighted but there's text, create new item
+        handleSelect(searchTerm.trim());
+      }
     } else if (e.key === "Escape") {
       setShowSuggestions(false);
       setHighlightedIndex(-1);

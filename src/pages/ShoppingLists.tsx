@@ -15,7 +15,7 @@ import {
   ShoppingCollectionWithMembers,
   useShoppingCollections,
 } from "@/hooks/useShoppingCollections";
-import { Edit, Plus, Search, ShoppingCart, Trash2, Users } from "lucide-react";
+import { Edit, Plus, Search, ShoppingCart, Trash2, Users, Share2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -107,23 +107,57 @@ export function ShoppingListsPage() {
     setEditCollectionName(collection.name);
   };
 
+  const handleShareCollection = async (collection: ShoppingCollectionWithMembers) => {
+    const shareUrl = `${window.location.origin}/shopping-lists/${collection.id}`;
+    
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: collection.name,
+          text: t("share_collection_text") || `Check out my shopping collection: ${collection.name}`,
+          url: shareUrl,
+        });
+        toast.success(t("collection_shared") || "Collection shared");
+        return;
+      } catch (err) {
+        // User cancelled or share failed, fall through to clipboard
+        if ((err as Error).name !== "AbortError") {
+          console.error("Share failed:", err);
+        }
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success(t("link_copied") || "Link copied to clipboard");
+    } catch (err) {
+      console.error("Copy failed:", err);
+      toast.error(t("error.copy_failed") || "Failed to copy link");
+    }
+  };
+
   if (!collections) {
     return <ContentLoader variant="card" count={3} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">
             {t("shopping_lists") || "Shopping Lists"}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             {t("shopping_lists_description") ||
               "Manage your shopping collections and lists"}
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button 
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="w-full sm:w-auto shrink-0"
+        >
           <Plus className="h-4 w-4 mr-2" />
           {t("create_collection") || "Create Collection"}
         </Button>
@@ -160,49 +194,81 @@ export function ShoppingListsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredCollections.map((collection) => (
             <Card
               key={collection.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20"
               onClick={() => navigate(`/shopping-lists/${collection.id}`)}
             >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{collection.name}</CardTitle>
-                  <div className="flex gap-1">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base sm:text-lg font-semibold leading-tight pr-2 break-words">
+                    {collection.name}
+                  </CardTitle>
+                  <div className="flex gap-1 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 min-size-override"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShareCollection(collection);
+                      }}
+                      title={t("share_collection") || "Share collection"}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 min-size-override"
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditCollection(collection);
                       }}
+                      title={t("edit_collection") || "Edit collection"}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 min-size-override"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeletingCollection(collection);
                       }}
+                      title={t("delete_collection") || "Delete collection"}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>
-                    {collection.members.length}{" "}
-                    {collection.members.length === 1
-                      ? t("member") || "member"
-                      : t("members") || "members"}
-                  </span>
+              <CardContent className="pt-0">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                    <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                    <span>
+                      {collection.members.length}{" "}
+                      {collection.members.length === 1
+                        ? t("member") || "member"
+                        : t("members") || "members"}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShareCollection(collection);
+                    }}
+                  >
+                    <Share2 className="h-3 w-3 mr-1.5" />
+                    <span className="hidden sm:inline">{t("share") || "Share"}</span>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

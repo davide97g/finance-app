@@ -328,12 +328,19 @@
   }
 
   /* Ensure touch targets are large enough */
-  button:not([role="switch"]),
-  a,
-  input:not([type="checkbox"]):not([type="radio"]),
-  select,
-  textarea {
+  button:not([role="switch"]):not([data-state]):not(.min-size-override),
+  a:not(.min-size-override),
+  input:not([type="checkbox"]):not([type="radio"]):not(.min-size-override),
+  select:not(.min-size-override),
+  textarea:not(.min-size-override) {
     @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Override for small interactive elements like checkboxes */
+  button[data-state],
+  .min-size-override {
+    min-height: unset !important;
+    min-width: unset !important;
   }
 }
 
