@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, LogOut, User2 } from "lucide-react";
 import { useSafeLogout } from "@/hooks/useSafeLogout";
 import { SafeLogoutDialog } from "@/components/SafeLogoutDialog";
+import { ProfilePictureManager } from "@/components/ProfilePictureManager";
 
 export function ProfilePage() {
     const { t } = useTranslation();
@@ -77,6 +78,10 @@ export function ProfilePage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSave} className="space-y-4">
+                            <ProfilePictureManager />
+
+                            <Separator />
+
                             <div className="grid gap-2">
                                 <Label htmlFor="full-name">
                                     {t("full_name")}

@@ -8,6 +8,8 @@ import {
   validate,
 } from "../lib/validation";
 import { useTranslation } from "react-i18next";
+import { updateCategoryUsageStats } from "../lib/categoryUsage";
+import { useAuth } from "../contexts/AuthProvider";
 
 /**
  * Hook for managing transactions with optional filtering.
@@ -22,6 +24,7 @@ export function useTransactions(
   groupId?: string | null
 ) {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   // Single unified query that handles all filtering in one operation
   const transactions = useLiveQuery(async () => {
@@ -90,6 +93,16 @@ export function useTransactions(
       pendingSync: 1,
       deleted_at: null,
     });
+    
+    // Update category usage statistics for expense transactions
+    if (user && validatedData.type === "expense" && validatedData.category_id) {
+      updateCategoryUsageStats(user.id, validatedData.category_id, validatedData.date).catch(
+        (error) => {
+          console.error("[useTransactions] Failed to update category usage stats:", error);
+        }
+      );
+    }
+    
     syncManager.schedulePush();
   };
 
@@ -97,6 +110,9 @@ export function useTransactions(
     id: string,
     updates: Partial<Omit<Transaction, "id" | "sync_token" | "pendingSync">>
   ) => {
+    // Get existing transaction to check for category/date changes
+    const existing = await db.transactions.get(id);
+    
     // Validate update data (partial validation)
     const validatedUpdates = validate(getTransactionUpdateSchema(t), updates);
 
@@ -104,6 +120,36 @@ export function useTransactions(
       ...validatedUpdates,
       pendingSync: 1,
     });
+    
+    // Update category usage statistics if category or date changed for expense transactions
+    if (user && existing) {
+      const categoryChanged = validatedUpdates.category_id && validatedUpdates.category_id !== existing.category_id;
+      const dateChanged = validatedUpdates.date && validatedUpdates.date !== existing.date;
+      const typeChanged = validatedUpdates.type && validatedUpdates.type !== existing.type;
+      
+      // If category changed, update stats for both old and new categories
+      if (categoryChanged && existing.type === "expense" && existing.category_id) {
+        updateCategoryUsageStats(user.id, existing.category_id, existing.date).catch(
+          (error) => {
+            console.error("[useTransactions] Failed to update old category usage stats:", error);
+          }
+        );
+      }
+      
+      // Update stats for new category if it's an expense
+      const finalCategoryId = validatedUpdates.category_id || existing.category_id;
+      const finalDate = validatedUpdates.date || existing.date;
+      const finalType = validatedUpdates.type || existing.type;
+      
+      if ((categoryChanged || dateChanged || typeChanged) && finalType === "expense" && finalCategoryId) {
+        updateCategoryUsageStats(user.id, finalCategoryId, finalDate).catch(
+          (error) => {
+            console.error("[useTransactions] Failed to update category usage stats:", error);
+          }
+        );
+      }
+    }
+    
     syncManager.schedulePush();
   };
 

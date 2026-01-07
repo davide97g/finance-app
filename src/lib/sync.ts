@@ -12,24 +12,25 @@
  * @module lib/sync
  */
 
+import i18n from "@/i18n";
+import { toast } from "sonner";
+import { Tables, TablesInsert } from "../types/supabase";
+import { UNCATEGORIZED_CATEGORY } from "./constants";
 import {
+  Category,
+  CategoryBudget,
+  CategoryUsageStats,
+  Context,
   db,
   Group,
   GroupMember,
-  Transaction,
-  Category,
-  Context,
-  RecurringTransaction,
-  CategoryBudget,
   Profile,
+  RecurringTransaction,
   Setting,
+  Transaction,
 } from "./db";
 import { processRecurringTransactions } from "./recurring";
 import { supabase } from "./supabase";
-import { Tables, TablesInsert } from "../types/supabase";
-import { toast } from "sonner";
-import i18n from "@/i18n";
-import { UNCATEGORIZED_CATEGORY } from "./constants";
 
 const TABLES = [
   "profiles",
@@ -40,6 +41,7 @@ const TABLES = [
   "transactions",
   "recurring_transactions",
   "category_budgets",
+  "category_usage_stats",
 ] as const;
 
 type TableName = (typeof TABLES)[number];
@@ -53,6 +55,7 @@ type LocalTableMap = {
   recurring_transactions: RecurringTransaction;
   category_budgets: CategoryBudget;
   profiles: Profile;
+  category_usage_stats: CategoryUsageStats;
 };
 
 // ============================================================================
@@ -200,34 +203,40 @@ export class SyncManager {
 
       // Attempt to refresh session if 403 Forbidden
       const err = error as { message?: string; status?: number; code?: string };
-      if (err?.message?.includes("403") || err?.status === 403 || err?.code === "PGRST301") {
-        console.log("[Sync] Encountered 403 error, attempting session refresh...");
+      if (
+        err?.message?.includes("403") ||
+        err?.status === 403 ||
+        err?.code === "PGRST301"
+      ) {
+        console.log(
+          "[Sync] Encountered 403 error, attempting session refresh..."
+        );
         const refreshResult = await supabase.auth.refreshSession();
         if (refreshResult.error) {
           console.error("[Sync] Session refresh failed:", refreshResult.error);
           if (this.onLogout) this.onLogout();
           return;
         } else {
-          console.log("[Sync] Session refreshed successfully, retrying sync...");
+          console.log(
+            "[Sync] Session refreshed successfully, retrying sync..."
+          );
           // Recursively retry sync once
-          // You need to be careful about infinite recursion here. 
+          // You need to be careful about infinite recursion here.
           // Ideally we pass a flag to sync() like `isRetry`.
-          // For now, we'll just let the NEXT sync cycle handle it, 
+          // For now, we'll just let the NEXT sync cycle handle it,
           // but we successfully avoided the logout!
           return;
         }
       }
 
       // Show error toast to user
-      toast.error(
-        i18n.t("sync_error_title", { defaultValue: "Sync Failed" }),
-        {
-          description: i18n.t("sync_error_description", {
-            defaultValue: "Could not sync your data. Changes are saved locally and will sync when online.",
-          }),
-          duration: 6000,
-        }
-      );
+      toast.error(i18n.t("sync_error_title", { defaultValue: "Sync Failed" }), {
+        description: i18n.t("sync_error_description", {
+          defaultValue:
+            "Could not sync your data. Changes are saved locally and will sync when online.",
+        }),
+        duration: 6000,
+      });
     } finally {
       this.isSyncing = false;
       this.notifyListeners();
@@ -271,15 +280,23 @@ export class SyncManager {
 
       // Attempt to refresh session if 403 Forbidden
       const err = error as { message?: string; status?: number; code?: string };
-      if (err?.message?.includes("403") || err?.status === 403 || err?.code === "PGRST301") {
-        console.log("[Sync] Encountered 403 error during push, attempting session refresh...");
+      if (
+        err?.message?.includes("403") ||
+        err?.status === 403 ||
+        err?.code === "PGRST301"
+      ) {
+        console.log(
+          "[Sync] Encountered 403 error during push, attempting session refresh..."
+        );
         const refreshResult = await supabase.auth.refreshSession();
         if (refreshResult.error) {
           console.error("[Sync] Session refresh failed:", refreshResult.error);
           if (this.onLogout) this.onLogout();
           return;
         } else {
-          console.log("[Sync] Session refreshed successfully, retrying push...");
+          console.log(
+            "[Sync] Session refreshed successfully, retrying push..."
+          );
           // Recursively retry once
           await this.pushOnly();
           return;
@@ -318,7 +335,9 @@ export class SyncManager {
       } = await supabase.auth.getUser();
 
       if (authError && authError.status === 403) {
-        console.error("[Sync] 403 Forbidden during full sync - triggering logout");
+        console.error(
+          "[Sync] 403 Forbidden during full sync - triggering logout"
+        );
         if (this.onLogout) this.onLogout();
         return;
       }
@@ -348,15 +367,23 @@ export class SyncManager {
 
       // Attempt to refresh session if 403 Forbidden
       const err = error as { message?: string; status?: number; code?: string };
-      if (err?.message?.includes("403") || err?.status === 403 || err?.code === "PGRST301") {
-        console.log("[Sync] Encountered 403 error during full sync, attempting session refresh...");
+      if (
+        err?.message?.includes("403") ||
+        err?.status === 403 ||
+        err?.code === "PGRST301"
+      ) {
+        console.log(
+          "[Sync] Encountered 403 error during full sync, attempting session refresh..."
+        );
         const refreshResult = await supabase.auth.refreshSession();
         if (refreshResult.error) {
           console.error("[Sync] Session refresh failed:", refreshResult.error);
           if (this.onLogout) this.onLogout();
           return;
         } else {
-          console.log("[Sync] Session refreshed successfully, retrying full sync...");
+          console.log(
+            "[Sync] Session refreshed successfully, retrying full sync..."
+          );
           // Recursively retry once
           await this.fullSync();
           return;
@@ -476,15 +503,22 @@ export class SyncManager {
 
       // Special handling for categories: Ensure topological sort (Parents before Children)
       if (tableName === "categories") {
-        pendingItems = this.sortCategoriesTopologically(pendingItems as Category[]);
+        pendingItems = this.sortCategoriesTopologically(
+          pendingItems as Category[]
+        );
       }
 
       // Guard: Filter out transactions/recurring with UNCATEGORIZED_CATEGORY
       // These cannot sync as the category doesn't exist in remote DB
-      if (tableName === "transactions" || tableName === "recurring_transactions") {
+      if (
+        tableName === "transactions" ||
+        tableName === "recurring_transactions"
+      ) {
         const originalCount = pendingItems.length;
         pendingItems = pendingItems.filter(
-          (item) => (item as Transaction | RecurringTransaction).category_id !== UNCATEGORIZED_CATEGORY.ID
+          (item) =>
+            (item as Transaction | RecurringTransaction).category_id !==
+            UNCATEGORIZED_CATEGORY.ID
         );
         const skippedCount = originalCount - pendingItems.length;
         if (skippedCount > 0) {
@@ -558,7 +592,8 @@ export class SyncManager {
       } catch (error) {
         lastError = error as Error;
         console.warn(
-          `[Sync] Attempt ${attempt + 1}/${SYNC_CONFIG.maxRetries
+          `[Sync] Attempt ${attempt + 1}/${
+            SYNC_CONFIG.maxRetries
           } failed for ${tableName}:`,
           error
         );
@@ -635,13 +670,15 @@ export class SyncManager {
     const categoryMap = new Map<string, Category>();
 
     // Index by ID
-    categories.forEach(c => categoryMap.set(c.id, c));
+    categories.forEach((c) => categoryMap.set(c.id, c));
 
     const visit = (category: Category) => {
       if (visited.has(category.id)) return;
       if (processing.has(category.id)) {
         // Cycle detected (should not happen in valid tree), just push to break
-        console.warn(`[Sync] Cycle detected for category ${category.name} (${category.id})`);
+        console.warn(
+          `[Sync] Cycle detected for category ${category.name} (${category.id})`
+        );
         return;
       }
 
@@ -663,7 +700,7 @@ export class SyncManager {
       sorted.push(category);
     };
 
-    categories.forEach(category => visit(category));
+    categories.forEach((category) => visit(category));
 
     return sorted;
   }
@@ -683,12 +720,22 @@ export class SyncManager {
 
       while (hasMore) {
         try {
-          const { data, error } = await supabase
-            .from(tableName)
-            .select("*")
-            .gt("sync_token", lastSyncToken)
-            .order("sync_token", { ascending: true })
-            .range(page * SUPABASE_LIMIT, (page + 1) * SUPABASE_LIMIT - 1);
+          // For category_usage_stats, handle case where sync_token might not exist yet
+          let query = supabase.from(tableName).select("*");
+
+          if (tableName === "category_usage_stats") {
+            // Try to query with sync_token, but fallback to all if column doesn't exist
+            query = query.order("updated_at", { ascending: true });
+          } else {
+            query = query
+              .gt("sync_token", lastSyncToken)
+              .order("sync_token", { ascending: true });
+          }
+
+          const { data, error } = await query.range(
+            page * SUPABASE_LIMIT,
+            (page + 1) * SUPABASE_LIMIT - 1
+          );
 
           if (error) {
             console.error(`[Sync] Failed to pull ${tableName}:`, error);
@@ -711,11 +758,14 @@ export class SyncManager {
 
           await db.transaction("rw", tables, async () => {
             for (const item of data) {
-              const updateResult = await this.shouldUpdateLocal(tableName, item);
+              const updateResult = await this.shouldUpdateLocal(
+                tableName,
+                item
+              );
 
               if (!updateResult.shouldUpdate) {
                 // Only log conflicts (pending changes), skip silent for already-synced items
-                if (updateResult.reason === 'pending') {
+                if (updateResult.reason === "pending") {
                   console.log(
                     `[Sync] Conflict: ${tableName} ${item.id} has pending local changes`
                   );
@@ -741,7 +791,9 @@ export class SyncManager {
 
                 if (membership) {
                   // as unknown as Tables<"transactions"> is safe here because tableName is checked
-                  newGroupTransactions.push(item as unknown as Tables<"transactions">);
+                  newGroupTransactions.push(
+                    item as unknown as Tables<"transactions">
+                  );
                 }
               }
 
@@ -749,8 +801,13 @@ export class SyncManager {
               const localItem = this.prepareItemForLocal(item, tableName);
               await db.table(tableName).put(localItem);
 
-              if ((item.sync_token || 0) > maxToken) {
-                maxToken = item.sync_token || 0;
+              // Update maxToken only if sync_token exists
+              if (
+                "sync_token" in item &&
+                item.sync_token &&
+                (item.sync_token as number) > maxToken
+              ) {
+                maxToken = item.sync_token as number;
               }
             }
           });
@@ -760,7 +817,9 @@ export class SyncManager {
             hasMore = false;
           } else {
             page++;
-            console.log(`[Sync] Fetching next page for ${tableName} (page ${page})...`);
+            console.log(
+              `[Sync] Fetching next page for ${tableName} (page ${page})...`
+            );
           }
         } catch (error) {
           console.error(`[Sync] Error pulling ${tableName}:`, error);
@@ -771,14 +830,19 @@ export class SyncManager {
 
       // Update last sync token
       if (maxToken > lastSyncToken) {
-        console.log(`[Sync] Updating last_sync_token to ${maxToken} after processing ${tableName}`);
+        console.log(
+          `[Sync] Updating last_sync_token to ${maxToken} after processing ${tableName}`
+        );
         await this.updateLastSyncToken(userId, maxToken, userSettings);
       }
 
-      // Show toast notification for new and modified group transactions  
+      // Show toast notification for new and modified group transactions
       await this.showGroupTransactionToast(newGroupTransactions, "new");
       const modifiedGroupTransactions: Tables<"transactions">[] = []; // Track modified separately if needed
-      await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
+      await this.showGroupTransactionToast(
+        modifiedGroupTransactions,
+        "modified"
+      );
 
       // Process recurring transactions
       const addedCount = await processRecurringTransactions();
@@ -827,7 +891,9 @@ export class SyncManager {
             continue;
           }
 
-          console.log(`[Sync] Full pull: ${data.length} items from ${tableName}`);
+          console.log(
+            `[Sync] Full pull: ${data.length} items from ${tableName}`
+          );
 
           const tables = [db.table(tableName)];
           if (tableName === "transactions") {
@@ -836,11 +902,14 @@ export class SyncManager {
 
           await db.transaction("rw", tables, async () => {
             for (const item of data) {
-              const updateResult = await this.shouldUpdateLocal(tableName, item);
+              const updateResult = await this.shouldUpdateLocal(
+                tableName,
+                item
+              );
 
               if (!updateResult.shouldUpdate) {
                 // Only log conflicts (pending changes), skip silent for already-synced items
-                if (updateResult.reason === 'pending') {
+                if (updateResult.reason === "pending") {
                   console.log(
                     `[Sync] Conflict: ${tableName} ${item.id} has pending local changes`
                   );
@@ -867,9 +936,13 @@ export class SyncManager {
                   // Check if this is a new or modified transaction
                   const existingTxn = await db.transactions.get(item.id);
                   if (existingTxn) {
-                    modifiedGroupTransactions.push(item as unknown as Tables<"transactions">);
+                    modifiedGroupTransactions.push(
+                      item as unknown as Tables<"transactions">
+                    );
                   } else {
-                    newGroupTransactions.push(item as unknown as Tables<"transactions">);
+                    newGroupTransactions.push(
+                      item as unknown as Tables<"transactions">
+                    );
                   }
                 }
               }
@@ -878,9 +951,13 @@ export class SyncManager {
               const localItem = this.prepareItemForLocal(item, tableName);
               await db.table(tableName).put(localItem);
 
-              // Track max sync_token for future delta syncs
-              if (item.sync_token && item.sync_token > maxToken) {
-                maxToken = item.sync_token;
+              // Track max sync_token for future delta syncs (only if sync_token exists)
+              if (
+                "sync_token" in item &&
+                item.sync_token &&
+                (item.sync_token as number) > maxToken
+              ) {
+                maxToken = item.sync_token as number;
               }
             }
           });
@@ -890,7 +967,9 @@ export class SyncManager {
             hasMore = false;
           } else {
             page++;
-            console.log(`[Sync] Full sync: Fetching next page for ${tableName} (page ${page})...`);
+            console.log(
+              `[Sync] Full sync: Fetching next page for ${tableName} (page ${page})...`
+            );
           }
         } catch (error) {
           console.error(`[Sync] Error pulling all ${tableName}:`, error);
@@ -907,7 +986,10 @@ export class SyncManager {
 
       // Show toast notification for new and modified group transactions
       await this.showGroupTransactionToast(newGroupTransactions, "new");
-      await this.showGroupTransactionToast(modifiedGroupTransactions, "modified");
+      await this.showGroupTransactionToast(
+        modifiedGroupTransactions,
+        "modified"
+      );
 
       // Process recurring transactions
       const addedCount = await processRecurringTransactions();
@@ -930,29 +1012,53 @@ export class SyncManager {
   private async shouldUpdateLocal<T extends TableName>(
     tableName: T,
     remoteItem: Tables<T>
-  ): Promise<{ shouldUpdate: boolean; reason: 'new' | 'pending' | 'already_synced' | 'remote_newer' }> {
+  ): Promise<{
+    shouldUpdate: boolean;
+    reason: "new" | "pending" | "already_synced" | "remote_newer";
+  }> {
     const existing = await db.table(tableName).get(remoteItem.id);
 
     // New item - always accept
     if (!existing) {
-      return { shouldUpdate: true, reason: 'new' };
+      return { shouldUpdate: true, reason: "new" };
     }
 
     // Local has pending changes - ALWAYS keep local to avoid overwriting user work
     if (existing.pendingSync === 1) {
-      return { shouldUpdate: false, reason: 'pending' };
+      return { shouldUpdate: false, reason: "pending" };
     }
 
     // Compare sync tokens - only update if remote has a newer version
-    const localToken = existing.sync_token || 0;
-    const remoteToken = remoteItem.sync_token || 0;
+    // Handle tables that might not have sync_token yet (e.g., category_usage_stats)
+    const localToken =
+      "sync_token" in existing && existing.sync_token ? existing.sync_token : 0;
+    const remoteToken =
+      "sync_token" in remoteItem && remoteItem.sync_token
+        ? remoteItem.sync_token
+        : 0;
 
-    if (remoteToken > localToken) {
-      return { shouldUpdate: true, reason: 'remote_newer' };
+    // If neither has sync_token, use updated_at for comparison
+    if (
+      localToken === 0 &&
+      remoteToken === 0 &&
+      "updated_at" in remoteItem &&
+      "updated_at" in existing
+    ) {
+      const localTime = existing.updated_at
+        ? new Date(existing.updated_at).getTime()
+        : 0;
+      const remoteTime = remoteItem.updated_at
+        ? new Date(remoteItem.updated_at).getTime()
+        : 0;
+      if (remoteTime > localTime) {
+        return { shouldUpdate: true, reason: "remote_newer" };
+      }
+    } else if (remoteToken > localToken) {
+      return { shouldUpdate: true, reason: "remote_newer" };
     }
 
     // Already synced or local is newer - no action needed
-    return { shouldUpdate: false, reason: 'already_synced' };
+    return { shouldUpdate: false, reason: "already_synced" };
   }
 
   /**
@@ -963,7 +1069,10 @@ export class SyncManager {
     item: Tables<T>,
     tableName: T
   ): LocalTableMap[T] {
-    const localItem = { ...item, pendingSync: 0 } as unknown as LocalTableMap[T] & { year_month?: string; active?: number };
+    const localItem = {
+      ...item,
+      pendingSync: 0,
+    } as unknown as LocalTableMap[T] & { year_month?: string; active?: number };
 
     // Calculate year_month for transactions
     if (tableName === "transactions" && "date" in item && item.date) {
@@ -1038,18 +1147,24 @@ export class SyncManager {
 
       // Build description with richer formatting
       const description = [
-        `💰 ${i18n.t("total_amount", { defaultValue: "Total" })}: €${totalAmount.toFixed(2)}`,
-        `👤 ${i18n.t("your_share", { defaultValue: "Your share" })}: €${userAmount.toFixed(2)} (${userShare}%)`,
+        `💰 ${i18n.t("total_amount", {
+          defaultValue: "Total",
+        })}: €${totalAmount.toFixed(2)}`,
+        `👤 ${i18n.t("your_share", {
+          defaultValue: "Your share",
+        })}: €${userAmount.toFixed(2)} (${userShare}%)`,
         `📝 ${txn.description}${categoryName}`,
       ].join("\n");
 
       // Different message based on action
-      const titleKey = action === "modified"
-        ? "modified_group_transaction_from"
-        : "new_group_transaction_from";
-      const defaultTitle = action === "modified"
-        ? "{{payer}} modified a transaction in {{group}}"
-        : "{{payer}} added a transaction in {{group}}";
+      const titleKey =
+        action === "modified"
+          ? "modified_group_transaction_from"
+          : "new_group_transaction_from";
+      const defaultTitle =
+        action === "modified"
+          ? "{{payer}} modified a transaction in {{group}}"
+          : "{{payer}} added a transaction in {{group}}";
 
       toast.info(
         `${i18n.t(titleKey, {
@@ -1087,16 +1202,20 @@ export class SyncManager {
       }
 
       const description = [
-        `💰 ${i18n.t("total_amount", { defaultValue: "Total" })}: €${totalAmount.toFixed(2)}`,
+        `💰 ${i18n.t("total_amount", {
+          defaultValue: "Total",
+        })}: €${totalAmount.toFixed(2)}`,
         ...groupSummaries,
       ].join("\n");
 
-      const titleKey = action === "modified"
-        ? "modified_group_transactions"
-        : "new_group_transactions";
-      const defaultTitle = action === "modified"
-        ? "{{count}} modified group transactions"
-        : "{{count}} new group transactions";
+      const titleKey =
+        action === "modified"
+          ? "modified_group_transactions"
+          : "new_group_transactions";
+      const defaultTitle =
+        action === "modified"
+          ? "{{count}} modified group transactions"
+          : "{{count}} new group transactions";
 
       toast.info(
         i18n.t(titleKey, {
@@ -1152,6 +1271,10 @@ export class SyncManager {
         default_view: "list",
         include_investments_in_expense_totals: false,
         include_group_expenses: false,
+        category_sorting_enabled: false,
+        category_sorting_strategy: null,
+        category_sorting_days: 30,
+        user_mode: "default",
         last_sync_token: maxToken,
         updated_at: new Date().toISOString(),
       });
@@ -1210,6 +1333,17 @@ export class SyncManager {
         include_group_expenses: data.include_group_expenses || false,
         monthly_budget: data.monthly_budget,
         cached_month: data.cached_month || undefined,
+        category_sorting_enabled: data.category_sorting_enabled ?? false,
+        category_sorting_strategy: data.category_sorting_strategy as
+          | "moving_average"
+          | "total_all_time"
+          | "recent_order"
+          | null
+          | undefined,
+        category_sorting_days: data.category_sorting_days ?? 30,
+        user_mode:
+          (data.user_mode as "default" | "simplified" | "advanced") ||
+          "default",
         last_sync_token: localSettings?.last_sync_token || 0, // Preserve local sync token
         updated_at: data.updated_at || undefined,
       };

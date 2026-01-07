@@ -466,6 +466,7 @@ create table if not exists public.profiles (
   email text,
   full_name text,
   avatar_url text,
+  avatar_type text check (avatar_type in ('initials', 'photo')) default 'initials',
   updated_at timestamptz default now(),
   sync_token bigint default nextval('global_sync_token_seq')
 );

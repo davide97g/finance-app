@@ -17,6 +17,7 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { useCategories } from "@/hooks/useCategories";
+import { useCategoryUsage } from "@/hooks/useCategoryUsage";
 import { Category } from "@/lib/db";
 import { getIconComponent } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
@@ -60,6 +61,9 @@ export function CategorySelector({
   const { categories } = useCategories(undefined);
   const { groups } = useGroups();
   const { t } = useTranslation();
+  
+  // Get sorted categories based on usage statistics (only applies to expense categories)
+  const { sortedCategories } = useCategoryUsage(categories);
 
   const [open, setOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
@@ -74,14 +78,18 @@ export function CategorySelector({
   }, []);
 
   const filteredCategories = React.useMemo(() => {
+    // Use sortedCategories if available (for expense categories with usage sorting enabled)
+    // Otherwise fall back to original categories
+    const sourceCategories = sortedCategories && type === "expense" ? sortedCategories : (categories || []);
+    
     // 1. Strict Group Filter
-    let cats = categories?.filter((c) => {
+    let cats = sourceCategories.filter((c) => {
       if (groupId) {
         return c.group_id === groupId;
       } else {
         return !c.group_id; // Personal categories only
       }
-    }) || [];
+    });
 
     // 2. Active Check
     cats = cats.filter((c) => c.active !== 0);
@@ -106,8 +114,32 @@ export function CategorySelector({
       cats = cats.filter(c => c.name.toLowerCase().includes(lowerTerm));
     }
 
-    return cats.sort((a, b) => a.name.localeCompare(b.name));
-  }, [categories, type, excludeId, searchTerm, groupId]);
+    // 7. Sort: If usage sorting is enabled and type is expense, maintain order from sortedCategories
+    // Otherwise, sort alphabetically
+    if (type === "expense" && sortedCategories && sortedCategories.length > 0) {
+      // Maintain order from sortedCategories (already sorted by usage)
+      // Create a map for quick lookup
+      const orderMap = new Map<string, number>();
+      sortedCategories.forEach((cat, index) => {
+        orderMap.set(cat.id, index);
+      });
+      
+      // Sort by order in sortedCategories, then alphabetically for items not in sortedCategories
+      cats.sort((a, b) => {
+        const orderA = orderMap.get(a.id) ?? Infinity;
+        const orderB = orderMap.get(b.id) ?? Infinity;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.name.localeCompare(b.name);
+      });
+    } else {
+      // Alphabetical sort for non-expense or when usage sorting is disabled
+      cats.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return cats;
+  }, [sortedCategories, categories, type, excludeId, searchTerm, groupId]);
 
 
   // If searching, we show a flat list. If not, we show tree.

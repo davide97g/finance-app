@@ -34,6 +34,8 @@ import {
 import { useAuth } from "@/contexts/AuthProvider"
 import { useOnlineSync } from "@/hooks/useOnlineSync"
 import { useProfile } from "@/hooks/useProfiles"
+import { generateInitials } from "@/lib/profileUtils"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import packageJson from "../../package.json"
 
@@ -108,9 +110,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     size="lg"
                                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                                 >
-                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                                        <User2 className="size-4" />
-                                    </div>
+                                    <Avatar className="size-8">
+                                        {profile?.avatar_type === "photo" && profile?.avatar_url ? (
+                                            <AvatarImage src={profile.avatar_url} alt={profile?.full_name || user?.email || "User"} />
+                                        ) : null}
+                                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                            {generateInitials(profile?.full_name, user?.email || profile?.email)}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                                         <span className="truncate font-semibold">{profile?.full_name || user?.email?.split('@')[0] || 'User'}</span>
                                         <span className="truncate text-xs">{user?.email}</span>

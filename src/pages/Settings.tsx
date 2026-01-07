@@ -1,17 +1,7 @@
-import React, { useState } from "react";
-import { useSettings } from "@/hooks/useSettings";
-import { useOnlineSync } from "@/hooks/useOnlineSync";
-import { useAuth } from "@/contexts/AuthProvider";
-import { db } from "@/lib/db";
-import { safeSync, syncManager } from "@/lib/sync";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { HelpSystemWrapper } from "@/components/help/HelpSystem";
+import { ImportWizard } from "@/components/import/ImportWizard";
+import { ImportRulesManager } from "@/components/settings/ImportRulesManager";
+import { SyncIndicator } from "@/components/SyncStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -30,37 +21,48 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SyncIndicator } from "@/components/SyncStatus";
 import { ContentLoader } from "@/components/ui/content-loader";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  RefreshCw,
-  Sun,
-  Moon,
-  Trash2,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useOnlineSync } from "@/hooks/useOnlineSync";
+import { useSettings } from "@/hooks/useSettings";
+import { useWelcomeWizard } from "@/hooks/useWelcomeWizard";
+import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
+import { db } from "@/lib/db";
+import { safeSync, syncManager } from "@/lib/sync";
+import { THEME_COLORS } from "@/lib/theme-colors";
+import { cn, getLocalDate } from "@/lib/utils";
+import {
   AlertTriangle,
-  Upload,
-  Download,
-  Monitor,
-  X,
-  Palette,
-  Database,
-  Wrench,
+  BookOpen,
   Check,
   Compass,
-  BookOpen,
+  Database,
+  Download,
+  Monitor,
+  Moon,
+  Palette,
+  RefreshCw,
+  Sun,
+  Trash2,
+  Upload,
+  Wrench,
+  X,
 } from "lucide-react";
-import { HelpSystemWrapper } from "@/components/help/HelpSystem";
-import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
-import { THEME_COLORS } from "@/lib/theme-colors";
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ImportWizard } from "@/components/import/ImportWizard";
-import { ImportRulesManager } from "@/components/settings/ImportRulesManager";
-import { cn, getLocalDate } from "@/lib/utils";
-import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
-import { useWelcomeWizard } from "@/hooks/useWelcomeWizard";
 
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
@@ -119,12 +121,17 @@ export function SettingsPage() {
     setClearingCache(false);
   };
 
-  const handleImportComplete = async (stats?: { transactions: number; categories: number }) => {
+  const handleImportComplete = async (stats?: {
+    transactions: number;
+    categories: number;
+  }) => {
     await safeSync("handleImportComplete");
-    toast.success(t("import_success", {
-      transactions: stats?.transactions || 0,
-      categories: stats?.categories || 0
-    }) || "Import successful");
+    toast.success(
+      t("import_success", {
+        transactions: stats?.transactions || 0,
+        categories: stats?.categories || 0,
+      }) || "Import successful"
+    );
   };
 
   const handleExportData = async () => {
@@ -136,7 +143,12 @@ export function SettingsPage() {
         .filter((t) => t.user_id === user.id && !t.deleted_at)
         .toArray();
       const categories = await db.categories
-        .filter((c) => c.user_id === user.id && !c.deleted_at && c.id !== UNCATEGORIZED_CATEGORY.ID)
+        .filter(
+          (c) =>
+            c.user_id === user.id &&
+            !c.deleted_at &&
+            c.id !== UNCATEGORIZED_CATEGORY.ID
+        )
         .toArray();
       const contexts = await db.contexts
         .filter((c) => c.user_id === user.id && !c.deleted_at)
@@ -148,12 +160,12 @@ export function SettingsPage() {
         .filter((b) => b.user_id === user.id && !b.deleted_at)
         .toArray();
       const groups = await db.groups
-        .filter((g) => !g.deleted_at) // Groups might not have user_id directly if I'm just a member, but created_by is there. 
+        .filter((g) => !g.deleted_at) // Groups might not have user_id directly if I'm just a member, but created_by is there.
         // Actually, for a backup, ideally we want groups I'm a member of.
         // But simply filtering by created_by might miss groups where I am a guest/member.
         // However, checking membership for every group is expensive.
         // For now, let's export ALL local groups since this is a local-first app and I only have groups I'm involved in locally?
-        // Let's verify db.ts. 
+        // Let's verify db.ts.
         // Sync pulls groups I'm in. So local DB should only have relevant groups.
         .toArray();
       const groupMembers = await db.group_members
@@ -164,16 +176,33 @@ export function SettingsPage() {
         exportDate: new Date().toISOString(),
         userId: user.id,
         transactions: transactions.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) => rest
+          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
+            rest
         ),
         categories: categories.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) => rest
+          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
+            rest
         ),
-        contexts: contexts.map(({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) => rest),
-        recurring_transactions: recurring.map(({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) => rest),
-        category_budgets: budgets.map(({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) => rest),
-        groups: groups.map(({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) => rest),
-        group_members: groupMembers.map(({ pendingSync: _pendingSync, removed_at: _removed_at, ...rest }) => rest),
+        contexts: contexts.map(
+          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
+            rest
+        ),
+        recurring_transactions: recurring.map(
+          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
+            rest
+        ),
+        category_budgets: budgets.map(
+          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
+            rest
+        ),
+        groups: groups.map(
+          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
+            rest
+        ),
+        group_members: groupMembers.map(
+          ({ pendingSync: _pendingSync, removed_at: _removed_at, ...rest }) =>
+            rest
+        ),
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -190,7 +219,7 @@ export function SettingsPage() {
 
       toast.success(
         t("export_success") ||
-        `Exported ${transactions.length} tx, ${categories.length} cat, ${recurring.length} recurring`
+          `Exported ${transactions.length} tx, ${categories.length} cat, ${recurring.length} recurring`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -218,7 +247,9 @@ export function SettingsPage() {
       {/* Header */}
       <div className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight">{t("settings")}</h2>
-        <p className="text-sm text-muted-foreground">{t("settings_general_desc")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t("settings_general_desc")}
+        </p>
       </div>
 
       {/* Tab Navigation */}
@@ -283,7 +314,8 @@ export function SettingsPage() {
                     variant={settings.theme === value ? "default" : "outline"}
                     className={cn(
                       "flex-1 h-12 gap-2 transition-all touch-manipulation",
-                      settings.theme === value && "ring-2 ring-primary ring-offset-2"
+                      settings.theme === value &&
+                        "ring-2 ring-primary ring-offset-2"
                     )}
                     onClick={() => handleThemeChange(value)}
                   >
@@ -303,11 +335,14 @@ export function SettingsPage() {
             <CardContent>
               <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
                 {Object.values(THEME_COLORS).map((color) => {
-                  const isSelected = (settings.accentColor || "slate") === color.name;
+                  const isSelected =
+                    (settings.accentColor || "slate") === color.name;
                   return (
                     <button
                       key={color.name}
-                      onClick={() => updateSettings({ accentColor: color.name })}
+                      onClick={() =>
+                        updateSettings({ accentColor: color.name })
+                      }
                       className={cn(
                         "relative h-8 w-full rounded-md border-2 transition-all touch-manipulation hover:scale-105 active:scale-95",
                         isSelected
@@ -315,7 +350,11 @@ export function SettingsPage() {
                           : "border-transparent hover:border-muted-foreground/50"
                       )}
                       style={{
-                        backgroundColor: `hsl(${mounted && resolvedTheme === "dark" ? color.dark.primary : color.light.primary})`,
+                        backgroundColor: `hsl(${
+                          mounted && resolvedTheme === "dark"
+                            ? color.dark.primary
+                            : color.light.primary
+                        })`,
                       }}
                       title={t(color.name)}
                     >
@@ -327,7 +366,7 @@ export function SettingsPage() {
                 })}
               </div>
               <p className="text-xs text-muted-foreground mt-3 text-center">
-                {t((settings.accentColor || "slate"))}
+                {t(settings.accentColor || "slate")}
               </p>
             </CardContent>
           </Card>
@@ -336,8 +375,15 @@ export function SettingsPage() {
           {/* Help & Resources */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t("help_and_resources", "Help & Resources")}</CardTitle>
-              <CardDescription>{t("help_resources_desc", "Learn how to use the app to its full potential.")}</CardDescription>
+              <CardTitle className="text-base">
+                {t("help_and_resources", "Help & Resources")}
+              </CardTitle>
+              <CardDescription>
+                {t(
+                  "help_resources_desc",
+                  "Learn how to use the app to its full potential."
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <HelpSystemWrapper triggerAsChild>
@@ -347,8 +393,12 @@ export function SettingsPage() {
                 >
                   <BookOpen className="h-5 w-5 text-primary" />
                   <div className="flex flex-col items-start gap-0.5">
-                    <span className="font-medium text-sm">{t("open_user_guide", "Open User Guide")}</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">{t("user_guide_desc", "Documentation, gestures & tips")}</span>
+                    <span className="font-medium text-sm">
+                      {t("open_user_guide", "Open User Guide")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      {t("user_guide_desc", "Documentation, gestures & tips")}
+                    </span>
                   </div>
                 </Button>
               </HelpSystemWrapper>
@@ -360,8 +410,12 @@ export function SettingsPage() {
               >
                 <Compass className="h-5 w-5 text-primary" />
                 <div className="flex flex-col items-start gap-0.5">
-                  <span className="font-medium text-sm">{t("welcome.review_tutorial")}</span>
-                  <span className="text-[10px] text-muted-foreground font-normal">{t("welcome.review_tutorial_desc")}</span>
+                  <span className="font-medium text-sm">
+                    {t("welcome.review_tutorial")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    {t("welcome.review_tutorial_desc")}
+                  </span>
                 </div>
               </Button>
             </CardContent>
@@ -378,7 +432,9 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex gap-2 items-center">
-                <span className="text-lg font-medium text-muted-foreground">€</span>
+                <span className="text-lg font-medium text-muted-foreground">
+                  €
+                </span>
                 <Input
                   key={settings.monthly_budget ?? "empty"}
                   type="number"
@@ -418,7 +474,9 @@ export function SettingsPage() {
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 {settings.monthly_budget
-                  ? `€${settings.monthly_budget.toFixed(2)} / ${t("monthly").toLowerCase()}`
+                  ? `€${settings.monthly_budget.toFixed(2)} / ${t(
+                      "monthly"
+                    ).toLowerCase()}`
                   : t("budget_not_set")}
               </p>
             </CardContent>
@@ -427,7 +485,9 @@ export function SettingsPage() {
           {/* Export & Import */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t("data_management")}</CardTitle>
+              <CardTitle className="text-base">
+                {t("data_management")}
+              </CardTitle>
               <CardDescription>{t("data_management_desc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -445,8 +505,12 @@ export function SettingsPage() {
                       <Download className="h-5 w-5 shrink-0 text-primary" />
                     )}
                     <div className="text-left overflow-hidden min-w-0 flex-1">
-                      <div className="font-medium truncate">{t("export_data")}</div>
-                      <div className="text-xs text-muted-foreground truncate">{t("export_data_desc")}</div>
+                      <div className="font-medium truncate">
+                        {t("export_data")}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {t("export_data_desc")}
+                      </div>
                     </div>
                   </Button>
                 </AlertDialogTrigger>
@@ -478,7 +542,9 @@ export function SettingsPage() {
                 <Upload className="h-5 w-5 shrink-0 text-primary" />
                 <div className="text-left overflow-hidden min-w-0 flex-1">
                   <div className="font-medium truncate">{t("import_data")}</div>
-                  <div className="text-xs text-muted-foreground truncate">{t("import_data_desc")}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {t("import_data_desc")}
+                  </div>
                 </div>
               </Button>
             </CardContent>
@@ -489,6 +555,166 @@ export function SettingsPage() {
 
         {/* Tab: Advanced */}
         <TabsContent value="advanced" className="space-y-4 animate-fade-in">
+          {/* Input Optimizations */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                {t("input_optimizations", "Ottimizzazioni inserimento")}
+              </CardTitle>
+              <CardDescription>
+                {t(
+                  "input_optimizations_desc",
+                  "Personalizza l'ordine delle categorie durante l'inserimento delle transazioni"
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Enable Category Sorting */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="category-sorting-enabled">
+                    {t(
+                      "enable_category_sorting",
+                      "Ordina categorie per utilizzo"
+                    )}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "enable_category_sorting_desc",
+                      "Le categorie di spesa più utilizzate appariranno per prime"
+                    )}
+                  </p>
+                </div>
+                <Switch
+                  id="category-sorting-enabled"
+                  checked={settings.category_sorting_enabled || false}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ category_sorting_enabled: checked })
+                  }
+                />
+              </div>
+
+              {/* Sorting Strategy */}
+              {settings.category_sorting_enabled && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="sorting-strategy">
+                      {t("sorting_strategy", "Strategia di ordinamento")}
+                    </Label>
+                    <Select
+                      value={
+                        settings.category_sorting_strategy || "moving_average"
+                      }
+                      onValueChange={(
+                        value:
+                          | "moving_average"
+                          | "total_all_time"
+                          | "recent_order"
+                      ) => updateSettings({ category_sorting_strategy: value })}
+                    >
+                      <SelectTrigger
+                        id="sorting-strategy"
+                        className="h-12 touch-manipulation"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="moving_average">
+                          {t(
+                            "strategy_moving_average",
+                            "Media mobile (ultimi N giorni)"
+                          )}
+                        </SelectItem>
+                        <SelectItem value="total_all_time">
+                          {t("strategy_total_all_time", "Totale di sempre")}
+                        </SelectItem>
+                        <SelectItem value="recent_order">
+                          {t("strategy_recent_order", "Ultime utilizzate")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Moving Average Days */}
+                  {settings.category_sorting_strategy === "moving_average" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="sorting-days">
+                        {t("moving_average_days", "Numero di giorni")}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="sorting-days"
+                          type="number"
+                          min="7"
+                          max="365"
+                          value={settings.category_sorting_days || 30}
+                          onChange={(e) => {
+                            const days = parseInt(e.target.value, 10);
+                            if (!isNaN(days) && days >= 7 && days <= 365) {
+                              updateSettings({ category_sorting_days: days });
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "-" || e.key === "e") {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="flex-1 h-12 touch-manipulation"
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          {t("days", "giorni")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t(
+                          "moving_average_days_desc",
+                          "Conta le transazioni degli ultimi N giorni (7 o 30 consigliati)"
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* User Mode */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="user-mode">
+                  {t("user_mode", "Modalità utente")}
+                </Label>
+                <Select
+                  value={settings.user_mode || "default"}
+                  onValueChange={(
+                    value: "default" | "simplified" | "advanced"
+                  ) => updateSettings({ user_mode: value })}
+                >
+                  <SelectTrigger
+                    id="user-mode"
+                    className="h-12 touch-manipulation"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      {t("mode_default", "Predefinita")}
+                    </SelectItem>
+                    <SelectItem value="simplified">
+                      {t("mode_simplified", "Semplificata")}
+                    </SelectItem>
+                    <SelectItem value="advanced">
+                      {t("mode_advanced", "Avanzata")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "user_mode_desc",
+                    "Modalità per future personalizzazioni dell'app"
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Sync */}
           <Card>
             <CardHeader className="pb-3">
@@ -509,7 +735,10 @@ export function SettingsPage() {
                   className="h-12 touch-manipulation"
                 >
                   <RefreshCw
-                    className={cn("mr-2 h-4 w-4", manualSyncing && "animate-spin")}
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      manualSyncing && "animate-spin"
+                    )}
                   />
                   {t("sync_now")}
                 </Button>
@@ -518,10 +747,15 @@ export function SettingsPage() {
                   disabled={isSyncing || !isOnline}
                   variant="secondary"
                   className="h-12 touch-manipulation"
-                  title={t("full_sync_desc") || "Re-download all data from server"}
+                  title={
+                    t("full_sync_desc") || "Re-download all data from server"
+                  }
                 >
                   <RefreshCw
-                    className={cn("mr-2 h-4 w-4", fullSyncing && "animate-spin")}
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      fullSyncing && "animate-spin"
+                    )}
                   />
                   {t("full_sync")}
                 </Button>

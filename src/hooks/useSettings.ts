@@ -93,12 +93,21 @@ export function useSettings() {
     if (settingsToSync) {
       // Map local field names to Supabase column names
        
-      const { last_sync_token: _last_sync_token, cached_month: _cached_month, accentColor, ...rest } =
-        settingsToSync;
+      const { 
+        last_sync_token: _last_sync_token, 
+        cached_month: _cached_month, 
+        accentColor, 
+        ...rest 
+      } = settingsToSync;
       const supabaseSettings = {
         ...rest,
         accent_color: accentColor,
         updated_at: updatedAt,
+        // Ensure new fields are included
+        category_sorting_enabled: settingsToSync.category_sorting_enabled ?? false,
+        category_sorting_strategy: settingsToSync.category_sorting_strategy ?? null,
+        category_sorting_days: settingsToSync.category_sorting_days ?? 30,
+        user_mode: settingsToSync.user_mode ?? "default",
       };
 
       supabase

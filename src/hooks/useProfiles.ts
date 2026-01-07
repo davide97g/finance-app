@@ -52,7 +52,7 @@ export function useProfile(userId: string | undefined) {
 export function useUpdateProfile() {
     const { user } = useAuth();
 
-    const updateProfile = async (updates: Partial<Pick<Profile, 'full_name' | 'avatar_url'>>) => {
+    const updateProfile = async (updates: Partial<Pick<Profile, 'full_name' | 'avatar_url' | 'avatar_type'>>) => {
         if (!user) {
             console.warn('[Profile] No user, cannot update profile');
             return;

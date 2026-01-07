@@ -1,5 +1,6 @@
 import { useProfile } from "@/hooks/useProfiles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { generateInitials } from "@/lib/profileUtils";
 import { cn } from "@/lib/utils";
 
 interface UserAvatarProps {
@@ -21,18 +22,18 @@ export function UserAvatar({
     // Priority: Profile Name -> Fallback Name -> ID (shortened)
     const displayName = profile?.full_name || profile?.email || fallbackName || userId.substring(0, 8);
 
-    // Determine initials for avatar fallback
-    const initials = displayName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .substring(0, 2)
-        .toUpperCase();
+    // Generate initials using the utility function
+    const initials = generateInitials(profile?.full_name, profile?.email);
+
+    // Respect avatar_type preference - only show photo if avatar_type is 'photo'
+    const shouldShowPhoto = profile?.avatar_type === "photo" && profile?.avatar_url;
 
     return (
         <div className={cn("flex items-center gap-2", className)}>
             <Avatar className="h-8 w-8">
-                <AvatarImage src={profile?.avatar_url} alt={displayName} />
+                {shouldShowPhoto ? (
+                    <AvatarImage src={profile.avatar_url} alt={displayName} />
+                ) : null}
                 <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             {showName && (

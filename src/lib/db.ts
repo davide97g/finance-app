@@ -218,8 +218,48 @@ export interface Setting {
   cached_month?: number;
   /** Last sync token for delta synchronization */
   last_sync_token?: number;
+  /** Enable category sorting by usage */
+  category_sorting_enabled?: boolean;
+  /** Category sorting strategy */
+  category_sorting_strategy?:
+    | "moving_average"
+    | "total_all_time"
+    | "recent_order"
+    | null;
+  /** Number of days for moving average strategy */
+  category_sorting_days?: number;
+  /** User mode: default, simplified, or advanced */
+  user_mode?: "default" | "simplified" | "advanced";
   /** Last settings update timestamp (ISO 8601) */
   updated_at?: string;
+}
+
+/**
+ * Category usage statistics for sorting optimization.
+ */
+export interface CategoryUsageStats {
+  /** UUID primary key */
+  id: string;
+  /** Owner user ID */
+  user_id: string;
+  /** Reference to category */
+  category_id: string;
+  /** Total transaction count */
+  transaction_count: number;
+  /** Last transaction date (ISO 8601) */
+  last_used_at?: string | null;
+  /** Moving average count for last 30 days */
+  moving_average_30d: number;
+  /** Moving average count for last 7 days */
+  moving_average_7d: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
 }
 
 /**
@@ -260,6 +300,8 @@ export interface Profile {
   full_name?: string;
   /** URL to user's avatar image */
   avatar_url?: string;
+  /** User's preference for avatar display: 'initials' or 'photo' */
+  avatar_type?: "initials" | "photo";
   /** Last modification timestamp (ISO 8601) */
   updated_at?: string;
   /** 1 if changes pending sync, 0 otherwise */
@@ -313,10 +355,11 @@ export class AppDatabase extends Dexie {
   category_budgets!: Table<CategoryBudget>;
   profiles!: Table<Profile>;
   import_rules!: Table<ImportRule>;
+  category_usage_stats!: Table<CategoryUsageStats>;
 
   constructor() {
     super("ExpenseTrackerDB");
-    // Version 1: Initial (and final) schema
+    // Version 1: Initial schema
     this.version(1).stores({
       groups: "id, created_by, pendingSync, deleted_at",
       group_members:
@@ -332,6 +375,25 @@ export class AppDatabase extends Dexie {
         "id, user_id, category_id, period, pendingSync, deleted_at",
       profiles: "id, pendingSync",
       import_rules: "id, user_id, match_type, pendingSync, deleted_at",
+    });
+
+    // Version 2: Add category_usage_stats table
+    this.version(2).stores({
+      groups: "id, created_by, pendingSync, deleted_at",
+      group_members:
+        "id, group_id, user_id, guest_name, is_guest, pendingSync, removed_at",
+      transactions:
+        "id, user_id, group_id, paid_by_member_id, recurring_transaction_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at, [group_id+year_month], [type+year_month], [category_id+year_month]",
+      categories: "id, user_id, group_id, name, type, pendingSync, deleted_at",
+      contexts: "id, user_id, pendingSync, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, frequency, pendingSync, deleted_at",
+      user_settings: "user_id",
+      category_budgets:
+        "id, user_id, category_id, period, pendingSync, deleted_at",
+      profiles: "id, pendingSync",
+      import_rules: "id, user_id, match_type, pendingSync, deleted_at",
+      category_usage_stats: "id, user_id, category_id, pendingSync",
     });
   }
 
@@ -352,6 +414,7 @@ export class AppDatabase extends Dexie {
       this.category_budgets.clear(),
       this.profiles.clear(),
       this.import_rules.clear(),
+      this.category_usage_stats.clear(),
     ]);
   }
 }
