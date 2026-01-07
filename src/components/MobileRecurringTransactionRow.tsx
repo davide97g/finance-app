@@ -93,7 +93,7 @@ export function MobileRecurringTransactionRow({
     >
       <div className="relative bg-card p-3 rounded-lg border shadow-sm flex flex-col gap-2 min-h-[84px] cursor-pointer">
         {/* Top: Description (Full Width) */}
-        <div className="font-medium text-sm w-full break-all">
+        <div className="font-medium text-sm w-full truncate min-w-0">
           {transaction.description || t("transaction")}
         </div>
 

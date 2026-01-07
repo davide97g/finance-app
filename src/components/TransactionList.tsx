@@ -247,8 +247,8 @@ export function TransactionList({
             <time dateTime={t_item.date}>{t_item.date}</time>
           </TableCell>
           <TableCell>
-            <div className="flex items-center gap-2 max-w-[200px] xl:max-w-[300px]">
-              <span className="truncate">{t_item.description}</span>
+            <div className="flex items-center gap-2 max-w-[200px] xl:max-w-[300px] min-w-0">
+              <span className="truncate min-w-0">{t_item.description}</span>
               {t_item.category_id === UNCATEGORIZED_CATEGORY.ID && (
                 <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" aria-hidden="true" />
               )}
@@ -256,7 +256,7 @@ export function TransactionList({
                 {t_item.pendingSync === 1 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="cursor-help">
+                      <span className="cursor-help shrink-0">
                         <SyncStatusBadge isPending={true} />
                       </span>
                     </TooltipTrigger>

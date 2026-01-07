@@ -106,8 +106,8 @@ export function MobileTransactionRow({
 
         {/* Main Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="font-medium text-sm truncate flex items-center gap-1">
-            {transaction.description || t("transaction")}
+          <div className="font-medium text-sm truncate flex items-center gap-1 min-w-0">
+            <span className="truncate">{transaction.description || t("transaction")}</span>
             {transaction.category_id === UNCATEGORIZED_CATEGORY.ID && (
               <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" aria-hidden="true" />
             )}
