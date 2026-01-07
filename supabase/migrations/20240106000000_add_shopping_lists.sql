@@ -121,7 +121,7 @@ $$ language plpgsql security definer set search_path = public;
 
 create policy "Members can view their collections"
   on public.shopping_collections for select
-  using (is_collection_member(id) or created_by = (select auth.uid()));
+  using (is_collection_member(id));
 
 create policy "Authenticated users can create collections"
   on public.shopping_collections for insert
@@ -129,7 +129,7 @@ create policy "Authenticated users can create collections"
 
 create policy "Members can update collections"
   on public.shopping_collections for update
-  using (is_collection_member(id) or created_by = (select auth.uid()));
+  using (is_collection_member(id));
 
 create policy "Only creator can delete collection"
   on public.shopping_collections for delete

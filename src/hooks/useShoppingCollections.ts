@@ -9,6 +9,8 @@ import {
 } from "../lib/db";
 import { syncManager } from "../lib/sync";
 import { useAuth } from "./useAuth";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
+import { useSettings } from "./useSettings";
 
 /**
  * Extended collection type with member information.
@@ -40,6 +42,7 @@ export interface ShoppingCollectionWithMembers extends ShoppingCollection {
 export function useShoppingCollections() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { settings } = useSettings();
 
   // Get all collections where user is a member or creator
   const collections = useLiveQuery(async () => {
@@ -49,15 +52,43 @@ export function useShoppingCollections() {
     const allMembers = await db.shopping_collection_members.toArray();
     const allProfiles = await db.profiles.toArray();
     const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
+    const allSettings = await db.user_settings.toArray();
+    const settingsMap = new Map(allSettings.map((s) => [s.user_id, s]));
 
-    // Filter collections where user is creator or active member
+    // Get joint account partner ID (bidirectional check)
+    const currentUserSettings = settingsMap.get(user.id);
+    const jointAccountPartnerId = currentUserSettings?.joint_account_partner_id || null;
+    
+    // Also check if any other user has this user as their partner (bidirectional)
+    const partnerUserId = Array.from(settingsMap.entries()).find(
+      ([_, s]) => s.joint_account_partner_id === user.id
+    )?.[0] || null;
+
+    // Filter collections where user is creator, active member, or joint account partner of creator
     const userCollections = allCollections.filter((c) => {
       if (c.deleted_at) return false;
       if (c.created_by === user.id) return true;
-      return allMembers.some(
+      
+      // Check if user is a member
+      if (allMembers.some(
         (m) =>
           m.collection_id === c.id && m.user_id === user.id && !m.removed_at
-      );
+      )) {
+        return true;
+      }
+      
+      // Check if user is joint account partner of creator
+      const creatorSettings = settingsMap.get(c.created_by);
+      if (creatorSettings?.joint_account_partner_id === user.id) {
+        return true;
+      }
+      
+      // Check if creator is joint account partner of user (bidirectional)
+      if (jointAccountPartnerId === c.created_by || partnerUserId === c.created_by) {
+        return true;
+      }
+      
+      return false;
     });
 
     // Enrich with members info
@@ -108,19 +139,38 @@ export function useShoppingCollections() {
       updated_at: new Date().toISOString(),
     });
 
-    // If shared, add creator as first member (for consistency)
-    // For private collections, we don't need a member record
-    if (isShared) {
-      const memberId = uuidv4();
-      await db.shopping_collection_members.add({
-        id: memberId,
-        collection_id: collectionId,
-        user_id: user.id,
-        joined_at: new Date().toISOString(),
-        removed_at: null,
-        pendingSync: 1,
-        updated_at: new Date().toISOString(),
-      });
+    // Get joint account partner ID
+    const jointAccountPartnerId = await getJointAccountPartnerId(user.id);
+    
+    // If shared OR has joint account partner, add members
+    if (isShared || jointAccountPartnerId) {
+      // Add creator as first member (for consistency in shared collections)
+      if (isShared) {
+        const memberId = uuidv4();
+        await db.shopping_collection_members.add({
+          id: memberId,
+          collection_id: collectionId,
+          user_id: user.id,
+          joined_at: new Date().toISOString(),
+          removed_at: null,
+          pendingSync: 1,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      
+      // Automatically add joint account partner as member (bidirectional sharing)
+      if (jointAccountPartnerId) {
+        const partnerMemberId = uuidv4();
+        await db.shopping_collection_members.add({
+          id: partnerMemberId,
+          collection_id: collectionId,
+          user_id: jointAccountPartnerId,
+          joined_at: new Date().toISOString(),
+          removed_at: null,
+          pendingSync: 1,
+          updated_at: new Date().toISOString(),
+        });
+      }
     }
 
     syncManager.schedulePush();
