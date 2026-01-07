@@ -35,10 +35,11 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { CategorySelector } from "@/components/CategorySelector";
-import { SlidersHorizontal, Calculator as CalculatorIcon, ChevronUp } from "lucide-react";
+import { SlidersHorizontal, Calculator as CalculatorIcon, ChevronUp, X } from "lucide-react";
 import { Calculator } from "@/components/Calculator";
 import { Label } from "@/components/ui/label";
 import { useCategoryBudgets } from "@/hooks/useCategoryBudgets";
+import { useSettings } from "@/hooks/useSettings";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { transactionSchema, TransactionFormValues } from "@/lib/schemas";
@@ -77,6 +78,7 @@ export function TransactionDialog({
     const { user } = useAuth();
     const { groups } = useGroups();
     const { contexts } = useContexts();
+    const { settings, updateSettings } = useSettings();
 
     const [activeSection, setActiveSection] = useState("main");
 
@@ -127,6 +129,8 @@ export function TransactionDialog({
                     setActiveSection("main");
                 }
             } else {
+                // Use default context from settings if available
+                const defaultContextId = settings?.default_context_id || null;
                 form.reset({
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     amount: "" as any, // Initialize as empty string so input is empty
@@ -134,21 +138,19 @@ export function TransactionDialog({
                     type: defaultType,
                     category_id: "",
                     date: getLocalDate(),
-                    context_id: null,
+                    context_id: defaultContextId,
                     group_id: defaultGroupId,
                     paid_by_member_id: null,
                 });
-                if (defaultGroupId) {
-                    setActiveSection("more");
-                } else {
-                    setActiveSection("main");
-                }
+                // Always start with main section for new transactions
+                // Context/group info will be visible in the accordion trigger
+                setActiveSection("main");
             }
             // Reset calculator
             setCalcState({ prevValue: null, operation: null });
             setShowCalculator(false);
         }
-    }, [open, editingTransaction, defaultGroupId, defaultType, form]);
+    }, [open, editingTransaction, defaultGroupId, defaultType, form, settings?.default_context_id]);
 
     // Watched values for effects
     const watchedGroupId = form.watch("group_id");
@@ -657,30 +659,56 @@ export function TransactionDialog({
                                                 render={({ field }) => (
                                                     <FormItem className="space-y-2">
                                                         <FormLabel>{t("context")}</FormLabel>
-                                                        <Select
-                                                            value={field.value || "none"}
-                                                            onValueChange={(value) => {
-                                                                field.onChange(value === "none" ? null : value);
-                                                            }}
-                                                        >
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder={t("select_context")} />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                <SelectItem value="none">
-                                                                    {t("no_contexts")}
-                                                                </SelectItem>
-                                                                {contexts
-                                                                    .filter(c => c.active !== 0 || c.id === field.value)
-                                                                    .map((ctx) => (
-                                                                        <SelectItem key={ctx.id} value={ctx.id}>
-                                                                            {ctx.name}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <div className="relative">
+                                                            <Select
+                                                                value={field.value || "none"}
+                                                                onValueChange={(value) => {
+                                                                    const newValue = value === "none" ? null : value;
+                                                                    field.onChange(newValue);
+                                                                    // Save to user settings when changed (only for new transactions)
+                                                                    if (!editingTransaction && newValue) {
+                                                                        updateSettings({ default_context_id: newValue });
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <FormControl>
+                                                                    <SelectTrigger className={field.value ? "pr-8" : ""}>
+                                                                        <SelectValue placeholder={t("select_context")} />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent>
+                                                                    <SelectItem value="none">
+                                                                        {t("no_contexts")}
+                                                                    </SelectItem>
+                                                                    {contexts
+                                                                        .filter(c => c.active !== 0 || c.id === field.value)
+                                                                        .map((ctx) => (
+                                                                            <SelectItem key={ctx.id} value={ctx.id}>
+                                                                                {ctx.name}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            {field.value && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-muted"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        field.onChange(null);
+                                                                        // Clear from user settings when cleared (only for new transactions)
+                                                                        if (!editingTransaction) {
+                                                                            updateSettings({ default_context_id: null });
+                                                                        }
+                                                                    }}
+                                                                    aria-label={t("clear") || "Clear"}
+                                                                >
+                                                                    <X className="h-3 w-3" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}

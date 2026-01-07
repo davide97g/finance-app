@@ -82,7 +82,7 @@ export function ShoppingCollectionDetailPage() {
     }
     
     // Sort items: unchecked first, then alphabetically
-    for (const [listId, items] of itemsByList.entries()) {
+    for (const [_listId, items] of itemsByList.entries()) {
       items.sort((a, b) => {
         if (a.checked !== b.checked) {
           return a.checked ? 1 : -1; // unchecked first
@@ -361,7 +361,7 @@ export function ShoppingCollectionDetailPage() {
                     {(() => {
                       const items = allListItems.get(list.id)!;
                       const totalItems = items.length;
-                      const checkedItems = items.filter((item) => item.checked).length;
+                      const checkedItems = items.filter((item: { name: string; checked: boolean }) => item.checked).length;
                       const progress = totalItems > 0 ? (checkedItems / totalItems) * 100 : 0;
                       
                       return (
@@ -381,7 +381,7 @@ export function ShoppingCollectionDetailPage() {
                     
                     {/* Item Preview */}
                     <div className="space-y-1">
-                      {allListItems.get(list.id)!.slice(0, 3).map((item, index) => (
+                      {allListItems.get(list.id)!.slice(0, 3).map((item: { name: string; checked: boolean }, index: number) => (
                         <div
                           key={index}
                           className={cn(

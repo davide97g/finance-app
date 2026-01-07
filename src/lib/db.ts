@@ -220,6 +220,8 @@ export interface Setting {
   revolut_username?: string | null;
   /** Joint account partner user ID (bidirectional sharing) */
   joint_account_partner_id?: string | null;
+  /** Default context ID to preselect when creating new transactions */
+  default_context_id?: string | null;
   /** Last settings update timestamp (ISO 8601) */
   updated_at?: string;
 }
@@ -416,6 +418,32 @@ export interface ShoppingListItem {
   item_id: string;
   /** Whether the item is checked */
   checked: boolean;
+  /** Quantity of the item (default 1) */
+  quantity?: number;
+  /** Optional note for the item */
+  note?: string | null;
+  /** Soft delete timestamp (ISO 8601) */
+  deleted_at?: string | null;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+}
+
+/**
+ * Shopping list item image.
+ */
+export interface ShoppingListItemImage {
+  /** UUID primary key */
+  id: string;
+  /** Reference to parent list item */
+  list_item_id: string;
+  /** Storage path in Supabase storage */
+  storage_path: string;
+  /** Display order for multiple images */
+  display_order?: number;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
   /** Server-assigned sync token */
@@ -449,6 +477,7 @@ export class AppDatabase extends Dexie {
   shopping_lists!: Table<ShoppingList>;
   shopping_items!: Table<ShoppingItem>;
   shopping_list_items!: Table<ShoppingListItem>;
+  shopping_list_item_images!: Table<ShoppingListItemImage>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -536,6 +565,29 @@ export class AppDatabase extends Dexie {
       shopping_items: "id, collection_id, name, deleted_at",
       shopping_list_items: "id, list_id, item_id, checked, deleted_at",
     });
+
+    // Version 5: Add quantity, note to shopping_list_items and add shopping_list_item_images table
+    this.version(5).stores({
+      groups: "id, created_by, deleted_at",
+      group_members: "id, group_id, user_id, guest_name, is_guest, removed_at",
+      transactions:
+        "id, user_id, group_id, paid_by_member_id, recurring_transaction_id, category_id, context_id, type, date, year_month, deleted_at, [group_id+year_month], [type+year_month], [category_id+year_month]",
+      categories: "id, user_id, group_id, name, type, deleted_at",
+      contexts: "id, user_id, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, frequency, deleted_at",
+      user_settings: "user_id",
+      category_budgets: "id, user_id, category_id, period, deleted_at",
+      profiles: "id",
+      import_rules: "id, user_id, match_type, deleted_at",
+      category_usage_stats: "id, user_id, category_id",
+      shopping_collections: "id, created_by, deleted_at",
+      shopping_collection_members: "id, collection_id, user_id, removed_at",
+      shopping_lists: "id, collection_id, created_by, deleted_at",
+      shopping_items: "id, collection_id, name, deleted_at",
+      shopping_list_items: "id, list_id, item_id, checked, deleted_at",
+      shopping_list_item_images: "id, list_item_id, deleted_at",
+    });
   }
 
   /**
@@ -561,6 +613,7 @@ export class AppDatabase extends Dexie {
       this.shopping_lists.clear(),
       this.shopping_items.clear(),
       this.shopping_list_items.clear(),
+      this.shopping_list_item_images.clear(),
     ]);
   }
 }

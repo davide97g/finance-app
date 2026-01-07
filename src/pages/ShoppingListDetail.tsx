@@ -1,5 +1,6 @@
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ShoppingItemAutocomplete } from "@/components/shopping/ShoppingItemAutocomplete";
+import { ShoppingItemDetailsDialog } from "@/components/shopping/ShoppingItemDetailsDialog";
 import { ShoppingItemRow } from "@/components/shopping/ShoppingItemRow";
 import { Button } from "@/components/ui/button";
 import { ContentLoader } from "@/components/ui/content-loader";
@@ -13,7 +14,7 @@ import { useShoppingLists } from "@/hooks/useShoppingLists";
 import { List, Share2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 export function ShoppingListDetailPage() {
@@ -22,14 +23,24 @@ export function ShoppingListDetailPage() {
     collectionId: string;
     listId: string;
   }>();
-  const navigate = useNavigate();
   const { collections } = useShoppingCollections();
   const { lists } = useShoppingLists(collectionId || null);
-  const { items, listItems, addItem, toggleItemChecked, removeItemFromList } =
-    useShoppingItems(collectionId || null, listId || null);
+  const {
+    items,
+    listItems,
+    addItem,
+    toggleItemChecked,
+    removeItemFromList,
+    updateListItemDetails,
+    uploadListItemImage,
+    deleteListItemImage,
+  } = useShoppingItems(collectionId || null, listId || null);
 
   const [deletingListItem, setDeletingListItem] =
     useState<ShoppingListItemWithItem | null>(null);
+  const [editingListItem, setEditingListItem] =
+    useState<ShoppingListItemWithItem | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const collection = useMemo(() => {
     return collections?.find((c) => c.id === collectionId) || null;
@@ -81,16 +92,55 @@ export function ShoppingListDetailPage() {
     }
   };
 
+  const handleEditItem = (listItem: ShoppingListItemWithItem) => {
+    setEditingListItem(listItem);
+  };
+
+  const handleSaveDetails = async (data: {
+    quantity: number;
+    note: string | null;
+  }) => {
+    if (!editingListItem) return;
+
+    setIsSaving(true);
+    try {
+      await updateListItemDetails(editingListItem.id, data);
+      toast.success(t("item_updated") || "Item updated");
+      setEditingListItem(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("error.update_failed") || "Failed to update item"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUploadImage = async (file: File) => {
+    if (!editingListItem) {
+      throw new Error("No item selected for editing");
+    }
+    return await uploadListItemImage(editingListItem.id, file);
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    await deleteListItemImage(imageId);
+  };
+
   const handleShareList = async () => {
     if (!collectionId || !listId) return;
     const shareUrl = `${window.location.origin}/shopping-lists/${collectionId}/lists/${listId}`;
-    
+
     // Try native share API first (mobile)
     if (navigator.share) {
       try {
         await navigator.share({
           title: list?.name || "",
-          text: t("share_list_text") || `Check out my shopping list: ${list?.name || ""}`,
+          text:
+            t("share_list_text") ||
+            `Check out my shopping list: ${list?.name || ""}`,
           url: shareUrl,
         });
         toast.success(t("list_shared") || "List shared");
@@ -126,7 +176,9 @@ export function ShoppingListDetailPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold truncate">{list.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">
+              {list.name}
+            </h1>
           </div>
           <Button
             variant="outline"
@@ -151,7 +203,8 @@ export function ShoppingListDetailPage() {
           <div className="space-y-1.5 bg-card p-4 rounded-lg border">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {checkedCount} / {totalCount} {t("items_checked") || "items checked"}
+                {checkedCount} / {totalCount}{" "}
+                {t("items_checked") || "items checked"}
               </span>
               <span className="font-medium text-muted-foreground">
                 {progress.toFixed(0)}%
@@ -188,6 +241,7 @@ export function ShoppingListDetailPage() {
                 listItem={listItem}
                 onToggle={() => handleToggleItem(listItem)}
                 onDelete={() => setDeletingListItem(listItem)}
+                onEdit={() => handleEditItem(listItem)}
               />
             ))}
           </div>
@@ -206,6 +260,19 @@ export function ShoppingListDetailPage() {
           t("remove_item_description") ||
           "Are you sure you want to remove this item from the list? The item will remain in the collection."
         }
+      />
+
+      {/* Edit Item Details Dialog */}
+      <ShoppingItemDetailsDialog
+        open={!!editingListItem}
+        onOpenChange={(open) => {
+          if (!open) setEditingListItem(null);
+        }}
+        listItem={editingListItem}
+        onSave={handleSaveDetails}
+        onUploadImage={handleUploadImage}
+        onDeleteImage={handleDeleteImage}
+        isSubmitting={isSaving}
       />
     </div>
   );

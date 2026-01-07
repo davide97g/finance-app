@@ -22,6 +22,7 @@ const TABLES_WITHOUT_USER_ID = [
   "shopping_lists",
   "shopping_items",
   "shopping_list_items",
+  "shopping_list_item_images",
 ] as const;
 
 /**
@@ -333,6 +334,7 @@ export async function updateUserSettings(
       user_mode: result.user_mode || "default",
       revolut_username: result.revolut_username,
       joint_account_partner_id: result.joint_account_partner_id,
+      default_context_id: result.default_context_id,
       updated_at: result.updated_at,
     };
 

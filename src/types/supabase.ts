@@ -505,6 +505,7 @@ export interface Database {
           user_mode: string | null;
           revolut_username: string | null;
           joint_account_partner_id: string | null;
+          default_context_id: string | null;
         };
         Insert: {
           accent_color?: string | null;
@@ -525,6 +526,7 @@ export interface Database {
           user_id: string;
           user_mode?: string | null;
           revolut_username?: string | null;
+          default_context_id?: string | null;
         };
         Update: {
           accent_color?: string | null;
@@ -545,6 +547,7 @@ export interface Database {
           user_id?: string;
           user_mode?: string | null;
           revolut_username?: string | null;
+          default_context_id?: string | null;
         };
         Relationships: [
           {
@@ -795,6 +798,8 @@ export interface Database {
           list_id: string;
           item_id: string;
           checked: boolean;
+          quantity: number;
+          note: string | null;
           deleted_at: string | null;
           sync_token: number | null;
           updated_at: string | null;
@@ -805,6 +810,8 @@ export interface Database {
           list_id: string;
           item_id: string;
           checked?: boolean;
+          quantity?: number;
+          note?: string | null;
           deleted_at?: string | null;
           sync_token?: number | null;
           updated_at?: string | null;
@@ -815,6 +822,8 @@ export interface Database {
           list_id?: string;
           item_id?: string;
           checked?: boolean;
+          quantity?: number;
+          note?: string | null;
           deleted_at?: string | null;
           sync_token?: number | null;
           updated_at?: string | null;
@@ -833,6 +842,47 @@ export interface Database {
             columns: ["item_id"];
             isOneToOne: false;
             referencedRelation: "shopping_items";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      shopping_list_item_images: {
+        Row: {
+          id: string;
+          list_item_id: string;
+          storage_path: string;
+          display_order: number;
+          deleted_at: string | null;
+          sync_token: number | null;
+          updated_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          list_item_id: string;
+          storage_path: string;
+          display_order?: number;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          list_item_id?: string;
+          storage_path?: string;
+          display_order?: number;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_list_item_images_list_item_id_fkey";
+            columns: ["list_item_id"];
+            isOneToOne: false;
+            referencedRelation: "shopping_list_items";
             referencedColumns: ["id"];
           }
         ];

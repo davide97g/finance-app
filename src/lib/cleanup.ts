@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db, ShoppingListItemImage } from "./db";
 import { subDays, parseISO, isBefore } from "date-fns";
 
 const CLEANUP_AGE_DAYS = 30;
@@ -20,6 +20,8 @@ export async function cleanupSoftDeletedRecords() {
         db.contexts,
         db.recurring_transactions,
         db.category_budgets,
+        db.shopping_list_items,
+        db.shopping_list_item_images,
     ];
 
     for (const table of tables) {
@@ -47,6 +49,23 @@ export async function cleanupSoftDeletedRecords() {
             });
 
             if (toDelete.length > 0) {
+                // Special handling for shopping_list_item_images: delete from storage
+                if (table.name === "shopping_list_item_images") {
+                    const { supabase } = await import("./supabase");
+                    for (const image of toDelete) {
+                        const itemImage = image as ShoppingListItemImage;
+                        if (itemImage.storage_path) {
+                            try {
+                                await supabase.storage
+                                    .from("shopping-item-images")
+                                    .remove([itemImage.storage_path]);
+                            } catch (error) {
+                                console.error(`[Cleanup] Failed to delete image from storage:`, error);
+                            }
+                        }
+                    }
+                }
+
                 await table.bulkDelete(toDelete.map((item: { id: string }) => item.id));
                 totalDeleted += toDelete.length;
                 console.log(`[Cleanup] Deleted ${toDelete.length} records from ${table.name}`);
