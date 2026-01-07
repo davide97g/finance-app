@@ -40,8 +40,8 @@ Welcome to the definitive documentation for **PWA GoNuts**, a local-first Progre
 
 ### Key Principles
 1.  **Read from Disk**: UI components almost *always* read from Dexie (via `useLiveQuery`), never directly from Supabase.
-2.  **Write to Disk**: Actions (Add/Edit/Delete) write to Dexie and mark items as `pendingSync: 1`.
-3.  **Sync in Background**: The background `SyncManager` handles pushing these changes to the server and handling conflicts.
+2.  **Write to Disk**: Actions (Add/Edit/Delete) write immediately to both Dexie and Supabase. If offline, operations are queued for retry.
+3.  **Realtime Updates**: Supabase Realtime subscriptions keep local data in sync across devices.
 
 ### Installation
 ```bash

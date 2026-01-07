@@ -2,7 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { db, ShoppingList } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { insertRecord, updateRecord, deleteRecord } from "../lib/dbOperations";
 import { useAuth } from "./useAuth";
 
 /**
@@ -43,19 +43,18 @@ export function useShoppingLists(collectionId: string | null) {
     }
 
     const listId = uuidv4();
-
-    await db.shopping_lists.add({
+    const listData = {
       id: listId,
       collection_id: collectionId,
       name: name.trim(),
       created_by: user.id,
       deleted_at: null,
-      pendingSync: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    });
+    };
 
-    syncManager.schedulePush();
+    // Immediate write (shopping_lists don't use user_id)
+    await insertRecord("shopping_lists", listData, user.id);
     return listId;
   };
 
@@ -63,26 +62,25 @@ export function useShoppingLists(collectionId: string | null) {
     id: string,
     updates: Partial<Pick<ShoppingList, "name">>
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     if (updates.name !== undefined && updates.name.trim().length === 0) {
       throw new Error(t("validation.name_required") || "Name is required");
     }
 
-    await db.shopping_lists.update(id, {
+    // Immediate write
+    await updateRecord("shopping_lists", id, {
       ...updates,
       name: updates.name?.trim(),
-      pendingSync: 1,
       updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    }, user.id);
   };
 
   const deleteList = async (id: string) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Soft delete list
-    await db.shopping_lists.update(id, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
+    await deleteRecord("shopping_lists", id);
 
     // Soft delete all list items
     const listItems = await db.shopping_list_items
@@ -90,13 +88,8 @@ export function useShoppingLists(collectionId: string | null) {
       .toArray();
 
     for (const item of listItems) {
-      await db.shopping_list_items.update(item.id, {
-        deleted_at: new Date().toISOString(),
-        pendingSync: 1,
-      });
+      await deleteRecord("shopping_list_items", item.id);
     }
-
-    syncManager.schedulePush();
   };
 
   return {

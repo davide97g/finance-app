@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { RecurringTransaction, Category, Context, Group } from "@/lib/db";
 import { getIconComponent } from "@/lib/icons";
 import { Tag, Users, Repeat } from "lucide-react";
-import { SyncStatusBadge } from "./SyncStatus";
 import { SwipeableItem } from "@/components/ui/SwipeableItem";
 import {
   addDays,
@@ -166,7 +165,6 @@ export function MobileRecurringTransactionRow({
                   : "+"}
               €{transaction.amount.toFixed(2)}
             </div>
-            <SyncStatusBadge isPending={transaction.pendingSync === 1} />
           </div>
         </div>
       </div>

@@ -85,7 +85,6 @@ export const updateCategoryUsageStats = async (
       moving_average_30d: movingAvg30d,
       moving_average_7d: movingAvg7d,
       updated_at: now,
-      pendingSync: 1,
     });
   } else {
     // Create new stats
@@ -102,7 +101,6 @@ export const updateCategoryUsageStats = async (
       moving_average_7d: movingAvg7d,
       updated_at: now,
       created_at: now,
-      pendingSync: 1,
     });
   }
 };
@@ -191,7 +189,6 @@ export const recalculateAllCategoryUsageStats = async (
         moving_average_30d: stats.movingAvg30d,
         moving_average_7d: stats.movingAvg7d,
         updated_at: nowStr,
-        pendingSync: 1,
       });
     } else if (stats.count > 0) {
       await db.category_usage_stats.add({
@@ -204,7 +201,6 @@ export const recalculateAllCategoryUsageStats = async (
         moving_average_7d: stats.movingAvg7d,
         updated_at: nowStr,
         created_at: nowStr,
-        pendingSync: 1,
       });
     }
   }

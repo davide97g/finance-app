@@ -1,18 +1,20 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, RecurringTransaction } from "../lib/db";
-import { syncManager } from "../lib/sync";
 import { v4 as uuidv4 } from "uuid";
+import { db, RecurringTransaction } from "../lib/db";
+import { deleteRecord, insertRecord, updateRecord } from "../lib/dbOperations";
+import { useAuth } from "./useAuth";
 
+import { useTranslation } from "react-i18next";
+import { processRecurringTransactions } from "../lib/recurring";
 import {
   getRecurringTransactionInputSchema,
   getRecurringTransactionUpdateSchema,
   validate,
 } from "../lib/validation";
-import { processRecurringTransactions } from "../lib/recurring";
-import { useTranslation } from "react-i18next";
 
 export function useRecurringTransactions(groupId?: string | null) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const recurringTransactions = useLiveQuery(() =>
     db.recurring_transactions.toArray()
   );
@@ -37,14 +39,11 @@ export function useRecurringTransactions(groupId?: string | null) {
   const addRecurringTransaction = async (
     transaction: Omit<
       RecurringTransaction,
-      | "id"
-      | "sync_token"
-      | "pendingSync"
-      | "deleted_at"
-      | "active"
-      | "last_generated"
+      "id" | "sync_token" | "deleted_at" | "active" | "last_generated"
     >
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate input data
     const validatedData = validate(getRecurringTransactionInputSchema(t), {
       ...transaction,
@@ -52,41 +51,36 @@ export function useRecurringTransactions(groupId?: string | null) {
     });
 
     const id = uuidv4();
-    await db.recurring_transactions.add({
+    const transactionData = {
       ...validatedData,
       id,
-      pendingSync: 1,
       deleted_at: null,
       last_generated: undefined,
-    });
-    syncManager.schedulePush();
+    };
+
+    // Immediate write to Supabase (queues if offline)
+    await insertRecord("recurring_transactions", transactionData, user.id);
   };
 
   const updateRecurringTransaction = async (
     id: string,
-    updates: Partial<
-      Omit<RecurringTransaction, "id" | "sync_token" | "pendingSync">
-    >
+    updates: Partial<Omit<RecurringTransaction, "id" | "sync_token">>
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate update data
     const validatedUpdates = validate(
       getRecurringTransactionUpdateSchema(t),
       updates
     );
 
-    await db.recurring_transactions.update(id, {
-      ...validatedUpdates,
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate write to Supabase (queues if offline)
+    await updateRecord("recurring_transactions", id, validatedUpdates, user.id);
   };
 
   const deleteRecurringTransaction = async (id: string) => {
-    await db.recurring_transactions.update(id, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate soft delete in Supabase (queues if offline)
+    await deleteRecord("recurring_transactions", id);
   };
 
   const generateTransactions = async () => {

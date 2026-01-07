@@ -1,16 +1,16 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, Category } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { useAuth } from "../contexts/AuthProvider";
+import { UNCATEGORIZED_CATEGORY } from "../lib/constants";
+import { Category, db } from "../lib/db";
+import { deleteRecord, insertRecord, updateRecord } from "../lib/dbOperations";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 import {
   getCategoryInputSchema,
   getCategoryUpdateSchema,
   validate,
 } from "../lib/validation";
-import { useTranslation } from "react-i18next";
-import { UNCATEGORIZED_CATEGORY } from "../lib/constants";
-import { useAuth } from "../contexts/AuthProvider";
-import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Hook for managing expense/income categories with hierarchical support.
@@ -49,12 +49,12 @@ export function useCategories(groupId?: string | null) {
   const { user } = useAuth();
   const categories = useLiveQuery(async () => {
     const cats = await db.categories.toArray();
-    
+
     // Get joint account partner ID if configured
     if (user) {
       const partnerId = await getJointAccountPartnerId(user.id);
       const userIds = partnerId ? [user.id, partnerId] : [user.id];
-      
+
       // Filter out deleted items, the local-only placeholder, and optionally by group
       return cats.filter((c) => {
         if (c.deleted_at) return false;
@@ -75,7 +75,7 @@ export function useCategories(groupId?: string | null) {
         }
       });
     }
-    
+
     // Fallback if no user
     return cats.filter((c) => {
       if (c.deleted_at) return false;
@@ -89,8 +89,10 @@ export function useCategories(groupId?: string | null) {
   const filteredCategories = categories || [];
 
   const addCategory = async (
-    category: Omit<Category, "id" | "sync_token" | "pendingSync" | "deleted_at">
+    category: Omit<Category, "id" | "sync_token" | "deleted_at">
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate input data
     const validatedData = validate(getCategoryInputSchema(t), {
       ...category,
@@ -98,86 +100,116 @@ export function useCategories(groupId?: string | null) {
     });
 
     const id = uuidv4();
-    await db.categories.add({
+    const categoryData = {
       ...validatedData,
       id,
-      pendingSync: 1,
       deleted_at: null,
-    });
-    syncManager.schedulePush();
+    };
+
+    // Immediate write to Supabase (queues if offline)
+    await insertRecord("categories", categoryData, user.id);
     return id;
   };
 
   const updateCategory = async (
     id: string,
-    updates: Partial<Omit<Category, "id" | "sync_token" | "pendingSync">>
+    updates: Partial<Omit<Category, "id" | "sync_token">>
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate update data
     const validatedUpdates = validate(getCategoryUpdateSchema(t), updates);
 
-    await db.categories.update(id, {
-      ...validatedUpdates,
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate write to Supabase (queues if offline)
+    await updateRecord("categories", id, validatedUpdates, user.id);
   };
 
   const deleteCategory = async (id: string) => {
-    await db.categories.update(id, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate soft delete in Supabase (queues if offline)
+    await deleteRecord("categories", id);
   };
 
   const reparentChildren = async (
     oldParentId: string,
     newParentId: string | undefined
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Find all children of the old parent
-    // Since parent_id is not indexed, we use filter
-    await db.categories
+    const children = await db.categories
       .filter((c) => c.parent_id === oldParentId)
-      .modify({
-        parent_id: newParentId,
-        pendingSync: 1,
-      });
-    syncManager.schedulePush();
+      .toArray();
+
+    // Update each child immediately
+    for (const child of children) {
+      await updateRecord(
+        "categories",
+        child.id,
+        { parent_id: newParentId },
+        user.id
+      );
+    }
   };
 
   const migrateTransactions = async (
     oldCategoryId: string,
     newCategoryId: string
   ) => {
-    // Find all transactions with the old category
-    await db.transactions.where("category_id").equals(oldCategoryId).modify({
-      category_id: newCategoryId,
-      pendingSync: 1,
-    });
+    if (!user) throw new Error("User must be logged in");
 
-    // Also migrate recurring transactions
-    await db.recurring_transactions
+    // Find all transactions with the old category
+    const transactions = await db.transactions
       .where("category_id")
       .equals(oldCategoryId)
-      .modify({
-        category_id: newCategoryId,
-        pendingSync: 1,
-      });
+      .toArray();
 
-    syncManager.schedulePush();
+    // Update each transaction immediately
+    for (const tx of transactions) {
+      await updateRecord(
+        "transactions",
+        tx.id,
+        { category_id: newCategoryId },
+        user.id
+      );
+    }
+
+    // Also migrate recurring transactions
+    const recurring = await db.recurring_transactions
+      .where("category_id")
+      .equals(oldCategoryId)
+      .toArray();
+
+    for (const rec of recurring) {
+      await updateRecord(
+        "recurring_transactions",
+        rec.id,
+        { category_id: newCategoryId },
+        user.id
+      );
+    }
   };
 
   const deleteCategoryTransactions = async (id: string) => {
-    await db.transactions.where("category_id").equals(id).modify({
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-    });
+    // Find all transactions with this category
+    const transactions = await db.transactions
+      .where("category_id")
+      .equals(id)
+      .toArray();
 
-    await db.recurring_transactions.where("category_id").equals(id).modify({
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Soft delete each transaction immediately
+    for (const tx of transactions) {
+      await deleteRecord("transactions", tx.id);
+    }
+
+    // Also delete recurring transactions
+    const recurring = await db.recurring_transactions
+      .where("category_id")
+      .equals(id)
+      .toArray();
+
+    for (const rec of recurring) {
+      await deleteRecord("recurring_transactions", rec.id);
+    }
   };
 
   const deleteCategoryData = async (id: string) => {

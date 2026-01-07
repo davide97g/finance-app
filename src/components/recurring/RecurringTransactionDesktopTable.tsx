@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { SyncStatusBadge } from "@/components/SyncStatus";
 import { getIconComponent } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
 import {
@@ -129,20 +128,6 @@ export function RecurringTransactionDesktopTable({
                                 <TableCell>
                                     <div className="flex items-center gap-2">
                                         {getCategoryDisplay(t_item.category_id)}
-                                        <TooltipProvider delayDuration={300}>
-                                            {t_item.pendingSync === 1 && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span className="cursor-help">
-                                                            <SyncStatusBadge isPending={true} />
-                                                        </span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{t("changes_pending_sync")}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            )}
-                                        </TooltipProvider>
                                     </div>
                                 </TableCell>
                                 <TableCell className="capitalize">

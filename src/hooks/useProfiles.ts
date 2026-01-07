@@ -1,6 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, Profile } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
+import { insertRecord, updateRecord } from "@/lib/dbOperations";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import i18n from "@/i18n";
@@ -58,61 +58,42 @@ export function useUpdateProfile() {
             return;
         }
 
-        const updatedAt = new Date().toISOString();
-
         try {
             // Check if profile exists
             const existing = await db.profiles.get(user.id);
 
             if (existing) {
-                // Update existing profile
-                await db.profiles.update(user.id, {
-                    ...updates,
-                    updated_at: updatedAt,
-                    pendingSync: 1, // Mark for sync
-                });
+                // Immediate update
+                await updateRecord("profiles", user.id, updates, user.id);
             } else {
                 // Create new profile
-                await db.profiles.add({
+                const profileData = {
                     id: user.id,
                     email: user.email,
                     ...updates,
-                    updated_at: updatedAt,
-                    pendingSync: 1,
-                });
+                };
+                await insertRecord("profiles", profileData, user.id);
             }
 
-            // Sync to Supabase
-            const { error } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: user.id,
-                    email: user.email,
-                    ...updates,
-                    updated_at: updatedAt,
-                });
-
-            if (error) {
-                console.error('[Profile] Failed to sync to Supabase:', error);
-                // Don't throw - offline support will handle this via pendingSync
+            toast.success(i18n.t('profile_updated', {
+                defaultValue: 'Profile updated successfully'
+            }));
+        } catch (error) {
+            console.error('[Profile] Failed to update:', error);
+            const isOffline = !navigator.onLine || (error instanceof Error && error.message.includes("fetch"));
+            
+            if (isOffline) {
                 toast.warning(
                     i18n.t('profile_update_offline', {
                         defaultValue: 'Profile updated locally, will sync when online'
                     })
                 );
             } else {
-                // Clear pending sync flag on success
-                await db.profiles.update(user.id, { pendingSync: 0 });
-                toast.success(i18n.t('profile_updated', {
-                    defaultValue: 'Profile updated successfully'
+                toast.error(i18n.t('profile_update_error', {
+                    defaultValue: 'Failed to update profile'
                 }));
+                throw error;
             }
-        } catch (error) {
-            console.error('[Profile] Failed to update:', error);
-            toast.error(i18n.t('profile_update_error', {
-                defaultValue: 'Failed to update profile'
-            }));
-            throw error;
         }
     };
 

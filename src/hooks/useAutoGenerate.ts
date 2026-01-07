@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { db, RecurringTransaction } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { insertRecord, updateRecord } from "../lib/dbOperations";
 import { v4 as uuidv4 } from "uuid";
 import {
   addDays,
@@ -57,7 +57,7 @@ export function useAutoGenerate() {
             const transactionId = uuidv4();
             const dateStr = format(nextDate, "yyyy-MM-dd");
 
-            await db.transactions.add({
+            const transactionData = {
               id: transactionId,
               user_id: rt.user_id,
               group_id: rt.group_id || null,
@@ -69,15 +69,16 @@ export function useAutoGenerate() {
               date: dateStr,
               year_month: dateStr.substring(0, 7),
               description: rt.description,
-              pendingSync: 1,
               deleted_at: null,
-            });
+            };
+
+            // Immediate write
+            await insertRecord("transactions", transactionData, rt.user_id);
 
             // Update last_generated
-            await db.recurring_transactions.update(rt.id, {
+            await updateRecord("recurring_transactions", rt.id, {
               last_generated: nextDate.toISOString(),
-              pendingSync: 1,
-            });
+            }, rt.user_id);
 
             generatedCount++;
             if (rt.type === "expense") {
@@ -102,11 +103,10 @@ export function useAutoGenerate() {
             )}`
           );
 
-          // Trigger sync to push generated transactions
+          // Transactions are already written immediately, no sync needed
           console.log(
-            "[AutoGenerate] Generated transactions, triggering sync..."
+            "[AutoGenerate] Generated transactions"
           );
-          syncManager.sync();
         }
       } catch (error) {
         handleError(

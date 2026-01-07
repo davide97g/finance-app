@@ -7,8 +7,8 @@ import {
   ShoppingCollection,
   ShoppingCollectionMember,
 } from "../lib/db";
+import { deleteRecord, insertRecord, updateRecord } from "../lib/dbOperations";
 import { getJointAccountPartnerId } from "../lib/jointAccount";
-import { syncManager } from "../lib/sync";
 import { useAuth } from "./useAuth";
 
 /**
@@ -134,15 +134,15 @@ export function useShoppingCollections() {
     const collectionId = uuidv4();
 
     // Create collection
-    await db.shopping_collections.add({
+    const collectionData = {
       id: collectionId,
       name: name.trim(),
       created_by: user.id,
       deleted_at: null,
-      pendingSync: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    });
+    };
+    await insertRecord("shopping_collections", collectionData, user.id);
 
     // Get joint account partner ID
     const jointAccountPartnerId = await getJointAccountPartnerId(user.id);
@@ -152,33 +152,36 @@ export function useShoppingCollections() {
       // Add creator as first member (for consistency in shared collections)
       if (isShared) {
         const memberId = uuidv4();
-        await db.shopping_collection_members.add({
+        const memberData = {
           id: memberId,
           collection_id: collectionId,
           user_id: user.id,
           joined_at: new Date().toISOString(),
           removed_at: null,
-          pendingSync: 1,
           updated_at: new Date().toISOString(),
-        });
+        };
+        await insertRecord("shopping_collection_members", memberData, user.id);
       }
 
       // Automatically add joint account partner as member (bidirectional sharing)
       if (jointAccountPartnerId) {
         const partnerMemberId = uuidv4();
-        await db.shopping_collection_members.add({
+        const partnerMemberData = {
           id: partnerMemberId,
           collection_id: collectionId,
           user_id: jointAccountPartnerId,
           joined_at: new Date().toISOString(),
           removed_at: null,
-          pendingSync: 1,
           updated_at: new Date().toISOString(),
-        });
+        };
+        await insertRecord(
+          "shopping_collection_members",
+          partnerMemberData,
+          user.id
+        );
       }
     }
 
-    syncManager.schedulePush();
     return collectionId;
   };
 
@@ -186,26 +189,29 @@ export function useShoppingCollections() {
     id: string,
     updates: Partial<Pick<ShoppingCollection, "name">>
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     if (!updates.name || updates.name.trim().length === 0) {
       throw new Error(t("validation.name_required") || "Name is required");
     }
 
-    await db.shopping_collections.update(id, {
-      ...updates,
-      name: updates.name?.trim(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    await updateRecord(
+      "shopping_collections",
+      id,
+      {
+        ...updates,
+        name: updates.name?.trim(),
+        updated_at: new Date().toISOString(),
+      },
+      user.id
+    );
   };
 
   const deleteCollection = async (id: string) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Soft delete collection
-    await db.shopping_collections.update(id, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
+    await deleteRecord("shopping_collections", id);
 
     // Soft delete all lists in collection
     const collectionLists = await db.shopping_lists
@@ -213,10 +219,7 @@ export function useShoppingCollections() {
       .toArray();
 
     for (const list of collectionLists) {
-      await db.shopping_lists.update(list.id, {
-        deleted_at: new Date().toISOString(),
-        pendingSync: 1,
-      });
+      await deleteRecord("shopping_lists", list.id);
     }
 
     // Soft delete all items in collection
@@ -225,16 +228,12 @@ export function useShoppingCollections() {
       .toArray();
 
     for (const item of collectionItems) {
-      await db.shopping_items.update(item.id, {
-        deleted_at: new Date().toISOString(),
-        pendingSync: 1,
-      });
+      await deleteRecord("shopping_items", item.id);
     }
-
-    syncManager.schedulePush();
   };
 
   const addCollectionMember = async (collectionId: string, userId: string) => {
+    if (!user) throw new Error("User must be logged in");
     if (!userId) throw new Error("User ID is required");
 
     // Check if member already exists
@@ -255,27 +254,30 @@ export function useShoppingCollections() {
 
     const memberId = uuidv4();
 
-    await db.shopping_collection_members.add({
+    const memberData = {
       id: memberId,
       collection_id: collectionId,
       user_id: userId,
       joined_at: new Date().toISOString(),
       removed_at: null,
-      pendingSync: 1,
       updated_at: new Date().toISOString(),
-    });
-
-    syncManager.schedulePush();
+    };
+    await insertRecord("shopping_collection_members", memberData, user.id);
     return memberId;
   };
 
   const removeCollectionMember = async (memberId: string) => {
-    await db.shopping_collection_members.update(memberId, {
-      removed_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    if (!user) throw new Error("User must be logged in");
+
+    await updateRecord(
+      "shopping_collection_members",
+      memberId,
+      {
+        removed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      user.id
+    );
   };
 
   return {

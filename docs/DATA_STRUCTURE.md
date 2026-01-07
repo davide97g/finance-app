@@ -14,13 +14,12 @@ Every major table includes these internal fields to manage sync state:
 
 | Field | Type (Local) | Type (Remote) | Purpose |
 | :--- | :--- | :--- | :--- |
-| `pendingSync` | `number` (0/1) | *N/A* | **Local Only**. `1` means this record has local changes not yet pushed to the server. `0` means it's synced. |
 | `sync_token` | `number` | `number` (BigInt) | **Version Control**. Server-assigned counter. Used to download only *new* changes (Deltas) since the last sync. |
 | `updated_at` | `string` (ISO) | `string` (ISO) | Timestamp of last modification. Used for "Last-Write-Wins" conflict resolution. |
 | `deleted_at` | `string` (ISO) | `string` (ISO) | If present, the record is considered deleted. |
 
 > **Why `number` for Boolean?**
-> IndexedDB indexes work better with numbers. We use `1` for true and `0` for false for fields like `pendingSync` and `active`.
+> IndexedDB indexes work better with numbers. We use `1` for true and `0` for false for fields like `active`.
 
 ---
 
@@ -114,8 +113,8 @@ When moving data between `db.ts` (Dexie) and `supabase.ts` (API), certain transf
 
 ## Indexes
 See `src/lib/db.ts` constructor for the exact index configuration.
-*   **Transactions**: `[id, user_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at]`
-*   **Groups**: `[id, created_by, pendingSync]`
+*   **Transactions**: `[id, user_id, category_id, context_id, type, date, year_month, deleted_at]`
+*   **Groups**: `[id, created_by, deleted_at]`
 *   **Profiles**: `[id, email]`
 
 *Note: Any field you want to filter/sort by efficiently in a `useLiveQuery` MUST be in this index list.*

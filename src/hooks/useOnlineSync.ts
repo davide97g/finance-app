@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { syncManager } from "../lib/sync";
+import { retryQueue } from "../lib/retryQueue";
 import { toast } from "sonner";
 import i18n from "@/i18n";
 
-// Singleton to ensure only one instance shows toasts and triggers sync
+// Singleton to ensure only one instance shows toasts and triggers retry
 let globalHandlersRegistered = false;
 const onlineListeners: Set<(isOnline: boolean) => void> = new Set();
 
@@ -20,16 +20,9 @@ function ensureGlobalHandlers() {
     // Notify all listeners
     onlineListeners.forEach((cb) => cb(true));
 
-    // Show toast only once (globally)
-    // Toast removed as per user request
-    // toast.success(i18n.t("back_online"), {
-    //   description: i18n.t("back_online_description"),
-    //   duration: 3000,
-    // });
-
-    // ✅ Sync completo (push + pull) per recuperare modifiche perse offline
-    console.log("[OnlineSync] Back online, syncing...");
-    await syncManager.sync();
+    // Retry queued operations
+    console.log("[OnlineSync] Back online, retrying queued operations...");
+    await retryQueue.retryQueuedOperations();
   };
 
   const handleOffline = () => {

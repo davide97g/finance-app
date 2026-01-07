@@ -2,7 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { db, ShoppingItem, ShoppingListItem } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { insertRecord, updateRecord, deleteRecord } from "../lib/dbOperations";
 import { useAuth } from "./useAuth";
 
 /**
@@ -106,16 +106,16 @@ export function useShoppingItems(
     } else {
       // Create new item
       itemId = uuidv4();
-      await db.shopping_items.add({
+      const itemData = {
         id: itemId,
         collection_id: collectionId,
         name: trimmedName,
         created_by: user.id,
         deleted_at: null,
-        pendingSync: 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      };
+      await insertRecord("shopping_items", itemData, user.id);
     }
 
     // If listId provided, add to list
@@ -130,42 +130,39 @@ export function useShoppingItems(
 
       if (!existingListItem) {
         const listItemId = uuidv4();
-        await db.shopping_list_items.add({
+        const listItemData = {
           id: listItemId,
           list_id: listId,
           item_id: itemId,
           checked: false,
           deleted_at: null,
-          pendingSync: 1,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        };
+        await insertRecord("shopping_list_items", listItemData, user.id);
       }
     }
 
-    syncManager.schedulePush();
     return itemId;
   };
 
   const toggleItemChecked = async (listItemId: string) => {
+    if (!user) throw new Error("User must be logged in");
+
     const listItem = await db.shopping_list_items.get(listItemId);
     if (!listItem) return;
 
-    await db.shopping_list_items.update(listItemId, {
+    await updateRecord("shopping_list_items", listItemId, {
       checked: !listItem.checked,
-      pendingSync: 1,
       updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    }, user.id);
   };
 
   const deleteItem = async (itemId: string) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Soft delete item
-    await db.shopping_items.update(itemId, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
+    await deleteRecord("shopping_items", itemId);
 
     // Soft delete all list items referencing this item
     const listItems = await db.shopping_list_items
@@ -173,23 +170,13 @@ export function useShoppingItems(
       .toArray();
 
     for (const li of listItems) {
-      await db.shopping_list_items.update(li.id, {
-        deleted_at: new Date().toISOString(),
-        pendingSync: 1,
-      });
+      await deleteRecord("shopping_list_items", li.id);
     }
-
-    syncManager.schedulePush();
   };
 
   const removeItemFromList = async (listItemId: string) => {
     // Soft delete list item (removes from list but keeps item in collection)
-    await db.shopping_list_items.update(listItemId, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    await deleteRecord("shopping_list_items", listItemId);
   };
 
   return {

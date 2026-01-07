@@ -30,7 +30,6 @@ import {
   Cloud,
   Clock,
 } from "lucide-react";
-import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Badge } from "@/components/ui/badge";
 import { createElement } from "react";
 
@@ -246,17 +245,13 @@ export function RecurringTransactionDetailDrawer({
                   <RefreshCw className="h-4 w-4 mr-2" />
                   <span className="text-sm">{t("status")}</span>
                 </div>
-                {transaction.pendingSync === 1 ? (
-                  <SyncStatusBadge isPending={true} />
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30"
-                  >
-                    <Cloud className="mr-1 h-3 w-3" />
-                    {t("synced")}
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className="border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30"
+                >
+                  <Cloud className="mr-1 h-3 w-3" />
+                  {t("synced")}
+                </Badge>
               </div>
             </div>
           </div>

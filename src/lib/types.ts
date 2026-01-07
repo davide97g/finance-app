@@ -62,7 +62,7 @@ export type DefaultView = "list" | "grid";
 
 // ============================================================================
 // INPUT TYPES (for creating/updating entities)
-// These exclude system fields like id, pendingSync, deleted_at, sync_token
+// These exclude system fields like id, deleted_at, sync_token
 // ============================================================================
 
 /**

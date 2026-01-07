@@ -1,6 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, CategoryBudget } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { insertRecord, updateRecord, deleteRecord } from "../lib/dbOperations";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "./useAuth";
 import { useMemo } from "react";
@@ -199,31 +199,28 @@ export function useCategoryBudgets(
     );
 
     if (existing) {
-      await db.category_budgets.update(existing.id, {
+      // Immediate update
+      await updateRecord("category_budgets", existing.id, {
         amount: validatedData.amount,
-        pendingSync: 1,
         updated_at: new Date().toISOString(),
-      });
+      }, user.id);
     } else {
       const id = uuidv4();
-      await db.category_budgets.add({
+      const budgetData = {
         id,
         ...validatedData,
-        pendingSync: 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      };
+      // Immediate insert
+      await insertRecord("category_budgets", budgetData, user.id);
     }
-    syncManager.schedulePush();
   };
 
   // Remove budget for a category
   const removeCategoryBudget = async (budgetId: string) => {
-    await db.category_budgets.update(budgetId, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate soft delete
+    await deleteRecord("category_budgets", budgetId);
   };
 
   // Get categories that are over budget

@@ -22,7 +22,6 @@ import {
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SwipeableItem } from "@/components/ui/SwipeableItem";
-import { SyncStatusBadge } from "@/components/SyncStatus";
 
 interface GroupCardProps {
   group: GroupWithMembers;
@@ -104,7 +103,6 @@ export function GroupCard({
               <Badge variant="secondary">
                 {group.members.length} {t("members")}
               </Badge>
-              <SyncStatusBadge isPending={group.pendingSync === 1} />
             </div>
           </div>
         </CardHeader>

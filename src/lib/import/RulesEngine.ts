@@ -58,7 +58,6 @@ export class RulesEngine {
             active: 1,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            pendingSync: 1
         };
 
         await db.import_rules.add(newRule);

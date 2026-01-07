@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { Transaction, Category, Context, Group } from "@/lib/db";
 import { getIconComponent } from "@/lib/icons";
 import { Tag, Users, AlertCircle } from "lucide-react";
-import { SyncStatusBadge } from "./SyncStatus";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
 import { SwipeableItem } from "@/components/ui/SwipeableItem";
 import { createElement } from "react";
@@ -155,7 +154,6 @@ export function MobileTransactionRow({
             </div>
           )}
           <div className="mt-1">
-            <SyncStatusBadge isPending={transaction.pendingSync === 1} />
           </div>
         </div>
       </div>

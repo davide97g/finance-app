@@ -14,7 +14,6 @@ import * as React from "react";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/db";
-import { syncManager } from "@/lib/sync";
 import { cleanupSoftDeletedRecords } from "@/lib/cleanup";
 import { User } from "@supabase/supabase-js";
 import { SessionExpiredModal } from "@/components/auth/SessionExpiredModal";
@@ -139,13 +138,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsSessionExpired(false);
   }, []);
 
-  // Register logout handler with sync manager to handle 403s from sync
-  useEffect(() => {
-    syncManager.registerLogoutHandler(() => {
-      console.log("[AuthProvider] Received logout request from SyncManager (403 Forbidden)");
-      setIsSessionExpired(true);
-    });
-  }, []);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -279,16 +271,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (!isReload) {
           console.log(
-            "[AuthProvider] Fresh login detected, triggering full sync..."
+            "[AuthProvider] Fresh login detected"
           );
           markPageLoaded(); // Mark for future reloads in this session
-          // Small delay to ensure session is fully established
-          setTimeout(() => {
-            syncManager.fullSync();
-          }, 1000);
         } else {
           console.log(
-            "[AuthProvider] Page reload detected, skipping full sync"
+            "[AuthProvider] Page reload detected"
           );
         }
       }

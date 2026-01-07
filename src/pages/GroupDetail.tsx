@@ -1,19 +1,3 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { useGroups } from "@/hooks/useGroups";
-import { useTransactions } from "@/hooks/useTransactions";
-import { useCategories } from "@/hooks/useCategories";
-import { useAuth } from "@/contexts/AuthProvider";
-import { useSync } from "@/hooks/useSync";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,36 +8,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useCategories } from "@/hooks/useCategories";
+import { useGroups } from "@/hooks/useGroups";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
 
-import {
-  ArrowLeft,
-  Plus,
-  Users,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
-} from "lucide-react";
-import { TransactionList } from "@/components/TransactionList";
-import { getIconComponent } from "@/lib/icons";
 import {
   TransactionDialog,
   TransactionFormData,
 } from "@/components/TransactionDialog";
-import { Transaction, GroupMember } from "@/lib/db";
+import { TransactionList } from "@/components/TransactionList";
+import { GroupMember, Transaction } from "@/lib/db";
+import { getIconComponent } from "@/lib/icons";
+import { ArrowLeft, Plus, TrendingDown, TrendingUp, Users } from "lucide-react";
 
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { sync, isSyncing } = useSync();
   const { groups, getGroupBalance } = useGroups();
-  const {
-    transactions,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-  } = useTransactions(undefined, undefined, groupId);
+  const { transactions, addTransaction, updateTransaction, deleteTransaction } =
+    useTransactions(undefined, undefined, groupId);
   const { categories } = useCategories(groupId);
 
   const group = useMemo(() => {
@@ -182,22 +164,6 @@ export function GroupDetailPage() {
             <p className="text-sm text-muted-foreground">{group.description}</p>
           )}
         </div>
-        {/* Refresh Button */}
-        <Button
-          onClick={() => sync()}
-          disabled={isSyncing}
-          variant="outline"
-          size="icon"
-          className="md:w-auto md:px-4 md:h-10"
-          title={t("sync_now") || "Sync now"}
-        >
-          <RefreshCw
-            className={`h-4 w-4 md:mr-2 ${isSyncing ? "animate-spin" : ""}`}
-          />
-          <span className="hidden md:inline">
-            {isSyncing ? t("syncing") || "Syncing..." : t("sync_now") || "Sync"}
-          </span>
-        </Button>
         <Button
           size="icon"
           className="md:w-auto md:px-4 md:h-10"
@@ -248,7 +214,9 @@ export function GroupDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">{group.myShare}%</div>
             <p className="text-xs text-muted-foreground">
-              {t("should_pay_amount", { amount: (myBalance?.shouldPay || 0).toFixed(2) })}
+              {t("should_pay_amount", {
+                amount: (myBalance?.shouldPay || 0).toFixed(2),
+              })}
             </p>
           </CardContent>
         </Card>
@@ -266,18 +234,24 @@ export function GroupDetailPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${(myBalance?.balance || 0) >= 0
-                ? "text-green-600"
-                : "text-red-600"
-                }`}
+              className={`text-2xl font-bold ${
+                (myBalance?.balance || 0) >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
             >
               {(myBalance?.balance || 0) >= 0
-                ? t("balance_amount_positive", { amount: (myBalance?.balance || 0).toFixed(2) })
-                : t("balance_amount_negative", { amount: (myBalance?.balance || 0).toFixed(2) })
-              }
+                ? t("balance_amount_positive", {
+                    amount: (myBalance?.balance || 0).toFixed(2),
+                  })
+                : t("balance_amount_negative", {
+                    amount: (myBalance?.balance || 0).toFixed(2),
+                  })}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("has_paid_amount", { amount: (myBalance?.hasPaid || 0).toFixed(2) })}
+              {t("has_paid_amount", {
+                amount: (myBalance?.hasPaid || 0).toFixed(2),
+              })}
             </p>
           </CardContent>
         </Card>
@@ -303,7 +277,6 @@ export function GroupDetailPage() {
             isLoading={transactions === undefined}
           />
         </TabsContent>
-
 
         <TabsContent value="categories" className="space-y-4">
           {groupCategories.length === 0 ? (
@@ -350,7 +323,9 @@ export function GroupDetailPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("confirm_delete_transaction")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("confirm_delete_transaction")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("confirm_delete_transaction_description")}
             </AlertDialogDescription>

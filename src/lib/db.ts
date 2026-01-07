@@ -4,8 +4,6 @@ import Dexie, { Table } from "dexie";
  * @fileoverview IndexedDB database schema using Dexie.js for local-first storage.
  *
  * This module defines the local database schema that mirrors the Supabase backend.
- * All entities include `pendingSync` flag for tracking unsynced changes and
- * `sync_token` for delta synchronization.
  *
  * @module lib/db
  */
@@ -24,8 +22,6 @@ export interface Group {
   created_by: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token for delta sync */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -54,8 +50,6 @@ export interface GroupMember {
   joined_at?: string;
   /** Soft remove timestamp, null if active (ISO 8601) */
   removed_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -90,8 +84,6 @@ export interface Transaction {
   description: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise (number for IndexedDB indexing) */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
 }
@@ -120,8 +112,6 @@ export interface Category {
   active: number;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
 }
@@ -142,8 +132,6 @@ export interface Context {
   active: number;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
 }
@@ -182,8 +170,6 @@ export interface RecurringTransaction {
   last_generated?: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Creation timestamp (ISO 8601) */
@@ -260,8 +246,6 @@ export interface CategoryUsageStats {
   updated_at?: string;
   /** Creation timestamp (ISO 8601) */
   created_at?: string;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
 }
@@ -282,8 +266,6 @@ export interface CategoryBudget {
   period: "monthly" | "yearly";
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -308,8 +290,6 @@ export interface Profile {
   avatar_type?: "initials" | "photo";
   /** Last modification timestamp (ISO 8601) */
   updated_at?: string;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
 }
@@ -332,8 +312,6 @@ export interface ImportRule {
   active: number;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Creation timestamp (ISO 8601) */
@@ -354,8 +332,6 @@ export interface ShoppingCollection {
   created_by: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -378,8 +354,6 @@ export interface ShoppingCollectionMember {
   joined_at?: string;
   /** Soft remove timestamp, null if active (ISO 8601) */
   removed_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -400,8 +374,6 @@ export interface ShoppingList {
   created_by: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -424,8 +396,6 @@ export interface ShoppingItem {
   created_by: string;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -448,8 +418,6 @@ export interface ShoppingListItem {
   checked: boolean;
   /** Soft delete timestamp (ISO 8601) */
   deleted_at?: string | null;
-  /** 1 if changes pending sync, 0 otherwise */
-  pendingSync?: number;
   /** Server-assigned sync token */
   sync_token?: number;
   /** Last modification timestamp (ISO 8601) */
@@ -545,6 +513,28 @@ export class AppDatabase extends Dexie {
       shopping_items: "id, collection_id, name, pendingSync, deleted_at",
       shopping_list_items:
         "id, list_id, item_id, checked, pendingSync, deleted_at",
+    });
+
+    // Version 4: Remove pendingSync from all tables
+    this.version(4).stores({
+      groups: "id, created_by, deleted_at",
+      group_members: "id, group_id, user_id, guest_name, is_guest, removed_at",
+      transactions:
+        "id, user_id, group_id, paid_by_member_id, recurring_transaction_id, category_id, context_id, type, date, year_month, deleted_at, [group_id+year_month], [type+year_month], [category_id+year_month]",
+      categories: "id, user_id, group_id, name, type, deleted_at",
+      contexts: "id, user_id, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, frequency, deleted_at",
+      user_settings: "user_id",
+      category_budgets: "id, user_id, category_id, period, deleted_at",
+      profiles: "id",
+      import_rules: "id, user_id, match_type, deleted_at",
+      category_usage_stats: "id, user_id, category_id",
+      shopping_collections: "id, created_by, deleted_at",
+      shopping_collection_members: "id, collection_id, user_id, removed_at",
+      shopping_lists: "id, collection_id, created_by, deleted_at",
+      shopping_items: "id, collection_id, name, deleted_at",
+      shopping_list_items: "id, list_id, item_id, checked, deleted_at",
     });
   }
 

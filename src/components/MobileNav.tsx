@@ -29,7 +29,7 @@ interface MobileNavProps {
 
 export function MobileNav({ navigation }: MobileNavProps) {
   const { t } = useTranslation();
-  const { handleLogout, isDialogOpen, setIsDialogOpen, confirmLogout, pendingCount } = useSafeLogout();
+  const { handleLogout, isDialogOpen, setIsDialogOpen, confirmLogout } = useSafeLogout();
   const navigate = useNavigate();
   const location = useLocation();
   const { isOnline } = useOnlineSync();
@@ -126,7 +126,6 @@ export function MobileNav({ navigation }: MobileNavProps) {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onConfirm={confirmLogout}
-        pendingCount={pendingCount}
       />
     </header>
   );

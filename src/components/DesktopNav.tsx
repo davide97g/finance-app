@@ -20,7 +20,7 @@ interface DesktopNavProps {
 
 export function DesktopNav({ navigation }: DesktopNavProps) {
   const { t } = useTranslation();
-  const { handleLogout, isDialogOpen, setIsDialogOpen, confirmLogout, pendingCount } = useSafeLogout();
+  const { handleLogout, isDialogOpen, setIsDialogOpen, confirmLogout } = useSafeLogout();
   const location = useLocation();
   const { isOnline } = useOnlineSync();
 
@@ -81,7 +81,6 @@ export function DesktopNav({ navigation }: DesktopNavProps) {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onConfirm={confirmLogout}
-        pendingCount={pendingCount}
       />
     </aside>
   );

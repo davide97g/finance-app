@@ -1,7 +1,6 @@
 import { HelpSystemWrapper } from "@/components/help/HelpSystem";
 import { ImportWizard } from "@/components/import/ImportWizard";
 import { ImportRulesManager } from "@/components/settings/ImportRulesManager";
-import { SyncIndicator } from "@/components/SyncStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,14 +33,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { useProfile } from "@/hooks/useProfiles";
 import { useSettings } from "@/hooks/useSettings";
 import { useWelcomeWizard } from "@/hooks/useWelcomeWizard";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { validatePartnerId } from "@/lib/jointAccount";
-import { safeSync, syncManager } from "@/lib/sync";
 import { THEME_COLORS } from "@/lib/theme-colors";
 import { cn, getLocalDate } from "@/lib/utils";
 import {
@@ -137,14 +134,10 @@ const JointAccountLinked = ({
 
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
-  const { isOnline } = useOnlineSync();
   const { user } = useAuth();
   const { t } = useTranslation();
   const { resolvedTheme, setTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [lastSyncTime, setLastSyncTime] = useState<Date | undefined>();
-  const [manualSyncing, setManualSyncing] = useState(false);
-  const [fullSyncing, setFullSyncing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [exportingData, setExportingData] = useState(false);
@@ -174,35 +167,12 @@ export function SettingsPage() {
     setSearchParams({ tab: value });
   };
 
-  const isSyncing = manualSyncing || fullSyncing;
-
-  const handleManualSync = async () => {
-    setManualSyncing(true);
-    await safeSync("handleManualSync");
-    setLastSyncTime(new Date());
-    setManualSyncing(false);
-  };
-
-  const handleFullSync = async () => {
-    setFullSyncing(true);
-    try {
-      await syncManager.fullSync();
-      setLastSyncTime(new Date());
-      toast.success(t("full_sync_completed") || "Full sync completed!");
-    } catch (_error) {
-      toast.error(t("sync_error") || "Sync failed");
-    } finally {
-      setFullSyncing(false);
-    }
-  };
-
   const handleClearCache = async () => {
     setClearingCache(true);
     try {
       await db.delete();
       await db.open();
       toast.success(t("cache_cleared"));
-      await safeSync("handleClearCache");
     } catch (error) {
       console.error("Failed to clear cache:", error);
       toast.error(t("cache_clear_error") || "Failed to clear cache.");
@@ -214,7 +184,6 @@ export function SettingsPage() {
     transactions: number;
     categories: number;
   }) => {
-    await safeSync("handleImportComplete");
     toast.success(
       t("import_success", {
         transactions: stats?.transactions || 0,
@@ -265,32 +234,21 @@ export function SettingsPage() {
         exportDate: new Date().toISOString(),
         userId: user.id,
         transactions: transactions.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
-            rest
+          ({ deleted_at: _deleted_at, ...rest }) => rest
         ),
         categories: categories.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
-            rest
+          ({ deleted_at: _deleted_at, ...rest }) => rest
         ),
-        contexts: contexts.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
-            rest
-        ),
+        contexts: contexts.map(({ deleted_at: _deleted_at, ...rest }) => rest),
         recurring_transactions: recurring.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
-            rest
+          ({ deleted_at: _deleted_at, ...rest }) => rest
         ),
         category_budgets: budgets.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
-            rest
+          ({ deleted_at: _deleted_at, ...rest }) => rest
         ),
-        groups: groups.map(
-          ({ pendingSync: _pendingSync, deleted_at: _deleted_at, ...rest }) =>
-            rest
-        ),
+        groups: groups.map(({ deleted_at: _deleted_at, ...rest }) => rest),
         group_members: groupMembers.map(
-          ({ pendingSync: _pendingSync, removed_at: _removed_at, ...rest }) =>
-            rest
+          ({ removed_at: _removed_at, ...rest }) => rest
         ),
       };
 
@@ -927,7 +885,6 @@ export function SettingsPage() {
                               "Joint account linked successfully! Both accounts will now share data."
                           );
                           // Trigger a sync to fetch partner's data
-                          await safeSync("jointAccountLinked");
                         } catch (error) {
                           console.error(
                             "[Settings] Failed to link joint account:",
@@ -961,57 +918,6 @@ export function SettingsPage() {
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Sync */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t("sync")}</CardTitle>
-              <CardDescription>{t("sync_desc")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <SyncIndicator
-                isSyncing={isSyncing}
-                isOnline={isOnline}
-                lastSyncTime={lastSyncTime}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  onClick={handleManualSync}
-                  disabled={isSyncing || !isOnline}
-                  variant="outline"
-                  className="h-12 touch-manipulation"
-                >
-                  <RefreshCw
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      manualSyncing && "animate-spin"
-                    )}
-                  />
-                  {t("sync_now")}
-                </Button>
-                <Button
-                  onClick={handleFullSync}
-                  disabled={isSyncing || !isOnline}
-                  variant="secondary"
-                  className="h-12 touch-manipulation"
-                  title={
-                    t("full_sync_desc") || "Re-download all data from server"
-                  }
-                >
-                  <RefreshCw
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      fullSyncing && "animate-spin"
-                    )}
-                  />
-                  {t("full_sync")}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t("full_sync_hint")}
-              </p>
             </CardContent>
           </Card>
 

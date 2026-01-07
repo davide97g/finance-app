@@ -1,19 +1,11 @@
 import { renderHook, act } from "@testing-library/react";
 import { useGroups } from "../useGroups";
 import { db } from "../../lib/db";
-import { syncManager } from "../../lib/sync";
 import { useAuth } from "../useAuth";
 
 // Mock dependencies
 jest.mock("../useAuth", () => ({
   useAuth: jest.fn(),
-}));
-
-jest.mock("../../lib/sync", () => ({
-  syncManager: {
-    sync: jest.fn(),
-    schedulePush: jest.fn(),
-  },
 }));
 
 jest.mock("react-i18next", () => ({
@@ -82,7 +74,6 @@ describe("useGroups", () => {
     created_at: "2024-01-01T00:00:00.000Z",
     updated_at: "2024-01-01T00:00:00.000Z",
     deleted_at: null,
-    pendingSync: 0,
   };
 
   const mockMember = {
@@ -92,7 +83,6 @@ describe("useGroups", () => {
     share: 100,
     joined_at: "2024-01-01T00:00:00.000Z",
     removed_at: null,
-    pendingSync: 0,
     updated_at: "2024-01-01T00:00:00.000Z",
   };
 
@@ -136,7 +126,6 @@ describe("useGroups", () => {
         name: "New Group",
         description: "Description",
         created_by: mockUser.id,
-        pendingSync: 1,
       })
     );
 
@@ -146,11 +135,9 @@ describe("useGroups", () => {
         group_id: "mock-uuid",
         user_id: mockUser.id,
         share: 100,
-        pendingSync: 1,
       })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should update a group", async () => {
@@ -168,11 +155,9 @@ describe("useGroups", () => {
       expect.objectContaining({
         name: "Updated Name",
         description: "Updated Description",
-        pendingSync: 1,
       })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should soft delete a group", async () => {
@@ -192,11 +177,9 @@ describe("useGroups", () => {
       "group-1",
       expect.objectContaining({
         deleted_at: expect.any(String),
-        pendingSync: 1,
       })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should add a member to a group", async () => {
@@ -212,11 +195,9 @@ describe("useGroups", () => {
         group_id: "group-1",
         user_id: "new-user-id",
         share: 25,
-        pendingSync: 1,
       })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should remove a member (soft delete)", async () => {
@@ -230,11 +211,9 @@ describe("useGroups", () => {
       "member-1",
       expect.objectContaining({
         removed_at: expect.any(String),
-        pendingSync: 1,
       })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should update member share", async () => {
@@ -248,11 +227,9 @@ describe("useGroups", () => {
       "member-1",
       expect.objectContaining({
         share: 50,
-        pendingSync: 1,
       })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should update all shares at once", async () => {
@@ -268,14 +245,13 @@ describe("useGroups", () => {
     expect(db.group_members.update).toHaveBeenCalledTimes(2);
     expect(db.group_members.update).toHaveBeenCalledWith(
       "member-1",
-      expect.objectContaining({ share: 60, pendingSync: 1 })
+      expect.objectContaining({ share: 60 })
     );
     expect(db.group_members.update).toHaveBeenCalledWith(
       "member-2",
-      expect.objectContaining({ share: 40, pendingSync: 1 })
+      expect.objectContaining({ share: 40 })
     );
 
-    expect(syncManager.schedulePush).toHaveBeenCalled();
   });
 
   it("should calculate group balance correctly", async () => {

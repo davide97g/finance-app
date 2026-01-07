@@ -1,16 +1,16 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, Transaction } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { useAuth } from "../contexts/AuthProvider";
+import { updateCategoryUsageStats } from "../lib/categoryUsage";
+import { db, Transaction } from "../lib/db";
+import { deleteRecord, insertRecord, updateRecord } from "../lib/dbOperations";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 import {
   getTransactionInputSchema,
   getTransactionUpdateSchema,
   validate,
 } from "../lib/validation";
-import { useTranslation } from "react-i18next";
-import { updateCategoryUsageStats } from "../lib/categoryUsage";
-import { useAuth } from "../contexts/AuthProvider";
-import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Hook for managing transactions with optional filtering.
@@ -94,88 +94,107 @@ export function useTransactions(
   }, [limit, yearMonth, groupId, user?.id]);
 
   const addTransaction = async (
-    transaction: Omit<
-      Transaction,
-      "id" | "sync_token" | "pendingSync" | "deleted_at"
-    >
+    transaction: Omit<Transaction, "id" | "sync_token" | "deleted_at">
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate input data
     const validatedData = validate(getTransactionInputSchema(t), transaction);
 
     const id = uuidv4();
-    await db.transactions.add({
+    const transactionData = {
       ...validatedData,
       id,
-      pendingSync: 1,
       deleted_at: null,
-    });
-    
+    };
+
+    // Immediate write to Supabase (queues if offline)
+    await insertRecord("transactions", transactionData, user.id);
+
     // Update category usage statistics for expense transactions
-    if (user && validatedData.type === "expense" && validatedData.category_id) {
-      updateCategoryUsageStats(user.id, validatedData.category_id, validatedData.date).catch(
-        (error) => {
-          console.error("[useTransactions] Failed to update category usage stats:", error);
-        }
-      );
+    if (validatedData.type === "expense" && validatedData.category_id) {
+      updateCategoryUsageStats(
+        user.id,
+        validatedData.category_id,
+        validatedData.date
+      ).catch((error) => {
+        console.error(
+          "[useTransactions] Failed to update category usage stats:",
+          error
+        );
+      });
     }
-    
-    syncManager.schedulePush();
   };
 
   const updateTransaction = async (
     id: string,
-    updates: Partial<Omit<Transaction, "id" | "sync_token" | "pendingSync">>
+    updates: Partial<Omit<Transaction, "id" | "sync_token">>
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Get existing transaction to check for category/date changes
     const existing = await db.transactions.get(id);
-    
+
     // Validate update data (partial validation)
     const validatedUpdates = validate(getTransactionUpdateSchema(t), updates);
 
-    await db.transactions.update(id, {
-      ...validatedUpdates,
-      pendingSync: 1,
-    });
-    
+    // Immediate write to Supabase (queues if offline)
+    await updateRecord("transactions", id, validatedUpdates, user.id);
+
     // Update category usage statistics if category or date changed for expense transactions
-    if (user && existing) {
-      const categoryChanged = validatedUpdates.category_id && validatedUpdates.category_id !== existing.category_id;
-      const dateChanged = validatedUpdates.date && validatedUpdates.date !== existing.date;
-      const typeChanged = validatedUpdates.type && validatedUpdates.type !== existing.type;
-      
+    if (existing) {
+      const categoryChanged =
+        validatedUpdates.category_id &&
+        validatedUpdates.category_id !== existing.category_id;
+      const dateChanged =
+        validatedUpdates.date && validatedUpdates.date !== existing.date;
+      const typeChanged =
+        validatedUpdates.type && validatedUpdates.type !== existing.type;
+
       // If category changed, update stats for both old and new categories
-      if (categoryChanged && existing.type === "expense" && existing.category_id) {
-        updateCategoryUsageStats(user.id, existing.category_id, existing.date).catch(
-          (error) => {
-            console.error("[useTransactions] Failed to update old category usage stats:", error);
-          }
-        );
+      if (
+        categoryChanged &&
+        existing.type === "expense" &&
+        existing.category_id
+      ) {
+        updateCategoryUsageStats(
+          user.id,
+          existing.category_id,
+          existing.date
+        ).catch((error) => {
+          console.error(
+            "[useTransactions] Failed to update old category usage stats:",
+            error
+          );
+        });
       }
-      
+
       // Update stats for new category if it's an expense
-      const finalCategoryId = validatedUpdates.category_id || existing.category_id;
+      const finalCategoryId =
+        validatedUpdates.category_id || existing.category_id;
       const finalDate = validatedUpdates.date || existing.date;
       const finalType = validatedUpdates.type || existing.type;
-      
-      if ((categoryChanged || dateChanged || typeChanged) && finalType === "expense" && finalCategoryId) {
+
+      if (
+        (categoryChanged || dateChanged || typeChanged) &&
+        finalType === "expense" &&
+        finalCategoryId
+      ) {
         updateCategoryUsageStats(user.id, finalCategoryId, finalDate).catch(
           (error) => {
-            console.error("[useTransactions] Failed to update category usage stats:", error);
+            console.error(
+              "[useTransactions] Failed to update category usage stats:",
+              error
+            );
           }
         );
       }
     }
-    
-    syncManager.schedulePush();
   };
 
   const deleteTransaction = async (id: string) => {
-    // Soft delete
-    await db.transactions.update(id, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate soft delete in Supabase (queues if offline)
+    await deleteRecord("transactions", id);
   };
 
   return {

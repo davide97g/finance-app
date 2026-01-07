@@ -26,8 +26,7 @@ export async function cleanupSoftDeletedRecords() {
         try {
             // Find records that are:
             // 1. Soft deleted (deleted_at is not null)
-            // 2. Synced (pendingSync is 0 or undefined)
-            // 3. Older than threshold
+            // 2. Older than threshold
             // Note: We can't query all these conditions efficiently with Dexie in one go without compound indexes,
             // so we'll query by deleted_at (if indexed) or just filter.
             // Since deleted_at is indexed in most tables, we can use it?
@@ -37,7 +36,7 @@ export async function cleanupSoftDeletedRecords() {
             // Actually it does.
 
             const softDeleted = await table
-                .filter((item: { deleted_at?: string | null; removed_at?: string | null; pendingSync?: number }) => (item.deleted_at != null || item.removed_at != null) && !item.pendingSync)
+                .filter((item: { deleted_at?: string | null; removed_at?: string | null }) => (item.deleted_at != null || item.removed_at != null))
                 .toArray();
 
             const toDelete = softDeleted.filter((item: { deleted_at?: string | null; removed_at?: string | null }) => {

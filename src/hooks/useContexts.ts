@@ -1,15 +1,15 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, Context } from "../lib/db";
-import { syncManager } from "../lib/sync";
+import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { useAuth } from "../contexts/AuthProvider";
+import { Context, db } from "../lib/db";
+import { deleteRecord, insertRecord, updateRecord } from "../lib/dbOperations";
+import { getJointAccountPartnerId } from "../lib/jointAccount";
 import {
   getContextInputSchema,
   getContextUpdateSchema,
   validate,
 } from "../lib/validation";
-import { useTranslation } from "react-i18next";
-import { useAuth } from "../contexts/AuthProvider";
-import { getJointAccountPartnerId } from "../lib/jointAccount";
 
 /**
  * Hook for managing transaction contexts (e.g., "Work", "Personal", "Vacation").
@@ -40,16 +40,16 @@ export function useContexts() {
   const { user } = useAuth();
   const contexts = useLiveQuery(async () => {
     const ctxs = await db.contexts.toArray();
-    
+
     // Get joint account partner ID if configured
     if (user) {
       const partnerId = await getJointAccountPartnerId(user.id);
       const userIds = partnerId ? [user.id, partnerId] : [user.id];
-      
+
       // Filter to include contexts from both users if joint account
       return ctxs.filter((c) => !c.deleted_at && userIds.includes(c.user_id));
     }
-    
+
     // Fallback if no user
     return ctxs.filter((c) => !c.deleted_at);
   }, [user?.id]);
@@ -57,77 +57,83 @@ export function useContexts() {
   const activeContexts = contexts || [];
 
   const addContext = async (
-    context: Omit<
-      Context,
-      "id" | "sync_token" | "pendingSync" | "deleted_at" | "active"
-    > & { active?: boolean }
+    context: Omit<Context, "id" | "sync_token" | "deleted_at" | "active"> & {
+      active?: boolean;
+    }
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate input data (schema expects boolean for active)
     const validatedData = validate(getContextInputSchema(t), {
       ...context,
-      active: context.active !== undefined ? (context.active ? 1 : 0) : 1, // Validation schema expects number? Let's check validation.ts
+      active: context.active !== undefined ? (context.active ? 1 : 0) : 1,
     });
 
     const { active, ...rest } = validatedData;
 
     const id = uuidv4();
-    await db.contexts.add({
+    const contextData = {
       ...rest,
       description: rest.description === null ? undefined : rest.description,
-      active: active, // Schema active is number, validatedData.active is number
+      active: active,
       id,
-      pendingSync: 1,
       deleted_at: null,
-    });
-    syncManager.schedulePush();
+    };
+
+    // Immediate write to Supabase (queues if offline)
+    await insertRecord("contexts", contextData, user.id);
   };
 
   const updateContext = async (
     id: string,
-    updates: Partial<Omit<Context, "id" | "sync_token" | "pendingSync" | "active">> & { active?: boolean | number }
+    updates: Partial<Omit<Context, "id" | "sync_token" | "active">> & {
+      active?: boolean | number;
+    }
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Prepare updates for validation (which expects number for active)
     const updatesForValidation = { ...updates };
-    if (typeof updates.active === 'boolean') {
+    if (typeof updates.active === "boolean") {
       updatesForValidation.active = updates.active ? 1 : 0;
     }
 
     // Validate update data
-    const validatedUpdates = validate(getContextUpdateSchema(t), updatesForValidation);
+    const validatedUpdates = validate(
+      getContextUpdateSchema(t),
+      updatesForValidation
+    );
 
-    // Convert active boolean to number safely (if validation passed through boolean? no schema enforces number)
+    // Convert active boolean to number safely
     const { active, description, ...rest } = validatedUpdates;
     const finalUpdates: Partial<Context> = { ...rest };
     if (active !== undefined) {
-      finalUpdates.active = active; // validatedData active is already number from schema
+      finalUpdates.active = active;
     }
     if (description !== undefined) {
       finalUpdates.description = description === null ? undefined : description;
     }
 
-    await db.contexts.update(id, {
-      ...finalUpdates,
-      pendingSync: 1,
-    });
-    syncManager.schedulePush();
+    // Immediate write to Supabase (queues if offline)
+    await updateRecord("contexts", id, finalUpdates, user.id);
   };
 
   const deleteContext = async (id: string) => {
-    // Transactional update: Detach from transactions AND soft delete context
-    await db.transaction('rw', db.transactions, db.contexts, async () => {
-      // 1. Detach from transactions (set context_id to null and mark for sync)
-      await db.transactions
-        .where("context_id")
-        .equals(id)
-        .modify({ context_id: null as unknown as string, pendingSync: 1 });
+    if (!user) throw new Error("User must be logged in");
 
-      // 2. Soft delete context
-      await db.contexts.update(id, {
-        deleted_at: new Date().toISOString(),
-        pendingSync: 1,
-      });
-    });
-    syncManager.schedulePush();
+    // Find all transactions with this context
+    const transactions = await db.transactions
+      .where("context_id")
+      .equals(id)
+      .toArray();
+
+    // Detach from transactions (set context_id to null)
+    for (const tx of transactions) {
+      await updateRecord("transactions", tx.id, { context_id: null }, user.id);
+    }
+
+    // Soft delete context
+    await deleteRecord("contexts", id);
   };
 
   return {

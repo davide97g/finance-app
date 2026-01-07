@@ -1,38 +1,36 @@
-import { useTranslation } from "react-i18next";
-import { Transaction, Category, Context, Group } from "@/lib/db";
-import { GroupWithMembers } from "@/hooks/useGroups";
-import { useAuth } from "@/hooks/useAuth";
+import { SplitExpenseDialog } from "@/components/SplitExpenseDialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
-  DrawerClose,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { GroupWithMembers } from "@/hooks/useGroups";
+import { useMobile } from "@/hooks/useMobile";
+import { Category, Context, Group, Transaction } from "@/lib/db";
 import { getIconComponent } from "@/lib/icons";
 import { format, parseISO } from "date-fns";
-import { it, enUS } from "date-fns/locale";
+import { enUS, it } from "date-fns/locale";
 import {
-  Tag,
-  Users,
-  Calendar,
-  Wallet,
-  RefreshCw,
-  User,
-  PieChart,
-  Cloud,
   Calculator,
-  X,
+  Calendar,
+  Cloud,
+  PieChart,
+  RefreshCw,
   Split,
+  Tag,
+  User,
+  Users,
+  Wallet,
+  X,
 } from "lucide-react";
-import { SyncStatusBadge } from "@/components/SyncStatus";
-import { Badge } from "@/components/ui/badge";
-import { SplitExpenseDialog } from "@/components/SplitExpenseDialog";
-import { useMobile } from "@/hooks/useMobile";
-import { useState } from "react";
-import { createElement } from "react";
+import { createElement, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface TransactionDetailDrawerProps {
   transaction: Transaction | null;
@@ -86,7 +84,9 @@ export function TransactionDetailDrawer({
 
   if (isGroupTransaction && user && "members" in group) {
     if (transaction.paid_by_member_id) {
-      const payer = group.members.find((m) => m.id === transaction.paid_by_member_id);
+      const payer = group.members.find(
+        (m) => m.id === transaction.paid_by_member_id
+      );
       payerName = payer?.displayName || t("unknown_user");
     } else {
       // Fallback for old transactions or edge cases
@@ -143,13 +143,19 @@ export function TransactionDetailDrawer({
                   {transaction.type === "expense"
                     ? "-"
                     : transaction.type === "investment"
-                      ? ""
-                      : "+"}
-                  €{isGroupTransaction && myShareAmount > 0 ? myShareAmount.toFixed(2) : transaction.amount.toFixed(2)}
+                    ? ""
+                    : "+"}
+                  €
+                  {isGroupTransaction && myShareAmount > 0
+                    ? myShareAmount.toFixed(2)
+                    : transaction.amount.toFixed(2)}
                 </span>
                 {isGroupTransaction && myShareAmount > 0 && (
                   <div className="flex flex-col items-center gap-1 mt-2">
-                    <Badge variant="secondary" className="font-normal text-xs px-2 py-0.5">
+                    <Badge
+                      variant="secondary"
+                      className="font-normal text-xs px-2 py-0.5"
+                    >
                       {t("your_share")}
                     </Badge>
                   </div>
@@ -268,17 +274,13 @@ export function TransactionDetailDrawer({
                   <RefreshCw className="h-4 w-4 mr-2" />
                   <span className="text-sm">{t("status")}</span>
                 </div>
-                {transaction.pendingSync === 1 ? (
-                  <SyncStatusBadge isPending={true} />
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30"
-                  >
-                    <Cloud className="mr-1 h-3 w-3" />
-                    {t("synced")}
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className="border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30"
+                >
+                  <Cloud className="mr-1 h-3 w-3" />
+                  {t("synced")}
+                </Badge>
               </div>
             </div>
 

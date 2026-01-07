@@ -27,14 +27,13 @@ Understanding where data lives is crucial for debugging and extending GoNuts. We
 
 ## State Flow Example: "Changing Currency"
 
-1.  **UI Event**: User selects "USD" in Settings Page (Layer 3 - UI State).
+1.  **UI Event**: User selects "USD" in Settings Page.
 2.  **Logic**: `updateSettings({ currency: 'USD' })` called.
-3.  **Write**: Logic writes `currency = 'USD'` and `pendingSync = 1` to **Layer 2 (Dexie)**.
-4.  **Reaction**: `useLiveQuery` inside `ThemeProvider` sees the change in Layer 2.
-5.  **Render**: App re-renders with "$" symbols. (The user is happy instantly).
-6.  **Background**: `SyncManager` wakes up, reads Layer 2 (`pendingSync=1`).
-7.  **Sync**: Pushes `USD` to **Layer 3 (Supabase)**.
-8.  **Confirmation**: Layer 3 confirms. Layer 2 updates `pendingSync = 0`.
+3.  **Immediate Write**: `updateUserSettings()` attempts Supabase write immediately.
+4.  **On Success**: Record written to both Supabase and Dexie.
+5.  **Reaction**: `useLiveQuery` inside `ThemeProvider` sees the change in Layer 2.
+6.  **Render**: App re-renders with "$" symbols. (The user is happy instantly).
+7.  **If Offline**: Operation queued in Retry Queue, retried automatically when online.
 
 ## Common Pitfalls
 

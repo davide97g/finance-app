@@ -12,7 +12,6 @@ import { AppShell } from "@/components/AppShell";
 import { AuthPage } from "@/pages/AuthPage";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
-import { useSync } from "@/hooks/useSync";
 import { useAutoGenerate } from "@/hooks/useAutoGenerate";
 import { useBudgetNotifications } from "@/hooks/useBudgetNotifications";
 import { Toaster } from "@/components/ui/sonner";
@@ -121,41 +120,34 @@ function AppLoadingState() {
 }
 
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
-import { syncManager } from "@/lib/sync";
+import { pullAllData } from "@/lib/dataPull";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, isOffline } = useAuth();
-  useOnlineSync(); // Auto-sync when coming online
-  const { initialSyncComplete } = useSync(); // Read sync status
-  useRealtimeSync(initialSyncComplete); // Subscribe to realtime changes only after initial sync
+  useOnlineSync(); // Handle retry queue when coming online
+  useRealtimeSync(true); // Subscribe to realtime changes immediately
   useAutoGenerate(); // Generate recurring transactions on app load
   useBudgetNotifications(); // Monitor budget and show warnings
 
   // Welcome wizard state
   const welcomeWizard = useWelcomeWizard();
 
-  // Handle initial sync and visibility changes
+  // Handle initial data pull
   useEffect(() => {
-    // Initial sync
-    const timer = setTimeout(() => {
-      console.log("[App] Starting initial sync...");
-      syncManager.sync();
-    }, 1000);
+    if (!user) return;
 
-    // Visibility listener
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        console.log("[App] App hidden, pushing pending changes...");
-        syncManager.pushOnly();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    // Initial data pull
+    const timer = setTimeout(() => {
+      console.log("[App] Starting initial data pull...");
+      pullAllData(user.id).catch((error) => {
+        console.error("[App] Initial data pull failed:", error);
+      });
+    }, 1000);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [user]);
 
   if (loading) {
     return <AppLoadingState />;

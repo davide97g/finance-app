@@ -21,7 +21,7 @@ import { ProfilePictureManager } from "@/components/ProfilePictureManager";
 export function ProfilePage() {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { handleLogout, isDialogOpen, setIsDialogOpen, confirmLogout, pendingCount } = useSafeLogout();
+    const { handleLogout, isDialogOpen, setIsDialogOpen, confirmLogout } = useSafeLogout();
     const { updateProfile } = useUpdateProfile();
     const profile = useProfile(user?.id);
     const [fullName, setFullName] = useState(profile?.full_name || "");
@@ -154,7 +154,6 @@ export function ProfilePage() {
                 open={isDialogOpen}
                 onOpenChange={setIsDialogOpen}
                 onConfirm={confirmLogout}
-                pendingCount={pendingCount}
             />
         </div>
     );

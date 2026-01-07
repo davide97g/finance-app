@@ -94,11 +94,8 @@ export function useRealtimeSync(enabled: boolean = true) {
                 ? new Date(newRecord.updated_at).getTime()
                 : 0;
 
-              // If local is pending sync and has newer timestamp, skip remote update
-              if (
-                existingRecord.pendingSync === 1 &&
-                localUpdatedAt >= remoteUpdatedAt
-              ) {
+              // If local is newer, skip remote update
+              if (localUpdatedAt >= remoteUpdatedAt) {
                 console.log(
                   `[Realtime] Skipping ${table} ${newRecord.id} - local is newer`
                 );
@@ -110,7 +107,6 @@ export function useRealtimeSync(enabled: boolean = true) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const recordToSave: Record<string, any> = {
               ...newRecord,
-              pendingSync: 0,
             };
             if (table === "transactions" && newRecord.date) {
               recordToSave.year_month = newRecord.date.substring(0, 7);
@@ -188,7 +184,6 @@ export function useRealtimeSync(enabled: boolean = true) {
             if (existing) {
               await dexieTable.update(recordId, {
                 deleted_at: new Date().toISOString(),
-                pendingSync: 0,
               });
               console.log(`[Realtime] Soft deleted ${table} ${recordId}`);
             }

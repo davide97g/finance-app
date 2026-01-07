@@ -58,7 +58,6 @@ export function ImportRulesManager() {
             await db.import_rules.update(ruleId, {
                 active: 0,
                 deleted_at: new Date().toISOString(),
-                pendingSync: 1
             });
             toast.success("Rule deleted");
         } catch (error) {

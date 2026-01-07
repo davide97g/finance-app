@@ -13,7 +13,6 @@ import * as Papa from 'papaparse';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useTranslation } from 'react-i18next';
-import { syncManager } from '../../lib/sync';
 
 import { Loader2, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 
@@ -60,7 +59,6 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
         recurring: number;
         orphanCount: number;
     } | null>(null);
-    const [isSyncing, setIsSyncing] = useState(false);
 
     // CSV Specific State
     const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -105,7 +103,6 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
         setRevolutIncludeSavings(false);
         setDetectedParser(null);
         setImportResult(null);
-        setIsSyncing(false);
         setRegenerateColors(true);
     };
 
@@ -371,14 +368,6 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
             setImportResult(result);
             setStep('success');
 
-            setIsSyncing(true);
-            setProgressMessage(t("import.syncing", "Syncing to cloud..."));
-            try {
-                await syncManager.pushOnly();
-            } finally {
-                setIsSyncing(false);
-            }
-
             onImportComplete({
                 transactions: result.transactions,
                 categories: result.categories
@@ -522,12 +511,6 @@ export function ImportWizard({ open, onOpenChange, onImportComplete }: ImportWiz
                             </div>
                             <p className="font-medium text-lg animate-pulse">{progressMessage}</p>
                             <Progress value={progress} className="w-[60%]" />
-                            {isSyncing && (
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                    {t("import.syncing_desc", "Backing up to secure cloud storage...")}
-                                </p>
-                            )}
                         </div>
                     )}
 

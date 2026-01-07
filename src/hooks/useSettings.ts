@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, Setting } from "../lib/db";
-import { supabase } from "../lib/supabase";
+import { updateUserSettings } from "../lib/dbOperations";
 import { useAuth } from "./useAuth";
 
 /**
@@ -64,16 +64,14 @@ export function useSettings() {
   const updateSettings = async (updates: Partial<Setting>) => {
     if (!user) return;
 
-    const updatedAt = new Date().toISOString();
     const current = await db.user_settings.get(user.id);
 
     if (current) {
-      await db.user_settings.update(user.id, {
-        ...updates,
-        updated_at: updatedAt,
-      });
+      // Update existing settings
+      await updateUserSettings(user.id, updates);
     } else {
-      await db.user_settings.add({
+      // Create new settings with defaults
+      const defaultSettings = {
         user_id: user.id,
         currency: "EUR",
         language: "en",
@@ -84,44 +82,8 @@ export function useSettings() {
         include_investments_in_expense_totals: false,
         include_group_expenses: false,
         ...updates,
-        updated_at: updatedAt,
-      } as Setting);
-    }
-
-    // Sync to Supabase (fire and forget, don't block UI)
-    const settingsToSync = await db.user_settings.get(user.id);
-    if (settingsToSync) {
-      // Map local field names to Supabase column names
-       
-      const { 
-        last_sync_token: _last_sync_token, 
-        cached_month: _cached_month, 
-        accentColor, 
-        ...rest 
-      } = settingsToSync;
-      const supabaseSettings = {
-        ...rest,
-        accent_color: accentColor,
-        updated_at: updatedAt,
-        // Ensure new fields are included
-        category_sorting_enabled: settingsToSync.category_sorting_enabled ?? false,
-        category_sorting_strategy: settingsToSync.category_sorting_strategy ?? null,
-        category_sorting_days: settingsToSync.category_sorting_days ?? 30,
-        user_mode: settingsToSync.user_mode ?? "default",
-        revolut_username: settingsToSync.revolut_username ?? null,
-        joint_account_partner_id: settingsToSync.joint_account_partner_id ?? null,
       };
-
-      supabase
-        .from("user_settings")
-        .upsert(supabaseSettings)
-        .then(({ error }) => {
-          if (error) {
-            console.error("[Settings] Failed to sync to Supabase:", error);
-          } else {
-            console.log("[Settings] Synced to Supabase");
-          }
-        });
+      await updateUserSettings(user.id, defaultSettings);
     }
   };
 

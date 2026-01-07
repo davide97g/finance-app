@@ -1,4 +1,3 @@
-import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
 import { ContentLoader } from "@/components/ui/content-loader";
 import { FadeIn } from "@/components/ui/fade-in";
@@ -275,20 +274,6 @@ export function TransactionList({
                   aria-hidden="true"
                 />
               )}
-              <TooltipProvider delayDuration={300}>
-                {t_item.pendingSync === 1 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="cursor-help shrink-0">
-                        <SyncStatusBadge isPending={true} />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t("changes_pending_sync")}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </TooltipProvider>
             </div>
           </TableCell>
           <TableCell className="w-[180px]">

@@ -1,15 +1,15 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, Group, GroupMember, Profile } from "../lib/db";
-import { syncManager } from "../lib/sync";
-import { useAuth } from "./useAuth";
+import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { db, Group, GroupMember, Profile } from "../lib/db";
+import { deleteRecord, insertRecord, updateRecord } from "../lib/dbOperations";
 import {
   getGroupInputSchema,
-  getGroupUpdateSchema,
   getGroupMemberUpdateSchema,
+  getGroupUpdateSchema,
   validate,
 } from "../lib/validation";
-import { useTranslation } from "react-i18next";
+import { useAuth } from "./useAuth";
 
 /**
  * Represents a single settlement transaction between two users.
@@ -224,29 +224,28 @@ export function useGroups() {
     const groupId = uuidv4();
     const memberId = uuidv4();
 
-    // Create group
-    await db.groups.add({
+    // Create group - immediate write (groups don't use user_id)
+    const groupData = {
       id: groupId,
       ...validatedData,
       deleted_at: null,
-      pendingSync: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    });
+    };
+    await insertRecord("groups", groupData, user.id);
 
-    // Add creator as first member with 100% share
-    await db.group_members.add({
+    // Add creator as first member with 100% share - immediate write
+    const memberData = {
       id: memberId,
       group_id: groupId,
       user_id: user.id,
       share: 100,
       joined_at: new Date().toISOString(),
       removed_at: null,
-      pendingSync: 1,
       updated_at: new Date().toISOString(),
-    });
+    };
+    await insertRecord("group_members", memberData, user.id);
 
-    syncManager.schedulePush();
     return groupId;
   };
 
@@ -254,27 +253,31 @@ export function useGroups() {
     id: string,
     updates: Partial<Pick<Group, "name" | "description">>
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate update data
     const validatedUpdates = validate(getGroupUpdateSchema(t), updates);
 
-    await db.groups.update(id, {
-      ...validatedUpdates,
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    // Immediate write (groups don't use user_id but we pass it for consistency)
+    await updateRecord(
+      "groups",
+      id,
+      {
+        ...validatedUpdates,
+        updated_at: new Date().toISOString(),
+      },
+      user.id
+    );
   };
 
   const deleteGroup = async (
     id: string,
     deleteTransactions: boolean = false
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Soft delete group
-    await db.groups.update(id, {
-      deleted_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
+    await deleteRecord("groups", id);
 
     // Always soft delete group categories
     const groupCategories = await db.categories
@@ -282,10 +285,7 @@ export function useGroups() {
       .toArray();
 
     for (const cat of groupCategories) {
-      await db.categories.update(cat.id, {
-        deleted_at: new Date().toISOString(),
-        pendingSync: 1,
-      });
+      await deleteRecord("categories", cat.id);
     }
 
     if (deleteTransactions) {
@@ -295,10 +295,7 @@ export function useGroups() {
         .toArray();
 
       for (const tx of groupTransactions) {
-        await db.transactions.update(tx.id, {
-          deleted_at: new Date().toISOString(),
-          pendingSync: 1,
-        });
+        await deleteRecord("transactions", tx.id);
       }
 
       // Soft delete recurring transactions
@@ -307,10 +304,7 @@ export function useGroups() {
         .toArray();
 
       for (const rec of groupRecurring) {
-        await db.recurring_transactions.update(rec.id, {
-          deleted_at: new Date().toISOString(),
-          pendingSync: 1,
-        });
+        await deleteRecord("recurring_transactions", rec.id);
       }
     } else {
       // Convert group transactions to personal (remove group_id)
@@ -319,15 +313,17 @@ export function useGroups() {
         .toArray();
 
       for (const tx of groupTransactions) {
-        await db.transactions.update(tx.id, {
-          group_id: null,
-          paid_by_member_id: null,
-          pendingSync: 1,
-        });
+        await updateRecord(
+          "transactions",
+          tx.id,
+          {
+            group_id: null,
+            paid_by_member_id: null,
+          },
+          user.id
+        );
       }
     }
-
-    syncManager.schedulePush();
   };
 
   const addGroupMember = async (
@@ -336,8 +332,7 @@ export function useGroups() {
     isGuest: boolean = false,
     share: number = 0
   ) => {
-    // For guests, we don't validate against GroupMemberInputSchema in the same way 
-    // because user_id is null. We need a custom validation or just simpler object.
+    if (!user) throw new Error("User must be logged in");
 
     // Basic validation
     if (!userIdOrName) throw new Error("User ID or Guest Name is required");
@@ -350,7 +345,6 @@ export function useGroups() {
       share,
       joined_at: new Date().toISOString(),
       removed_at: null,
-      pendingSync: 1,
       updated_at: new Date().toISOString(),
       is_guest: isGuest,
     } as GroupMember;
@@ -363,46 +357,66 @@ export function useGroups() {
       newMember.guest_name = null;
     }
 
-    await db.group_members.add(newMember);
-
-    syncManager.schedulePush();
+    // Immediate write (group_members don't use user_id for owner, but we pass it for consistency)
+    await insertRecord(
+      "group_members",
+      { ...newMember } as Record<string, unknown>,
+      user.id
+    );
     return memberId;
   };
 
   const removeGroupMember = async (memberId: string) => {
-    await db.group_members.update(memberId, {
-      removed_at: new Date().toISOString(),
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    if (!user) throw new Error("User must be logged in");
+
+    // Immediate write
+    await updateRecord(
+      "group_members",
+      memberId,
+      {
+        removed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      user.id
+    );
   };
 
-  // ... existing updateMemberShare ...
   const updateMemberShare = async (memberId: string, share: number) => {
+    if (!user) throw new Error("User must be logged in");
+
     // Validate share value
     const validatedData = validate(getGroupMemberUpdateSchema(t), { share });
 
-    await db.group_members.update(memberId, {
-      share: validatedData.share,
-      pendingSync: 1,
-      updated_at: new Date().toISOString(),
-    });
-    syncManager.schedulePush();
+    // Immediate write
+    await updateRecord(
+      "group_members",
+      memberId,
+      {
+        share: validatedData.share,
+        updated_at: new Date().toISOString(),
+      },
+      user.id
+    );
   };
 
   const updateAllShares = async (
     _groupId: string,
     shares: { memberId: string; share: number }[]
   ) => {
+    if (!user) throw new Error("User must be logged in");
+
+    // Update each member share immediately
     for (const { memberId, share } of shares) {
-      await db.group_members.update(memberId, {
-        share,
-        pendingSync: 1,
-        updated_at: new Date().toISOString(),
-      });
+      await updateRecord(
+        "group_members",
+        memberId,
+        {
+          share,
+          updated_at: new Date().toISOString(),
+        },
+        user.id
+      );
     }
-    syncManager.schedulePush();
   };
 
   // Calculate group balances
@@ -422,8 +436,8 @@ export function useGroups() {
     const balances: Record<
       string,
       {
-        userId: string; // This might be memberId for guests in a future refactor, but for now we need a unique key. 
-        // CAUTION: For guests user_id is null. We should use member.id as key for balances if possible, 
+        userId: string; // This might be memberId for guests in a future refactor, but for now we need a unique key.
+        // CAUTION: For guests user_id is null. We should use member.id as key for balances if possible,
         // but the UI currently expects userId.
         // Let's rely on member.id as the key in the record, but we need to check how it's consumed.
         // The consumption in GroupDetail uses member.user_id. This will break for guests.
@@ -454,7 +468,9 @@ export function useGroups() {
         })
         .reduce((sum, t) => sum + t.amount, 0);
 
-      const profile = member.user_id ? profileMap.get(member.user_id) : undefined;
+      const profile = member.user_id
+        ? profileMap.get(member.user_id)
+        : undefined;
       let displayName = "Unknown User";
 
       if (member.is_guest && member.guest_name) {
@@ -470,8 +486,8 @@ export function useGroups() {
       }
 
       // We use member.user_id as key if exists, else member.id (prefixed? no, just member.id)
-      // Ideally we should switch to using member.id everywhere as the primary key for members 
-      // but that refactor is large. 
+      // Ideally we should switch to using member.id everywhere as the primary key for members
+      // but that refactor is large.
       // For now, if guest, use member.id. If user, use user.id (to match existing usages).
       const key = member.user_id || member.id;
 
@@ -490,9 +506,9 @@ export function useGroups() {
     return {
       totalExpenses,
       balances,
-      members: members.map(m => ({
+      members: members.map((m) => ({
         ...m,
-        displayName: m.is_guest ? m.guest_name : (m.user_id ? "User" : "Unknown") // Simplified, expanded later or computed above
+        displayName: m.is_guest ? m.guest_name : m.user_id ? "User" : "Unknown", // Simplified, expanded later or computed above
       })),
     };
   };

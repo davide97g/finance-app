@@ -27,7 +27,7 @@ it('adds a transaction', async () => {
   });
 
   expect(db.transactions.add).toHaveBeenCalledWith(
-    expect.objectContaining({ amount: 100, pendingSync: 1 })
+    expect.objectContaining({ amount: 100 })
   );
 });
 ```

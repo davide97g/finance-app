@@ -9,7 +9,7 @@
 
 /**
  * The "Uncategorized" category is a LOCAL-ONLY placeholder.
- * - It is NEVER synced to Supabase (pendingSync: 0)
+ * - It is NEVER synced to Supabase
  * - Transactions using this category_id will fail to sync (FK constraint)
  * - This forces users to properly categorize before syncing
  */

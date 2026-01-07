@@ -17,7 +17,6 @@ import {
 import { getIconComponent } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Tag, Users, FolderTree, Target, RefreshCw, Cloud, Edit, Trash2 } from "lucide-react";
-import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { createElement } from "react";
@@ -232,17 +231,13 @@ export function CategoryDetailDrawer({
               <RefreshCw className="h-4 w-4 mr-2" />
               <span className="text-sm">{t("status")}</span>
             </div>
-            {category.pendingSync === 1 ? (
-              <SyncStatusBadge isPending={true} />
-            ) : (
-              <Badge
-                variant="outline"
-                className="border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30"
-              >
-                <Cloud className="mr-1 h-3 w-3" />
-                {t("synced")}
-              </Badge>
-            )}
+            <Badge
+              variant="outline"
+              className="border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30"
+            >
+              <Cloud className="mr-1 h-3 w-3" />
+              {t("synced")}
+            </Badge>
           </div>
         </div>
       </div>

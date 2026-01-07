@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { syncManager } from "@/lib/sync";
+import { pullAllData } from "@/lib/dataPull";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,11 +52,16 @@ export function AuthPage() {
         });
         if (error) throw error;
 
-        // Sync data from Supabase after successful login
+        // Pull data from Supabase after successful login
         toast.success(t("sign_in_success"));
-        toast.loading(t("syncing"));
-        await syncManager.sync();
-        toast.dismiss();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          toast.loading(t("loading") || "Loading...");
+          await pullAllData(user.id).catch((error) => {
+            console.error("[AuthPage] Initial data pull failed:", error);
+          });
+          toast.dismiss();
+        }
 
         // Redirect to dashboard after successful sign in and sync
         navigate("/");
