@@ -11,6 +11,7 @@ import { Loader2, Upload, X, User, Image } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import i18n from "@/i18n";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 
 const AVATARS_BUCKET = "avatars";
 
@@ -31,6 +32,8 @@ export const ProfilePictureManager = () => {
     const [previewUrl, setPreviewUrl] = useState<string | null>(
         profile?.avatar_url || null
     );
+    const [cropDialogOpen, setCropDialogOpen] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
     // Update preview URL when profile loads, but don't change avatar_type
     useEffect(() => {
@@ -86,26 +89,37 @@ export const ProfilePictureManager = () => {
             return;
         }
 
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
+        // Validate file size (max 10MB for original - will be compressed after crop)
+        if (file.size > 10 * 1024 * 1024) {
             toast.error(
                 i18n.t("profile_avatar_too_large", {
-                    defaultValue: "Image must be smaller than 5MB"
+                    defaultValue: "Image must be smaller than 10MB"
                 })
             );
             return;
         }
 
+        // Create preview and open crop dialog
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const imageSrc = reader.result as string;
+            setImageToCrop(imageSrc);
+            setCropDialogOpen(true);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleCropComplete = async (blob: Blob) => {
+        if (!user) return;
+
         setUploading(true);
 
         try {
-            // Create preview
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewUrl(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-
             // Delete old avatar if exists
             if (profile?.avatar_url) {
                 const oldPath = profile.avatar_url.split("/").pop();
@@ -116,14 +130,15 @@ export const ProfilePictureManager = () => {
                 }
             }
 
-            // Upload new avatar
-            const fileExt = file.name.split(".").pop();
+            // Upload new avatar (cropped and processed)
+            const fileExt = "jpg"; // Always use jpg for better compression
             const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from(AVATARS_BUCKET)
-                .upload(fileName, file, {
+                .upload(fileName, blob, {
                     upsert: true,
+                    contentType: "image/jpeg",
                 });
 
             if (uploadError) {
@@ -163,10 +178,6 @@ export const ProfilePictureManager = () => {
             setPreviewUrl(profile?.avatar_url || null);
         } finally {
             setUploading(false);
-            // Reset file input
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
         }
     };
 
@@ -304,13 +315,22 @@ export const ProfilePictureManager = () => {
                             />
                             <p className="text-xs text-muted-foreground">
                                 {t("profile_picture_hint", {
-                                    defaultValue: "Upload a photo (max 5MB)"
+                                    defaultValue: "Upload a photo (max 10MB, will be cropped and compressed)"
                                 })}
                             </p>
                         </div>
                     )}
                 </div>
             </div>
+
+            {imageToCrop && (
+                <ImageCropDialog
+                    open={cropDialogOpen}
+                    onOpenChange={setCropDialogOpen}
+                    imageSrc={imageToCrop}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
         </div>
     );
 };

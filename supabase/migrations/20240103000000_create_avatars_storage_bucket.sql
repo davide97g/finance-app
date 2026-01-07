@@ -7,7 +7,7 @@ values (
   'avatars',
   'avatars',
   true, -- Public access
-  5242880, -- 5MB limit
+  2097152, -- 2MB limit
   ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 )
 on conflict (id) do nothing;
