@@ -1,13 +1,19 @@
-import { useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useTransactions } from "@/hooks/useTransactions";
-import { useCategories } from "@/hooks/useCategories";
-import { useContexts } from "@/hooks/useContexts";
-import { useGroups } from "@/hooks/useGroups";
-import { Transaction } from "@/lib/db";
-import { useAvailableYears } from "@/hooks/useAvailableYears";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import {
+  TransactionDialog,
+  TransactionFormData,
+} from "@/components/TransactionDialog";
+import { TransactionList } from "@/components/TransactionList";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CountUp } from "@/components/ui/count-up";
+import { FlipCard, type SwipeDirection } from "@/components/ui/flip-card";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -15,15 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Filter, X } from "lucide-react";
-import { useAuth } from "@/contexts/AuthProvider";
-import { useTranslation } from "react-i18next";
-import { TransactionList } from "@/components/TransactionList";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -31,13 +28,32 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { TransactionDialog, TransactionFormData } from "@/components/TransactionDialog";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useAvailableYears } from "@/hooks/useAvailableYears";
+import { useCategories } from "@/hooks/useCategories";
+import { useContexts } from "@/hooks/useContexts";
+import { GroupWithMembers, useGroups } from "@/hooks/useGroups";
+import { useTransactions } from "@/hooks/useTransactions";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants";
-import { Category, Group, Context } from "@/lib/db";
+import { Category, Context, Group, Transaction } from "@/lib/db";
+import {
+  AlertCircle,
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Eye,
+  EyeOff,
+  Filter,
+  PiggyBank,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { format } from "date-fns";
 
@@ -246,11 +262,7 @@ const FilterContent = ({
         />
       </div>
 
-      <Button
-        variant="outline"
-        onClick={onReset}
-        className="w-full gap-2"
-      >
+      <Button variant="outline" onClick={onReset} className="w-full gap-2">
         <X className="h-4 w-4" />
         {t("reset_filters") || "Reset Filters"}
       </Button>
@@ -258,11 +270,171 @@ const FilterContent = ({
   );
 };
 
+interface TransactionStatCardProps {
+  index: number;
+  statsCount: number;
+  totalExpense: number;
+  totalIncome: number;
+  balance: number;
+  showAllMonths: boolean;
+}
+
+const TransactionStatCard = ({
+  index,
+  statsCount,
+  totalExpense,
+  totalIncome,
+  balance,
+  showAllMonths: _showAllMonths,
+}: TransactionStatCardProps) => {
+  const { t } = useTranslation();
+
+  // Helper to render value or placeholder
+  const renderAnimatedValue = (
+    value: number,
+    prefix: string = "",
+    suffix: string = "",
+    decimals: number = 2
+  ) => {
+    if (value === 0) {
+      return <span className="text-muted-foreground">-</span>;
+    }
+
+    return (
+      <CountUp
+        value={value}
+        decimals={decimals}
+        prefix={prefix}
+        suffix={suffix}
+      />
+    );
+  };
+
+  const dotIndicators = (
+    <div className="flex gap-1.5">
+      {Array.from({ length: statsCount }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-1.5 w-1.5 rounded-full transition-colors ${
+            i === index
+              ? index === 0
+                ? "bg-red-500"
+                : index === 1
+                ? "bg-green-500"
+                : balance >= 0
+                ? "bg-emerald-500"
+                : "bg-red-500"
+              : "bg-muted-foreground/30"
+          }`}
+        />
+      ))}
+    </div>
+  );
+
+  switch (index) {
+    case 0: // Expenses
+      return (
+        <div className="relative overflow-hidden rounded-xl p-4 h-full border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-red-500/15 text-red-500">
+                <ArrowDownRight className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("expenses")}
+              </span>
+            </div>
+            {dotIndicators}
+          </div>
+          <p className="text-3xl font-bold tracking-tight text-red-500">
+            {renderAnimatedValue(totalExpense, "-€")}
+          </p>
+          <div className="absolute -right-4 -bottom-4 opacity-[0.07] text-red-500">
+            <TrendingDown className="h-24 w-24" />
+          </div>
+        </div>
+      );
+    case 1: // Income
+      return (
+        <div className="relative overflow-hidden rounded-xl p-4 h-full border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-green-500/15 text-green-500">
+                <ArrowUpRight className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("income")}
+              </span>
+            </div>
+            {dotIndicators}
+          </div>
+          <p className="text-3xl font-bold tracking-tight text-green-500">
+            {renderAnimatedValue(totalIncome, "+€")}
+          </p>
+          <div className="absolute -right-4 -bottom-4 opacity-[0.07] text-green-500">
+            <TrendingUp className="h-24 w-24" />
+          </div>
+        </div>
+      );
+    case 2: // Balance
+      return (
+        <div className="relative overflow-hidden rounded-xl p-4 h-full border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div
+                className={`p-1.5 rounded-md ${
+                  balance >= 0
+                    ? "bg-emerald-500/15 text-green-500"
+                    : "bg-red-500/15 text-red-500"
+                }`}
+              >
+                <PiggyBank className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("balance")}
+              </span>
+            </div>
+            {dotIndicators}
+          </div>
+          <p
+            className={`text-3xl font-bold tracking-tight ${
+              balance >= 0 ? "text-green-500" : "text-red-500"
+            }`}
+          >
+            {renderAnimatedValue(balance, balance >= 0 ? "+€" : "€")}
+          </p>
+          <div
+            className={`absolute -right-4 -bottom-4 opacity-[0.07] ${
+              balance >= 0 ? "text-green-500" : "text-red-500"
+            }`}
+          >
+            <PiggyBank className="h-24 w-24" />
+          </div>
+        </div>
+      );
+    default:
+      return null;
+  }
+};
+
 export function TransactionsPage() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(format(now, "yyyy-MM"));
   const [selectedYear, setSelectedYear] = useState(format(now, "yyyy"));
   const [showAllMonths, setShowAllMonths] = useState(false);
+
+  // Load summary cards visibility preference from localStorage
+  const [showSummaryCards, setShowSummaryCards] = useState(() => {
+    const saved = localStorage.getItem("transactions-show-summary-cards");
+    return saved !== null ? saved === "true" : true; // Default to true (visible)
+  });
+
+  // Toggle summary cards visibility and persist preference
+  const toggleSummaryCards = useCallback(() => {
+    const newValue = !showSummaryCards;
+    setShowSummaryCards(newValue);
+    localStorage.setItem("transactions-show-summary-cards", String(newValue));
+  }, [showSummaryCards]);
 
   // Pass undefined for limit, and the selectedMonth (which is in yyyy-MM format) for yearMonth
   // When showAllMonths is true, pass only the year
@@ -314,6 +486,51 @@ export function TransactionsPage() {
       setSelectedMonth(`${year}-${currentMonthPart}`);
     }
   };
+
+  // Flip card state for swipable stats
+  const [statsRotation, setStatsRotation] = useState(0);
+  const statsCount = 3; // Expenses, Income, Balance
+  const [faceAIndex, setFaceAIndex] = useState(0);
+  const [faceBIndex, setFaceBIndex] = useState(1);
+
+  // Derive flip state from rotation (odd multiples of 180 are flipped)
+  const isStatsFlipped = Math.abs(statsRotation / 180) % 2 === 1;
+
+  // Current visible index (for dot indicators)
+  const currentVisibleIndex = isStatsFlipped ? faceBIndex : faceAIndex;
+
+  // Handle stat flip with direction (circular navigation)
+  const handleStatSwipe = useCallback(
+    (direction: SwipeDirection) => {
+      const newRotation =
+        direction === "left" ? statsRotation - 180 : statsRotation + 180;
+      setStatsRotation(newRotation);
+
+      const nextIndex =
+        direction === "right"
+          ? (currentVisibleIndex - 1 + statsCount) % statsCount
+          : (currentVisibleIndex + 1) % statsCount;
+
+      const afterNextIndex =
+        direction === "right"
+          ? (nextIndex - 1 + statsCount) % statsCount
+          : (nextIndex + 1) % statsCount;
+
+      if (isStatsFlipped) {
+        setFaceAIndex(nextIndex);
+        setTimeout(() => {
+          setFaceBIndex(afterNextIndex);
+        }, 350);
+      } else {
+        setFaceBIndex(nextIndex);
+        setTimeout(() => {
+          setFaceAIndex(afterNextIndex);
+        }, 350);
+      }
+    },
+    [currentVisibleIndex, isStatsFlipped, statsRotation, statsCount]
+  );
+
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -330,7 +547,7 @@ export function TransactionsPage() {
     categoryId: "all",
     type: "all",
     groupFilter: "all", // 'all', 'personal', 'group', or specific group id
-    contextFilter: (searchParams.get("contextId") || "all"), // 'all', 'none' (no context), or specific context id
+    contextFilter: searchParams.get("contextId") || "all", // 'all', 'none' (no context), or specific context id
     needsReview: false,
   });
 
@@ -491,7 +708,11 @@ export function TransactionsPage() {
         }
 
         // Needs Review (uncategorized transactions)
-        if (filters.needsReview && transaction.category_id !== UNCATEGORIZED_CATEGORY.ID) return false;
+        if (
+          filters.needsReview &&
+          transaction.category_id !== UNCATEGORIZED_CATEGORY.ID
+        )
+          return false;
 
         return true;
       }) || []
@@ -525,10 +746,59 @@ export function TransactionsPage() {
       return true;
     });
   }, [categories, filters.type, filters.groupFilter]);
+  const groupMap = useMemo(() => {
+    const map = new Map<string, GroupWithMembers>();
+    groups.forEach((group) => {
+      map.set(group.id, group as GroupWithMembers);
+    });
+    return map;
+  }, [groups]);
 
+  const monthlySummary = useMemo(() => {
+    if (!filteredTransactions.length) {
+      return {
+        totalExpenses: 0,
+        totalIncome: 0,
+        totalInvestments: 0,
+        net: 0,
+      };
+    }
 
+    const getPersonalAmount = (transaction: Transaction) => {
+      if (!transaction.group_id) {
+        return transaction.amount;
+      }
+      const group = groupMap.get(transaction.group_id);
+      if (!group || typeof group.myShare !== "number" || group.myShare === 0) {
+        return transaction.amount;
+      }
+      return (transaction.amount * group.myShare) / 100;
+    };
 
+    let totalExpenses = 0;
+    let totalIncome = 0;
+    let totalInvestments = 0;
 
+    filteredTransactions.forEach((transaction) => {
+      const personalAmount = getPersonalAmount(transaction);
+      if (transaction.type === "expense") {
+        totalExpenses += personalAmount;
+      } else if (transaction.type === "income") {
+        totalIncome += personalAmount;
+      } else if (transaction.type === "investment") {
+        totalInvestments += personalAmount;
+      }
+    });
+
+    const net = totalIncome + totalInvestments - totalExpenses;
+
+    return {
+      totalExpenses,
+      totalIncome,
+      totalInvestments,
+      net,
+    };
+  }, [filteredTransactions, groupMap]);
 
   return (
     <div className="space-y-4">
@@ -569,7 +839,7 @@ export function TransactionsPage() {
           </div>
 
           {/* Date Selectors - Desktop only */}
-          <div className="hidden md:flex gap-2">
+          <div className="hidden md:flex gap-2 items-center">
             <Select
               value={showAllMonths ? "all" : selectedMonth.split("-")[1]}
               onValueChange={handleMonthChange}
@@ -597,6 +867,24 @@ export function TransactionsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleSummaryCards}
+              aria-label={
+                showSummaryCards
+                  ? t("hide_summary") || "Hide summary"
+                  : t("show_summary") || "Show summary"
+              }
+              className="relative"
+            >
+              <BarChart3 className="h-4 w-4" />
+              {showSummaryCards ? (
+                <EyeOff className="h-4 w-4 absolute -top-1 -right-1 bg-background rounded-full p-0.5" />
+              ) : (
+                <Eye className="h-4 w-4 absolute -top-1 -right-1 bg-background rounded-full p-0.5" />
+              )}
+            </Button>
           </div>
 
           {/* Desktop Filter Popover */}
@@ -640,7 +928,7 @@ export function TransactionsPage() {
       </div>
 
       {/* Second row: Date Selectors - Mobile only */}
-      <div className="flex gap-2 md:hidden">
+      <div className="flex gap-2 md:hidden items-center">
         <Select
           value={showAllMonths ? "all" : selectedMonth.split("-")[1]}
           onValueChange={handleMonthChange}
@@ -668,7 +956,56 @@ export function TransactionsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleSummaryCards}
+          aria-label={
+            showSummaryCards
+              ? t("hide_summary") || "Hide summary"
+              : t("show_summary") || "Show summary"
+          }
+          className="relative"
+        >
+          <BarChart3 className="h-4 w-4" />
+          {showSummaryCards ? (
+            <EyeOff className="h-4 w-4 absolute -top-1 -right-1 bg-background rounded-full p-0.5" />
+          ) : (
+            <Eye className="h-4 w-4 absolute -top-1 -right-1 bg-background rounded-full p-0.5" />
+          )}
+        </Button>
       </div>
+
+      {/* Monthly Summary - Swipable Cards */}
+      {showSummaryCards && filteredTransactions.length > 0 && (
+        <FlipCard
+          className="h-[12vh] min-h-[120px]"
+          isFlipped={isStatsFlipped}
+          onSwipe={handleStatSwipe}
+          rotation={statsRotation}
+          disableGlobalClick
+          frontContent={
+            <TransactionStatCard
+              index={faceAIndex}
+              statsCount={statsCount}
+              totalExpense={monthlySummary.totalExpenses}
+              totalIncome={monthlySummary.totalIncome}
+              balance={monthlySummary.net}
+              showAllMonths={showAllMonths}
+            />
+          }
+          backContent={
+            <TransactionStatCard
+              index={faceBIndex}
+              statsCount={statsCount}
+              totalExpense={monthlySummary.totalExpenses}
+              totalIncome={monthlySummary.totalIncome}
+              balance={monthlySummary.net}
+              showAllMonths={showAllMonths}
+            />
+          }
+        />
+      )}
 
       {/* Active Filters Summary */}
       {(filters.text ||
@@ -682,53 +1019,53 @@ export function TransactionsPage() {
         filters.groupFilter !== "all" ||
         filters.contextFilter !== "all" ||
         filters.needsReview) && (
-          <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground">
-            <span>{t("active_filters")}:</span>
-            {filters.text && (
-              <span className="bg-muted px-2 py-1 rounded-md">
-                "{filters.text}"
-              </span>
-            )}
-            {filters.type !== "all" && (
-              <span className="bg-muted px-2 py-1 rounded-md capitalize">
-                {t(filters.type)}
-              </span>
-            )}
-            {filters.groupFilter !== "all" && (
-              <span className="bg-muted px-2 py-1 rounded-md">
-                {filters.groupFilter === "personal"
-                  ? t("personal")
-                  : filters.groupFilter === "group"
-                    ? t("all_groups")
-                    : groups.find((g) => g.id === filters.groupFilter)?.name ||
-                    filters.groupFilter}
-              </span>
-            )}
-            {filters.contextFilter !== "all" && (
-              <span className="bg-muted px-2 py-1 rounded-md">
-                {filters.contextFilter === "none"
-                  ? t("no_contexts")
-                  : contexts.find((c) => c.id === filters.contextFilter)?.name ||
+        <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground">
+          <span>{t("active_filters")}:</span>
+          {filters.text && (
+            <span className="bg-muted px-2 py-1 rounded-md">
+              "{filters.text}"
+            </span>
+          )}
+          {filters.type !== "all" && (
+            <span className="bg-muted px-2 py-1 rounded-md capitalize">
+              {t(filters.type)}
+            </span>
+          )}
+          {filters.groupFilter !== "all" && (
+            <span className="bg-muted px-2 py-1 rounded-md">
+              {filters.groupFilter === "personal"
+                ? t("personal")
+                : filters.groupFilter === "group"
+                ? t("all_groups")
+                : groups.find((g) => g.id === filters.groupFilter)?.name ||
+                  filters.groupFilter}
+            </span>
+          )}
+          {filters.contextFilter !== "all" && (
+            <span className="bg-muted px-2 py-1 rounded-md">
+              {filters.contextFilter === "none"
+                ? t("no_contexts")
+                : contexts.find((c) => c.id === filters.contextFilter)?.name ||
                   filters.contextFilter}
-              </span>
-            )}
-            {filters.needsReview && (
-              <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-1 rounded-md flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {t("needs_review") || "Needs Review"}
-              </span>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilters}
-              className="h-auto p-0 text-destructive hover:text-destructive"
-            >
-              <X className="h-3 w-3 mr-1" />
-              {t("clear")}
-            </Button>
-          </div>
-        )}
+            </span>
+          )}
+          {filters.needsReview && (
+            <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-1 rounded-md flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {t("needs_review") || "Needs Review"}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleResetFilters}
+            className="h-auto p-0 text-destructive hover:text-destructive"
+          >
+            <X className="h-3 w-3 mr-1" />
+            {t("clear")}
+          </Button>
+        </div>
+      )}
 
       {/* Mobile View: Card Stack */}
       <TransactionList
