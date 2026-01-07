@@ -1,5 +1,8 @@
-import { useTranslation } from "react-i18next";
+import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
+import { ContentLoader } from "@/components/ui/content-loader";
+import { FadeIn } from "@/components/ui/fade-in";
+import { SmoothLoader } from "@/components/ui/smooth-loader";
 import {
   Table,
   TableBody,
@@ -14,24 +17,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Edit, Trash2, Tag, Users, AlertCircle } from "lucide-react";
-import { SyncStatusBadge } from "@/components/SyncStatus";
-import { Transaction, Category, Context, Group } from "@/lib/db";
+import { useAuth } from "@/hooks/useAuth";
+import { GroupWithMembers } from "@/hooks/useGroups";
 import { useMobile } from "@/hooks/useMobile";
-import { useMemo, useRef, useCallback, useState } from "react";
-import { ContentLoader } from "@/components/ui/content-loader";
-import { SmoothLoader } from "@/components/ui/smooth-loader";
-import { motion, Variants } from "framer-motion";
-import { FadeIn } from "@/components/ui/fade-in";
+import { UI_DEFAULTS, UNCATEGORIZED_CATEGORY } from "@/lib/constants";
+import { Category, Context, Group, Transaction } from "@/lib/db";
 import { getIconComponent } from "@/lib/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { UI_DEFAULTS, UNCATEGORIZED_CATEGORY } from "@/lib/constants";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
-import { it, enUS } from "date-fns/locale";
+import { enUS, it } from "date-fns/locale";
+import { motion, Variants } from "framer-motion";
+import { AlertCircle, Edit, Split, Tag, Trash2, Users } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MobileTransactionRow } from "./MobileTransactionRow";
 import { TransactionDetailDrawer } from "./TransactionDetailDrawer";
-import { GroupWithMembers } from "@/hooks/useGroups";
-import { useAuth } from "@/hooks/useAuth";
 
 interface TransactionListProps {
   transactions: Transaction[] | undefined;
@@ -40,6 +40,7 @@ interface TransactionListProps {
   groups?: Group[] | GroupWithMembers[];
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (id: string) => void;
+  onSplitExpense?: (transaction: Transaction) => void;
   showActions?: boolean;
   isLoading?: boolean;
   /** Height of the container for virtualization (default: auto-detect) */
@@ -63,6 +64,7 @@ export function TransactionList({
   groups,
   onEdit,
   onDelete,
+  onSplitExpense,
   showActions = true,
   isLoading = false,
   height,
@@ -83,9 +85,9 @@ export function TransactionList({
       y: 0,
       transition: {
         duration: 0.3,
-        ease: "easeOut"
-      }
-    }
+        ease: "easeOut",
+      },
+    },
   };
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
@@ -124,27 +126,39 @@ export function TransactionList({
     return map;
   }, [groups]);
 
-  const getCategory = (id?: string) => {
-    if (!id) return undefined;
-    return categoryMap.get(id);
-  };
+  const getCategory = useCallback(
+    (id?: string) => {
+      if (!id) return undefined;
+      return categoryMap.get(id);
+    },
+    [categoryMap]
+  );
 
-  const getContext = (id?: string | null) => {
-    if (!id) return undefined;
-    return contextMap.get(id);
-  };
+  const getContext = useCallback(
+    (id?: string | null) => {
+      if (!id) return undefined;
+      return contextMap.get(id);
+    },
+    [contextMap]
+  );
 
-  const getGroup = (id?: string | null) => {
-    if (!id) return undefined;
-    return groupMap.get(id);
-  };
+  const getGroup = useCallback(
+    (id?: string | null) => {
+      if (!id) return undefined;
+      return groupMap.get(id);
+    },
+    [groupMap]
+  );
 
-  const getPersonalAmount = (transaction: Transaction) => {
-    if (!transaction.group_id) return transaction.amount;
-    const group = getGroup(transaction.group_id);
-    if (!group || !("myShare" in group)) return transaction.amount;
-    return (transaction.amount * (group as GroupWithMembers).myShare) / 100;
-  };
+  const getPersonalAmount = useCallback(
+    (transaction: Transaction) => {
+      if (!transaction.group_id) return transaction.amount;
+      const group = groupMap.get(transaction.group_id);
+      if (!group || !("myShare" in group)) return transaction.amount;
+      return (transaction.amount * (group as GroupWithMembers).myShare) / 100;
+    },
+    [groupMap]
+  );
 
   const getTypeTextColor = (type: string) => {
     switch (type) {
@@ -218,15 +232,21 @@ export function TransactionList({
 
       if (isGroupTransaction && user && group && "members" in group) {
         if (t_item.paid_by_member_id) {
-          const payer = (group as GroupWithMembers).members.find((m) => m.id === t_item.paid_by_member_id);
+          const payer = (group as GroupWithMembers).members.find(
+            (m) => m.id === t_item.paid_by_member_id
+          );
           payerName = payer?.displayName || t("unknown_user");
         } else {
           const payerId = t_item.user_id;
-          const payer = (group as GroupWithMembers).members.find((m) => m.user_id === payerId);
+          const payer = (group as GroupWithMembers).members.find(
+            (m) => m.user_id === payerId
+          );
           payerName = payer?.displayName || t("unknown_user");
         }
 
-        const myMemberInfo = (group as GroupWithMembers).members.find((m) => m.user_id === user.id);
+        const myMemberInfo = (group as GroupWithMembers).members.find(
+          (m) => m.user_id === user.id
+        );
         if (myMemberInfo) {
           mySharePercentage = myMemberInfo.share;
           myShareAmount = (t_item.amount * mySharePercentage) / 100;
@@ -236,9 +256,9 @@ export function TransactionList({
       const animationProps =
         !isVirtual && index < 20
           ? {
-            className: "animate-slide-in-up opacity-0 fill-mode-forwards",
-            style: { animationDelay: `${index * 0.03}s` },
-          }
+              className: "animate-slide-in-up opacity-0 fill-mode-forwards",
+              style: { animationDelay: `${index * 0.03}s` },
+            }
           : {};
 
       return (
@@ -250,7 +270,10 @@ export function TransactionList({
             <div className="flex items-center gap-2 max-w-[200px] xl:max-w-[300px] min-w-0">
               <span className="truncate min-w-0">{t_item.description}</span>
               {t_item.category_id === UNCATEGORIZED_CATEGORY.ID && (
-                <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" aria-hidden="true" />
+                <AlertCircle
+                  className="h-4 w-4 text-amber-500 shrink-0"
+                  aria-hidden="true"
+                />
               )}
               <TooltipProvider delayDuration={300}>
                 {t_item.pendingSync === 1 && (
@@ -270,9 +293,20 @@ export function TransactionList({
           </TableCell>
           <TableCell className="w-[180px]">
             <div className="flex items-center gap-2">
-              {IconComp && <IconComp className="h-4 w-4 shrink-0" aria-hidden="true" />}
-              <span className={`truncate max-w-[140px] ${!category && t_item.category_id === UNCATEGORIZED_CATEGORY.ID ? "text-amber-500 font-medium" : ""}`}>
-                {category?.name || (t_item.category_id === UNCATEGORIZED_CATEGORY.ID ? (t("needs_review") || "Needs Review") : "-")}
+              {IconComp && (
+                <IconComp className="h-4 w-4 shrink-0" aria-hidden="true" />
+              )}
+              <span
+                className={`truncate max-w-[140px] ${
+                  !category && t_item.category_id === UNCATEGORIZED_CATEGORY.ID
+                    ? "text-amber-500 font-medium"
+                    : ""
+                }`}
+              >
+                {category?.name ||
+                  (t_item.category_id === UNCATEGORIZED_CATEGORY.ID
+                    ? t("needs_review") || "Needs Review"
+                    : "-")}
               </span>
             </div>
           </TableCell>
@@ -300,25 +334,41 @@ export function TransactionList({
                     {isGroupTransaction && "members" in group ? (
                       <>
                         <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                          <span className="text-muted-foreground">{t("paid_by")}:</span>
-                          <span className="font-medium text-right">{payerName}</span>
+                          <span className="text-muted-foreground">
+                            {t("paid_by")}:
+                          </span>
+                          <span className="font-medium text-right">
+                            {payerName}
+                          </span>
 
                           {myShareAmount > 0 && (
                             <>
-                              <span className="text-muted-foreground">{t("your_share")}:</span>
+                              <span className="text-muted-foreground">
+                                {t("your_share")}:
+                              </span>
                               <div className="text-right">
-                                <span className="font-medium">€{myShareAmount.toFixed(2)}</span>
-                                <span className="text-muted-foreground ml-1">({mySharePercentage}%)</span>
+                                <span className="font-medium">
+                                  €{myShareAmount.toFixed(2)}
+                                </span>
+                                <span className="text-muted-foreground ml-1">
+                                  ({mySharePercentage}%)
+                                </span>
                               </div>
                             </>
                           )}
 
-                          <span className="text-muted-foreground">{t("total")}:</span>
-                          <span className="font-medium text-right">€{t_item.amount.toFixed(2)}</span>
+                          <span className="text-muted-foreground">
+                            {t("total")}:
+                          </span>
+                          <span className="font-medium text-right">
+                            €{t_item.amount.toFixed(2)}
+                          </span>
                         </div>
                       </>
                     ) : (
-                      <span>{t("amount")}: €{t_item.amount.toFixed(2)}</span>
+                      <span>
+                        {t("amount")}: €{t_item.amount.toFixed(2)}
+                      </span>
                     )}
                   </TooltipContent>
                 </Tooltip>
@@ -327,13 +377,17 @@ export function TransactionList({
               <span className="text-muted-foreground">-</span>
             )}
           </TableCell>
-          <TableCell className="capitalize w-[100px]">{t(t_item.type)}</TableCell>
-          <TableCell className={`text-right w-[120px] ${getTypeTextColor(t_item.type)}`}>
+          <TableCell className="capitalize w-[100px]">
+            {t(t_item.type)}
+          </TableCell>
+          <TableCell
+            className={`text-right w-[120px] ${getTypeTextColor(t_item.type)}`}
+          >
             {t_item.type === "expense"
               ? "-"
               : t_item.type === "investment"
-                ? ""
-                : "+"}
+              ? ""
+              : "+"}
             €{getPersonalAmount(t_item).toFixed(2)}
             {t_item.group_id && (
               <div className="text-[10px] text-muted-foreground">
@@ -387,6 +441,23 @@ export function TransactionList({
                       </TooltipContent>
                     </Tooltip>
                   )}
+                  {onSplitExpense && t_item.type === "expense" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onSplitExpense(t_item)}
+                          aria-label={t("split_expense") || "Split Expense"}
+                        >
+                          <Split className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("split_expense") || "Split Expense"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </TooltipProvider>
               </div>
             </TableCell>
@@ -394,7 +465,19 @@ export function TransactionList({
         </TableRow>
       );
     },
-    [getCategory, getContext, onEdit, onDelete, showActions, t]
+    [
+      getCategory,
+      getContext,
+      getGroup,
+      getPersonalAmount,
+      onEdit,
+      onDelete,
+      onSplitExpense,
+      showActions,
+      hideContext,
+      user,
+      t,
+    ]
   );
 
   const renderContent = () => {
@@ -415,7 +498,10 @@ export function TransactionList({
             <div
               ref={parentRef}
               className="overflow-auto"
-              style={{ height: height ?? 'calc(100vh - 280px)', minHeight: '450px' }}
+              style={{
+                height: height ?? "calc(100vh - 280px)",
+                minHeight: "450px",
+              }}
             >
               <div
                 style={{
@@ -440,7 +526,7 @@ export function TransactionList({
                           transform: `translateY(${virtualRow.start}px)`,
                           padding: "8px 4px",
                         }}
-                        className="font-semibold text-sm text-muted-foreground sticky z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+                        className="font-semibold text-sm text-muted-foreground sticky z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60"
                       >
                         {item.label}
                       </div>
@@ -505,7 +591,7 @@ export function TransactionList({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.2 }}
-                    className="font-semibold text-sm text-muted-foreground pt-4 pb-2 px-1 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+                    className="font-semibold text-sm text-muted-foreground pt-4 pb-2 px-1 sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60"
                   >
                     {item.label}
                   </motion.div>
@@ -552,8 +638,6 @@ export function TransactionList({
       );
     }
 
-
-
     // Desktop view
     // Virtualized table for large datasets
     if (shouldVirtualize) {
@@ -568,7 +652,9 @@ export function TransactionList({
                 <TableHead className="w-[130px]">{t("context")}</TableHead>
                 <TableHead className="w-[130px]">{t("group")}</TableHead>
                 <TableHead className="w-[100px]">{t("type")}</TableHead>
-                <TableHead className="text-right w-[120px]">{t("amount")}</TableHead>
+                <TableHead className="text-right w-[120px]">
+                  {t("amount")}
+                </TableHead>
                 {showActions && <TableHead className="w-[100px]"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -576,7 +662,10 @@ export function TransactionList({
           <div
             ref={parentRef}
             className="overflow-auto"
-            style={{ height: height ?? 'calc(100vh - 280px)', minHeight: '400px' }}
+            style={{
+              height: height ?? "calc(100vh - 280px)",
+              minHeight: "400px",
+            }}
           >
             <Table>
               <TableBody>
@@ -603,7 +692,11 @@ export function TransactionList({
                           <FadeIn delay={0} duration={200}>
                             <Table>
                               <TableBody>
-                                {renderDesktopRow(t_item, virtualRow.index, true)}
+                                {renderDesktopRow(
+                                  t_item,
+                                  virtualRow.index,
+                                  true
+                                )}
                               </TableBody>
                             </Table>
                           </FadeIn>
@@ -631,7 +724,9 @@ export function TransactionList({
               <TableHead className="w-[130px]">{t("context")}</TableHead>
               <TableHead className="w-[130px]">{t("group")}</TableHead>
               <TableHead className="w-[100px]">{t("type")}</TableHead>
-              <TableHead className="text-right w-[120px]">{t("amount")}</TableHead>
+              <TableHead className="text-right w-[120px]">
+                {t("amount")}
+              </TableHead>
               {showActions && <TableHead className="w-[100px]"></TableHead>}
             </TableRow>
           </TableHeader>
@@ -654,4 +749,3 @@ export function TransactionList({
     </SmoothLoader>
   );
 }
-

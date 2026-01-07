@@ -60,6 +60,9 @@ const SettingsPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("@/pages/Profile").then((m) => ({ default: m.ProfilePage }))
 );
+const SplitExpensePage = lazy(() =>
+  import("@/pages/SplitExpense").then((m) => ({ default: m.SplitExpensePage }))
+);
 
 /**
  * Loading fallback for lazy-loaded pages
@@ -363,6 +366,18 @@ function AppRoutes() {
               <Suspense fallback={<PageLoadingFallback />}>
                 <PageTransition>
                   <ProfilePage />
+                </PageTransition>
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/split-expense"
+          element={
+            <ErrorBoundary section="Split Expense" minimal>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PageTransition>
+                  <SplitExpensePage />
                 </PageTransition>
               </Suspense>
             </ErrorBoundary>

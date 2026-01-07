@@ -25,9 +25,13 @@ import {
   Cloud,
   Calculator,
   X,
+  Split,
 } from "lucide-react";
 import { SyncStatusBadge } from "@/components/SyncStatus";
 import { Badge } from "@/components/ui/badge";
+import { SplitExpenseDialog } from "@/components/SplitExpenseDialog";
+import { useMobile } from "@/hooks/useMobile";
+import { useState } from "react";
 import { createElement } from "react";
 
 interface TransactionDetailDrawerProps {
@@ -50,6 +54,8 @@ export function TransactionDetailDrawer({
 }: TransactionDetailDrawerProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const isMobile = useMobile();
+  const [splitExpenseDialogOpen, setSplitExpenseDialogOpen] = useState(false);
 
   if (!transaction) return null;
 
@@ -275,9 +281,32 @@ export function TransactionDetailDrawer({
                 )}
               </div>
             </div>
+
+            {/* Split Expense Button - Mobile Only */}
+            {isMobile && transaction.type === "expense" && (
+              <div className="pt-4 border-t">
+                <Button
+                  onClick={() => setSplitExpenseDialogOpen(true)}
+                  className="w-full bg-gradient-to-r from-[#0075EB] to-[#5B4FFF] hover:from-[#0066CC] hover:to-[#4A3FDD] text-white border-0"
+                >
+                  <Split className="h-4 w-4 mr-2" />
+                  {t("split_expense") || "Split Expense"}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </DrawerContent>
+
+      {/* Split Expense Dialog */}
+      <SplitExpenseDialog
+        open={splitExpenseDialogOpen}
+        onOpenChange={setSplitExpenseDialogOpen}
+        initialData={{
+          description: transaction.description,
+          amount: transaction.amount,
+        }}
+      />
     </Drawer>
   );
 }

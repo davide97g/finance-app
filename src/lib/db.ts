@@ -230,6 +230,8 @@ export interface Setting {
   category_sorting_days?: number;
   /** User mode: default, simplified, or advanced */
   user_mode?: "default" | "simplified" | "advanced";
+  /** Revolut username for payment links */
+  revolut_username?: string | null;
   /** Last settings update timestamp (ISO 8601) */
   updated_at?: string;
 }

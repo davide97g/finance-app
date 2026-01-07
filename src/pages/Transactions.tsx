@@ -4,6 +4,7 @@ import {
   TransactionFormData,
 } from "@/components/TransactionDialog";
 import { TransactionList } from "@/components/TransactionList";
+import { SplitExpenseDialog } from "@/components/SplitExpenseDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CountUp } from "@/components/ui/count-up";
@@ -535,6 +536,8 @@ export function TransactionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [splitExpenseDialogOpen, setSplitExpenseDialogOpen] = useState(false);
+  const [splitExpenseTransaction, setSplitExpenseTransaction] = useState<Transaction | null>(null);
 
   const [searchParams] = useSearchParams();
 
@@ -633,6 +636,13 @@ export function TransactionsPage() {
   const handleDeleteClick = (id: string) => {
     setDeletingId(id);
     setDeleteDialogOpen(true);
+  };
+
+  const handleSplitExpense = (transaction: Transaction) => {
+    if (transaction.type === "expense") {
+      setSplitExpenseTransaction(transaction);
+      setSplitExpenseDialogOpen(true);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -1075,6 +1085,7 @@ export function TransactionsPage() {
         groups={groups}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
+        onSplitExpense={handleSplitExpense}
         isLoading={transactions === undefined}
       />
 
@@ -1086,6 +1097,19 @@ export function TransactionsPage() {
         description={
           t("confirm_delete_transaction_description") ||
           t("confirm_delete_description")
+        }
+      />
+
+      <SplitExpenseDialog
+        open={splitExpenseDialogOpen}
+        onOpenChange={setSplitExpenseDialogOpen}
+        initialData={
+          splitExpenseTransaction
+            ? {
+                description: splitExpenseTransaction.description,
+                amount: splitExpenseTransaction.amount,
+              }
+            : null
         }
       />
     </div>

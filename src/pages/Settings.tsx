@@ -60,8 +60,9 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 export function SettingsPage() {
@@ -70,6 +71,7 @@ export function SettingsPage() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { resolvedTheme, setTheme } = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [lastSyncTime, setLastSyncTime] = useState<Date | undefined>();
   const [manualSyncing, setManualSyncing] = useState(false);
   const [fullSyncing, setFullSyncing] = useState(false);
@@ -77,6 +79,7 @@ export function SettingsPage() {
   const [clearingCache, setClearingCache] = useState(false);
   const [exportingData, setExportingData] = useState(false);
   const [isImportWizardOpen, setIsImportWizardOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("appearance");
 
   // Welcome wizard hook for "Review Tutorial" button
   const welcomeWizard = useWelcomeWizard();
@@ -84,6 +87,19 @@ export function SettingsPage() {
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Handle URL param for tab navigation
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["appearance", "data", "advanced"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams({ tab: value });
+  };
 
   const isSyncing = manualSyncing || fullSyncing;
 
@@ -253,7 +269,11 @@ export function SettingsPage() {
       </div>
 
       {/* Tab Navigation */}
-      <Tabs defaultValue="appearance" className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="space-y-4"
+      >
         <TabsList className="grid w-full grid-cols-3 h-13 dark:bg-primary/20">
           <TabsTrigger value="appearance" className="gap-2 text-xs sm:text-sm">
             <Palette className="h-4 w-4 hidden sm:block" />
@@ -710,6 +730,40 @@ export function SettingsPage() {
                     "user_mode_desc",
                     "Modalità per future personalizzazioni dell'app"
                   )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Revolut Username */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                {t("revolut_username") || "Revolut Username"}
+              </CardTitle>
+              <CardDescription>
+                {t("revolut_username_desc") ||
+                  "Your Revolut username for generating payment links"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Input
+                  value={settings.revolut_username || ""}
+                  onChange={(e) => {
+                    updateSettings({
+                      revolut_username: e.target.value || null,
+                    });
+                  }}
+                  className="h-12 touch-manipulation"
+                  placeholder={
+                    t("revolut_username_placeholder") ||
+                    "Enter your Revolut username"
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("revolut_username_note") ||
+                    "Enter your Revolut username to generate payment links when splitting expenses"}
                 </p>
               </div>
             </CardContent>

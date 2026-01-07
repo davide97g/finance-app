@@ -503,6 +503,7 @@ export interface Database {
           updated_at: string | null;
           user_id: string;
           user_mode: string | null;
+          revolut_username: string | null;
         };
         Insert: {
           accent_color?: string | null;
@@ -522,6 +523,7 @@ export interface Database {
           updated_at?: string | null;
           user_id: string;
           user_mode?: string | null;
+          revolut_username?: string | null;
         };
         Update: {
           accent_color?: string | null;
@@ -541,6 +543,7 @@ export interface Database {
           updated_at?: string | null;
           user_id?: string;
           user_mode?: string | null;
+          revolut_username?: string | null;
         };
         Relationships: [
           {
