@@ -610,6 +610,233 @@ export interface Database {
           }
         ];
       };
+      shopping_collections: {
+        Row: {
+          id: string;
+          name: string;
+          created_by: string;
+          deleted_at: string | null;
+          sync_token: number | null;
+          updated_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_by: string;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_by?: string;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_collections_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      shopping_collection_members: {
+        Row: {
+          id: string;
+          collection_id: string;
+          user_id: string;
+          joined_at: string | null;
+          removed_at: string | null;
+          sync_token: number | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          collection_id: string;
+          user_id: string;
+          joined_at?: string | null;
+          removed_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          collection_id?: string;
+          user_id?: string;
+          joined_at?: string | null;
+          removed_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_collection_members_collection_id_fkey";
+            columns: ["collection_id"];
+            isOneToOne: false;
+            referencedRelation: "shopping_collections";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shopping_collection_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      shopping_lists: {
+        Row: {
+          id: string;
+          collection_id: string;
+          name: string;
+          created_by: string;
+          deleted_at: string | null;
+          sync_token: number | null;
+          updated_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          collection_id: string;
+          name: string;
+          created_by: string;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          collection_id?: string;
+          name?: string;
+          created_by?: string;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_lists_collection_id_fkey";
+            columns: ["collection_id"];
+            isOneToOne: false;
+            referencedRelation: "shopping_collections";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shopping_lists_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      shopping_items: {
+        Row: {
+          id: string;
+          collection_id: string;
+          name: string;
+          created_by: string;
+          deleted_at: string | null;
+          sync_token: number | null;
+          updated_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          collection_id: string;
+          name: string;
+          created_by: string;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          collection_id?: string;
+          name?: string;
+          created_by?: string;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_collection_id_fkey";
+            columns: ["collection_id"];
+            isOneToOne: false;
+            referencedRelation: "shopping_collections";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shopping_items_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      shopping_list_items: {
+        Row: {
+          id: string;
+          list_id: string;
+          item_id: string;
+          checked: boolean;
+          deleted_at: string | null;
+          sync_token: number | null;
+          updated_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          list_id: string;
+          item_id: string;
+          checked?: boolean;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          list_id?: string;
+          item_id?: string;
+          checked?: boolean;
+          deleted_at?: string | null;
+          sync_token?: number | null;
+          updated_at?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_list_items_list_id_fkey";
+            columns: ["list_id"];
+            isOneToOne: false;
+            referencedRelation: "shopping_lists";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shopping_list_items_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "shopping_items";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -630,6 +857,18 @@ export interface Database {
       is_group_member: {
         Args: {
           group_id: string;
+        };
+        Returns: boolean;
+      };
+      is_collection_creator: {
+        Args: {
+          collection_id: string;
+        };
+        Returns: boolean;
+      };
+      is_collection_member: {
+        Args: {
+          collection_id: string;
         };
         Returns: boolean;
       };

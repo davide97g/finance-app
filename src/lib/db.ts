@@ -343,6 +343,122 @@ export interface ImportRule {
 }
 
 /**
+ * Shopping collection (top-level group for shopping lists).
+ */
+export interface ShoppingCollection {
+  /** UUID primary key */
+  id: string;
+  /** Display name of the collection */
+  name: string;
+  /** User ID of the collection creator */
+  created_by: string;
+  /** Soft delete timestamp (ISO 8601) */
+  deleted_at?: string | null;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+}
+
+/**
+ * Shopping collection membership.
+ */
+export interface ShoppingCollectionMember {
+  /** UUID primary key */
+  id: string;
+  /** Reference to parent collection */
+  collection_id: string;
+  /** Reference to member user */
+  user_id: string;
+  /** When the user joined (ISO 8601) */
+  joined_at?: string;
+  /** Soft remove timestamp, null if active (ISO 8601) */
+  removed_at?: string | null;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+}
+
+/**
+ * Shopping list within a collection.
+ */
+export interface ShoppingList {
+  /** UUID primary key */
+  id: string;
+  /** Reference to parent collection */
+  collection_id: string;
+  /** Display name of the list */
+  name: string;
+  /** User ID of the list creator */
+  created_by: string;
+  /** Soft delete timestamp (ISO 8601) */
+  deleted_at?: string | null;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+}
+
+/**
+ * Shopping item (reusable item pool scoped to collection).
+ */
+export interface ShoppingItem {
+  /** UUID primary key */
+  id: string;
+  /** Reference to parent collection */
+  collection_id: string;
+  /** Display name of the item */
+  name: string;
+  /** User ID of the item creator */
+  created_by: string;
+  /** Soft delete timestamp (ISO 8601) */
+  deleted_at?: string | null;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+}
+
+/**
+ * Shopping list item (junction between list and item).
+ */
+export interface ShoppingListItem {
+  /** UUID primary key */
+  id: string;
+  /** Reference to parent list */
+  list_id: string;
+  /** Reference to item */
+  item_id: string;
+  /** Whether the item is checked */
+  checked: boolean;
+  /** Soft delete timestamp (ISO 8601) */
+  deleted_at?: string | null;
+  /** 1 if changes pending sync, 0 otherwise */
+  pendingSync?: number;
+  /** Server-assigned sync token */
+  sync_token?: number;
+  /** Last modification timestamp (ISO 8601) */
+  updated_at?: string;
+  /** Creation timestamp (ISO 8601) */
+  created_at?: string;
+}
+
+/**
  * Dexie database class for the expense tracker application.
  *
  * Provides typed access to all IndexedDB tables with proper indexing
@@ -360,6 +476,11 @@ export class AppDatabase extends Dexie {
   profiles!: Table<Profile>;
   import_rules!: Table<ImportRule>;
   category_usage_stats!: Table<CategoryUsageStats>;
+  shopping_collections!: Table<ShoppingCollection>;
+  shopping_collection_members!: Table<ShoppingCollectionMember>;
+  shopping_lists!: Table<ShoppingList>;
+  shopping_items!: Table<ShoppingItem>;
+  shopping_list_items!: Table<ShoppingListItem>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -399,6 +520,32 @@ export class AppDatabase extends Dexie {
       import_rules: "id, user_id, match_type, pendingSync, deleted_at",
       category_usage_stats: "id, user_id, category_id, pendingSync",
     });
+
+    // Version 3: Add shopping lists tables
+    this.version(3).stores({
+      groups: "id, created_by, pendingSync, deleted_at",
+      group_members:
+        "id, group_id, user_id, guest_name, is_guest, pendingSync, removed_at",
+      transactions:
+        "id, user_id, group_id, paid_by_member_id, recurring_transaction_id, category_id, context_id, type, date, year_month, pendingSync, deleted_at, [group_id+year_month], [type+year_month], [category_id+year_month]",
+      categories: "id, user_id, group_id, name, type, pendingSync, deleted_at",
+      contexts: "id, user_id, pendingSync, deleted_at",
+      recurring_transactions:
+        "id, user_id, group_id, paid_by_member_id, category_id, context_id, type, frequency, pendingSync, deleted_at",
+      user_settings: "user_id",
+      category_budgets:
+        "id, user_id, category_id, period, pendingSync, deleted_at",
+      profiles: "id, pendingSync",
+      import_rules: "id, user_id, match_type, pendingSync, deleted_at",
+      category_usage_stats: "id, user_id, category_id, pendingSync",
+      shopping_collections: "id, created_by, pendingSync, deleted_at",
+      shopping_collection_members:
+        "id, collection_id, user_id, pendingSync, removed_at",
+      shopping_lists: "id, collection_id, created_by, pendingSync, deleted_at",
+      shopping_items: "id, collection_id, name, pendingSync, deleted_at",
+      shopping_list_items:
+        "id, list_id, item_id, checked, pendingSync, deleted_at",
+    });
   }
 
   /**
@@ -419,6 +566,11 @@ export class AppDatabase extends Dexie {
       this.profiles.clear(),
       this.import_rules.clear(),
       this.category_usage_stats.clear(),
+      this.shopping_collections.clear(),
+      this.shopping_collection_members.clear(),
+      this.shopping_lists.clear(),
+      this.shopping_items.clear(),
+      this.shopping_list_items.clear(),
     ]);
   }
 }

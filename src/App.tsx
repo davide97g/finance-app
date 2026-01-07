@@ -63,6 +63,19 @@ const ProfilePage = lazy(() =>
 const SplitExpensePage = lazy(() =>
   import("@/pages/SplitExpense").then((m) => ({ default: m.SplitExpensePage }))
 );
+const ShoppingListsPage = lazy(() =>
+  import("@/pages/ShoppingLists").then((m) => ({ default: m.ShoppingListsPage }))
+);
+const ShoppingCollectionDetailPage = lazy(() =>
+  import("@/pages/ShoppingCollectionDetail").then((m) => ({
+    default: m.ShoppingCollectionDetailPage,
+  }))
+);
+const ShoppingListDetailPage = lazy(() =>
+  import("@/pages/ShoppingListDetail").then((m) => ({
+    default: m.ShoppingListDetailPage,
+  }))
+);
 
 /**
  * Loading fallback for lazy-loaded pages
@@ -378,6 +391,42 @@ function AppRoutes() {
               <Suspense fallback={<PageLoadingFallback />}>
                 <PageTransition>
                   <SplitExpensePage />
+                </PageTransition>
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/shopping-lists"
+          element={
+            <ErrorBoundary section="Shopping Lists" minimal>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PageTransition>
+                  <ShoppingListsPage />
+                </PageTransition>
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/shopping-lists/:collectionId"
+          element={
+            <ErrorBoundary section="Shopping Collection Detail" minimal>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PageTransition>
+                  <ShoppingCollectionDetailPage />
+                </PageTransition>
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/shopping-lists/:collectionId/lists/:listId"
+          element={
+            <ErrorBoundary section="Shopping List Detail" minimal>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PageTransition>
+                  <ShoppingListDetailPage />
                 </PageTransition>
               </Suspense>
             </ErrorBoundary>

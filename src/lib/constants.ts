@@ -183,6 +183,11 @@ export const REALTIME_CONFIG = {
     "transactions",
     "recurring_transactions",
     "category_budgets",
+    "shopping_collections",
+    "shopping_collection_members",
+    "shopping_lists",
+    "shopping_items",
+    "shopping_list_items",
   ] as const,
 
   /** Initial retry delay for connection failures */

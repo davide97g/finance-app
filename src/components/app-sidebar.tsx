@@ -6,6 +6,7 @@ import {
   Receipt,
   Repeat,
   Settings,
+  ShoppingCart,
   Squirrel,
   Tags,
   User2,
@@ -55,6 +56,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     { name: t("categories"), href: "/categories", icon: Tags },
     { name: t("contexts"), href: "/contexts", icon: Layers },
     { name: t("groups"), href: "/groups", icon: Users },
+    { name: t("shopping_lists"), href: "/shopping-lists", icon: ShoppingCart },
     { name: t("statistics"), href: "/statistics", icon: PieChart },
     { name: t("settings"), href: "/settings", icon: Settings },
   ];

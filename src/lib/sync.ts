@@ -27,6 +27,11 @@ import {
   Profile,
   RecurringTransaction,
   Setting,
+  ShoppingCollection,
+  ShoppingCollectionMember,
+  ShoppingItem,
+  ShoppingList,
+  ShoppingListItem,
   Transaction,
 } from "./db";
 import { processRecurringTransactions } from "./recurring";
@@ -42,6 +47,11 @@ const TABLES = [
   "recurring_transactions",
   "category_budgets",
   "category_usage_stats",
+  "shopping_collections",
+  "shopping_collection_members",
+  "shopping_lists",
+  "shopping_items",
+  "shopping_list_items",
 ] as const;
 
 type TableName = (typeof TABLES)[number];
@@ -56,6 +66,11 @@ type LocalTableMap = {
   category_budgets: CategoryBudget;
   profiles: Profile;
   category_usage_stats: CategoryUsageStats;
+  shopping_collections: ShoppingCollection;
+  shopping_collection_members: ShoppingCollectionMember;
+  shopping_lists: ShoppingList;
+  shopping_items: ShoppingItem;
+  shopping_list_items: ShoppingListItem;
 };
 
 // ============================================================================
@@ -649,8 +664,18 @@ export class SyncManager {
     // Cast to record to allow dynamic assignment
     const itemWithUserId = pushItem as Record<string, unknown>;
 
-    // Add user_id only if the table uses it (not groups)
-    if (tableName !== "groups" && tableName !== "group_members") {
+    // Add user_id only if the table uses it
+    // Tables without user_id: groups, shopping_collections, shopping_lists, shopping_items, shopping_list_items
+    // Tables with user_id that shouldn't be overridden: group_members, shopping_collection_members (user_id is the member's id, not owner's)
+    if (
+      tableName !== "groups" &&
+      tableName !== "group_members" &&
+      tableName !== "shopping_collections" &&
+      tableName !== "shopping_collection_members" &&
+      tableName !== "shopping_lists" &&
+      tableName !== "shopping_items" &&
+      tableName !== "shopping_list_items"
+    ) {
       itemWithUserId.user_id = userId;
     }
 
